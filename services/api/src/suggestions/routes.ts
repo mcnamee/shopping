@@ -15,6 +15,10 @@ import {
   suggestCandidates,
   type BulkAddItemResult,
   type BulkAddItemsResponse,
+  type BulkUndoResponse,
+  type BulkUndoResult,
+  type LineChange,
+  parseUndoRequest,
   type LineInput,
   type ProductSnapshot,
   type Suggestion,
@@ -273,6 +277,27 @@ export function createSuggestionRoutes(getDeps: () => Stage3Deps): RouteTable {
     } satisfies BulkAddItemsResponse);
   }
 
+  /** POST /api/lists/{listId}/items/undo: revert a bulk add's changes in one request. */
+  async function bulkUndo(req: AuthedRequest): Promise<HttpResult> {
+    const hh = hhOf(req);
+    const id = req.event.pathParameters?.listId;
+    const listId = isValidEntityId(id) ? id : fail.notFound();
+    const changes = unwrapChanges(readJsonBody(req.event));
+    const { lists } = getDeps();
+    const outcomes = await lists.undoEach(hh, req.household.userId, listId, changes);
+    const results: BulkUndoResult[] = outcomes.map((o, i) => {
+      const itemId = (changes[i] as LineChange).itemId;
+      return o.ok ? { ok: true, itemId } : { ok: false, itemId, code: o.code, message: o.message };
+    });
+    const undone = results.filter((r) => r.ok).length;
+    return json(200, {
+      list: await lists.detail(hh, listId),
+      results,
+      undone,
+      failed: results.length - undone,
+    } satisfies BulkUndoResponse);
+  }
+
   const r = (handler: (req: AuthedRequest) => Promise<HttpResult>) => ({
     auth: true as const,
     handler,
@@ -282,5 +307,12 @@ export function createSuggestionRoutes(getDeps: () => Stage3Deps): RouteTable {
     'POST /api/lists/{listId}/suggestions': r(listSuggestions),
     'POST /api/suggestions': r((req) => suggest(req, null)),
     'POST /api/lists/{listId}/items/bulk': r(bulkAdd),
+    'POST /api/lists/{listId}/items/undo': r(bulkUndo),
   };
+}
+
+/** Validate an undo body: { changes: LineChange[] } with 1-50 distinct item ids. */
+function unwrapChanges(body: unknown): LineChange[] {
+  const p = parseUndoRequest(body, BULK_ADD_MAX);
+  return p.ok ? p.value : fail.validation(p.message, p.field);
 }

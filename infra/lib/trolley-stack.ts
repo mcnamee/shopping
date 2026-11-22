@@ -302,6 +302,7 @@ export class TrolleyStack extends Stack {
       ['/api/lists/{listId}/suggestions', POST],
       ['/api/suggestions', POST],
       ['/api/lists/{listId}/items/bulk', POST],
+      ['/api/lists/{listId}/items/undo', POST],
     ];
     for (const [routePath, method] of authedRoutes) {
       httpApi.addRoutes({

@@ -3,6 +3,7 @@ import {
   keys,
   purchaseSortKey,
   type BulkAddItemsResponse,
+  type BulkUndoResponse,
   type CreateListResponse,
   type ListDetail,
   type SuggestionsResponse,
@@ -430,6 +431,62 @@ describe('POST /api/lists/{listId}/items/bulk', () => {
       [`${MILK}~pack`, 1, false],
       [`${MINCE}~pack`, 1, false],
     ]);
+  });
+
+  it('undoes a bulk add in one request; a row changed by the other phone is kept', async () => {
+    const listId = await newList([
+      [MILK, 1, 'pack'],
+      [MINCE, 1, 'pack'],
+    ]);
+    const res = await bulk(listId, [
+      { productId: MILK, qty: 2, unit: 'pack' },
+      { productId: BREAD, qty: 1, unit: 'each' },
+      { productId: BANANAS, qty: 1.5, unit: 'kg' },
+    ]);
+    const changes = res.body.results.flatMap((r) => (r.ok ? [r.change] : []));
+    // The other phone edits the bananas row before Undo.
+    await h.call('PATCH /api/lists/{listId}/items/{itemId}', {
+      path: { listId, itemId: `${BANANAS}~kg` },
+      body: { qty: 2, version: 1 },
+    });
+    const undo = await h.call<BulkUndoResponse>('POST /api/lists/{listId}/items/undo', {
+      path: { listId },
+      body: { changes },
+    });
+    expect(undo.status).toBe(200);
+    expect(undo.body).toMatchObject({ undone: 2, failed: 1 });
+    expect(undo.body.results).toEqual([
+      { ok: true, itemId: `${MILK}~pack` },
+      { ok: true, itemId: `${BREAD}~each` },
+      { ok: false, itemId: `${BANANAS}~kg`, code: 'CONFLICT', message: 'Changed on another phone' },
+    ]);
+    expect(undo.body.list.items.map((i) => [i.id, i.qty]).sort()).toEqual([
+      [`${BANANAS}~kg`, 2],
+      [`${MILK}~pack`, 1],
+      [`${MINCE}~pack`, 1],
+    ]);
+    // Undo again: created rows already gone count as undone; merged rows are now stale.
+    const again = await h.call<BulkUndoResponse>('POST /api/lists/{listId}/items/undo', {
+      path: { listId },
+      body: { changes: changes.slice(1, 2) },
+    });
+    expect(again.body.results).toEqual([{ ok: true, itemId: `${BREAD}~each` }]);
+  });
+
+  it('undo validates its body and the household', async () => {
+    const listId = await newList([[MILK, 1, 'pack']]);
+    const change = { itemId: `${MILK}~pack`, created: false, addedQty: 1, version: 1 };
+    const undo = (body: unknown, hh?: string) =>
+      h.call('POST /api/lists/{listId}/items/undo', {
+        path: { listId },
+        body,
+        ...(hh ? { hh } : {}),
+      });
+    expect((await undo({ changes: [] })).status).toBe(400);
+    expect((await undo({ changes: [change, change] })).status).toBe(400);
+    expect((await undo({ changes: [{ ...change, itemId: 'x' }] })).status).toBe(400);
+    expect((await undo({ changes: [{ ...change, version: 0 }] })).status).toBe(400);
+    expect((await undo({ changes: [change] }, 'home-2')).status).toBe(404);
   });
 
   it('reports per-item failures and still adds the rest', async () => {

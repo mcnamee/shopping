@@ -1,5 +1,6 @@
 import type {
   BulkAddItemsResponse,
+  BulkUndoResponse,
   CreateListResponse,
   ListDetail,
   SuggestionsResponse,
@@ -145,16 +146,18 @@ describe('mock bulk add', () => {
     });
     expect(res.body.results[2]).toMatchObject({ ok: false, code: 'VALIDATION' });
 
-    // Undo
-    await call('DELETE', `/lists/${id}/items/${RAZORS}~pack?version=1`);
-    const merged = res.body.list.items.find((i) => i.id === `${MILK}~pack`);
-    await call('PATCH', `/lists/${id}/items/${MILK}~pack`, {
-      qty: (merged?.qty ?? 0) - 1,
-      version: merged?.version,
-    });
+    // Undo in one request
+    const changes = res.body.results.flatMap((r) => (r.ok ? [r.change] : []));
+    const undo = await call<BulkUndoResponse>('POST', `/lists/${id}/items/undo`, { changes });
+    expect(undo.body).toMatchObject({ undone: 2, failed: 0 });
     const after = (await call<ListDetail>('GET', `/lists/${id}`)).body;
     expect(after.items).toHaveLength(before.items.length);
     expect(after.items.find((i) => i.id === `${MILK}~pack`)?.qty).toBe(milkBefore?.qty);
+    // A row changed since is left alone.
+    const again = await call<BulkUndoResponse>('POST', `/lists/${id}/items/undo`, {
+      changes: changes.slice(1),
+    });
+    expect(again.body.results[0]).toMatchObject({ ok: false, code: 'CONFLICT' });
   });
 
   it('rejects a bad request shape', async () => {

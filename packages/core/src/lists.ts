@@ -11,7 +11,7 @@
  * - shop-mode grouping in household aisle order (E1, E3),
  * - "Week of <Monday>" names (D-048).
  */
-import type { GroupSummary, ProductSummary } from './api-types';
+import type { GroupSummary, LineChange, ProductSummary } from './api-types';
 import { DEFAULT_AISLE_ORDER, DEFAULT_GROUPS, OTHER_GROUP_ID } from './groups';
 import { isUnitType, isValidSku, type UnitType } from './product';
 import { convertQuantity, roundQuantity } from './quantity';
@@ -938,4 +938,37 @@ export function sortUnitOverrides(overrides: readonly UnitOverride[]): UnitOverr
       a.name.localeCompare(b.name, 'en-AU', { sensitivity: 'base' }) ||
       a.productId.localeCompare(b.productId),
   );
+}
+
+/**
+ * POST /api/lists/{id}/items/undo body: `{ changes: LineChange[] }` (1..max, distinct
+ * item ids) as returned by a bulk add or "add templates".
+ */
+export function parseUndoRequest(body: unknown, max: number): Parsed<LineChange[]> {
+  if (!isObject(body) || !Array.isArray(body.changes)) {
+    return fail('changes must be a list', 'changes');
+  }
+  if (body.changes.length < 1 || body.changes.length > max) {
+    return fail(`Undo 1 to ${max} items at a time`, 'changes');
+  }
+  const seen = new Set<string>();
+  const out: LineChange[] = [];
+  for (const c of body.changes as unknown[]) {
+    if (!isObject(c)) return fail('Each change must be an object', 'changes');
+    const { itemId, created, addedQty, version } = c;
+    const ref = parseLineId(itemId);
+    if (!ref || typeof itemId !== 'string' || seen.has(itemId)) {
+      return fail('Each change needs a distinct item id', 'changes');
+    }
+    if (typeof created !== 'boolean') return fail('created must be true or false', 'changes');
+    if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
+      return fail('version must be a positive whole number', 'changes');
+    }
+    if (typeof addedQty !== 'number' || !Number.isFinite(addedQty) || addedQty < 0) {
+      return fail('addedQty must be a number of 0 or more', 'changes');
+    }
+    seen.add(itemId);
+    out.push({ itemId, created, addedQty: roundQuantity(addedQty, ref.unit), version });
+  }
+  return { ok: true, value: out };
 }

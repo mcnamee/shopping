@@ -630,6 +630,45 @@ export class ListStore {
   }
 
   /**
+   * Undo a bulk add in one request (Stage 3 review sheet, D-072): created rows are deleted
+   * and merged rows go back to `qty - addedQty`, each only if the row is still at the
+   * version the add left it (otherwise CONFLICT: another phone changed it, keep theirs).
+   * A created row that is already gone counts as undone.
+   */
+  async undoEach(
+    hh: string,
+    userId: string,
+    listId: string,
+    changes: readonly LineChange[],
+  ): Promise<Array<{ ok: true } | { ok: false; code: BulkFailCode; message: string }>> {
+    await this.mustGetActive(hh, listId);
+    return inBatches([...changes], BULK_CONCURRENCY, async (c) => {
+      try {
+        if (c.created) {
+          await this.deleteItem(hh, listId, c.itemId, c.version);
+          return { ok: true as const };
+        }
+        const cur = await this.getItem(hh, listId, c.itemId);
+        if (!cur || cur.version !== c.version) {
+          return {
+            ok: false as const,
+            code: 'CONFLICT' as const,
+            message: 'Changed on another phone',
+          };
+        }
+        const qty = roundQuantity(cur.qty - c.addedQty, cur.unit);
+        if (qty <= 0) await this.deleteItem(hh, listId, c.itemId, c.version);
+        else await this.updateItem(hh, userId, listId, c.itemId, { qty, version: c.version });
+        return { ok: true as const };
+      } catch (err) {
+        if (!(err instanceof HttpFailure)) throw err;
+        if (c.created && err.result.statusCode === 404) return { ok: true as const };
+        return { ok: false as const, ...bulkFailure(err) };
+      }
+    });
+  }
+
+  /**
    * Edit or tick one item. Same unit: one conditional UpdateItem of the row (ticks need no
    * version; content edits need it). Unit change: the row is re-keyed (and merged into a row
    * with the new unit if there is one) in one transaction.

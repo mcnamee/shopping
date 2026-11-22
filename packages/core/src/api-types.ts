@@ -418,3 +418,25 @@ export interface BulkAddItemsResponse {
   added: number;
   failed: number;
 }
+
+/** POST /api/lists/{listId}/items/undo: the `change`s of a bulk add (or add templates). */
+export interface BulkUndoRequest {
+  changes: LineChange[];
+}
+
+export type BulkUndoResult =
+  | { ok: true; itemId: string }
+  | {
+      ok: false;
+      itemId: string;
+      /** CONFLICT: the row changed since the add (other phone); it is left as it is. */
+      code: 'VALIDATION' | 'LIMIT' | 'CONFLICT';
+      message: string;
+    };
+
+export interface BulkUndoResponse {
+  list: ListDetail;
+  results: BulkUndoResult[];
+  undone: number;
+  failed: number;
+}

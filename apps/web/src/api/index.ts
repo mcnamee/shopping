@@ -3,6 +3,8 @@ import type {
   AddTemplatesToListResponse,
   AisleOrderResponse,
   BulkAddItemsResponse,
+  BulkUndoResponse,
+  LineChange,
   CreateCustomProductRequest,
   CreateCustomProductResponse,
   CreateListRequest,
@@ -154,3 +156,6 @@ export const getSuggestions = (signal?: AbortSignal) =>
 /** Add many items with per-item results; Undo each `change` like a template add. */
 export const addListItemsBulk = (listId: string, items: AddItemRequest[]) =>
   api.post<BulkAddItemsResponse>(`/lists/${enc(listId)}/items/bulk`, { items });
+/** Undo a bulk add (or add templates) in one request: pass the ok results' `change`s. */
+export const undoListItemsBulk = (listId: string, changes: LineChange[]) =>
+  api.post<BulkUndoResponse>(`/lists/${enc(listId)}/items/undo`, { changes });

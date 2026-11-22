@@ -14,7 +14,7 @@
  * core engine over the seeded purchase rows and report `source: 'ai'` (deterministic
  * reasons; the mock has no model). Seam: `window.__mockSuggest = { mode }` with mode
  * 'rules' (source rules), 'coldStart' (no history), 'empty' (no history, no templates) or
- * 'limit' (429). POST /api/lists/{id}/items/bulk mirrors the API's per-item results.
+ * 'limit' (429). POST /api/lists/{id}/items/bulk and /items/undo mirror the API.
  */
 import {
   addLine,
@@ -41,6 +41,7 @@ import {
   parseEditItemRequest,
   parseLineId,
   parseTemplateIdsRequest,
+  parseUndoRequest,
   parseUnitOverrideRequest,
   parseUpdateListRequest,
   parseUpdateTemplateRequest,
@@ -61,6 +62,8 @@ import {
   type AisleOrderResponse,
   type BulkAddItemResult,
   type BulkAddItemsResponse,
+  type BulkUndoResponse,
+  type BulkUndoResult,
   type LineChange,
   type LineInput,
   type ListDetail,
@@ -850,6 +853,24 @@ function bulkAdd(
   return { list: detail(hh, list), results, added, failed: results.length - added };
 }
 
+function bulkUndo(hh: MockHousehold, list: MockList, body: unknown): BulkUndoResponse {
+  const changes = unwrap(parseUndoRequest(body, BULK_ADD_MAX));
+  const at = nowIso();
+  const results: BulkUndoResult[] = changes.map((c) => {
+    const cur = list.items.find((i) => i.id === c.itemId);
+    if (c.created && !cur) return { ok: true, itemId: c.itemId };
+    if (!cur || cur.version !== c.version) {
+      return { ok: false, itemId: c.itemId, code: 'CONFLICT', message: 'Changed on another phone' };
+    }
+    const qty = roundQuantity(cur.qty - c.addedQty, cur.unit);
+    if (c.created || qty <= 0) list.items = list.items.filter((i) => i.id !== c.itemId);
+    else Object.assign(cur, { qty, version: cur.version + 1, updatedAt: at });
+    return { ok: true, itemId: c.itemId };
+  });
+  const undone = results.filter((r) => r.ok).length;
+  return { list: detail(hh, list), results, undone, failed: results.length - undone };
+}
+
 // ------------------------------------------------------------------ routes
 
 type Claims = Record<string, string>;
@@ -1314,6 +1335,9 @@ export function createStage2MockRoutes(source: MockProductSource) {
     ),
     'POST /api/lists/{listId}/items/bulk': write((hh, { params, body, householdId, userId }) =>
       json(200, bulkAdd(hh, householdId, userId, activeList(hh, params.listId), body)),
+    ),
+    'POST /api/lists/{listId}/items/undo': write((hh, { params, body }) =>
+      json(200, bulkUndo(hh, activeList(hh, params.listId), body)),
     ),
   };
 }
