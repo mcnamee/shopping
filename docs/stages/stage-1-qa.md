@@ -131,3 +131,19 @@ No defects block sign-off.
 - AWS Lambda scrape blocked by ALDI (Akamai 403); D-042 made the AWS schedule and alarm opt-in, default off.
 - GitHub runner fallback scrape succeeded and seeded the live catalogue; the user signed in on the live site.
 - Confirmed in production: catalogue loaded (the substance of A15, via the fallback), sign-in. Not explicitly confirmed: D9 (images and "milk" on both phones) and C9 feel; the user should tick these. A16 open and non-blocking.
+
+## 6. PM sign-off (2026-11-22)
+
+**Verdict: Stage 1 signed off.** All [S] criteria pass; 410 unit tests and E2E 80/80 green; no blocking defects. Production deploy preceded sign-off at the user's request (D-043).
+
+Accepted items:
+- INFO-1: build-time npm audit advisories, accepted (D-044, as D-022).
+- INFO-2: A10/A11/A15/A16 reworded in `stage-1.md` to match D-042. A15 is met by the GitHub fallback scrape that seeded the live catalogue.
+- LOW-1: no loose `weightType 3` fixture; accepted, tracked as B-005 (D-045).
+
+User checklist [U] (does not block sign-off):
+- [ ] D9: on both phones, product images load and searching "milk" shows ALDI milk.
+- [ ] C9: search feels instant on the live site.
+- [ ] Monthly scrape: repository variable `SCRAPE_FALLBACK_ENABLED=true` is set (Settings > Secrets and variables > Actions > Variables).
+- [ ] A16: after 1 Dec, check the scheduled "Scrape fallback" run in GitHub Actions succeeded.
+

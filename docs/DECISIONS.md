@@ -52,3 +52,8 @@ GitHub repos created after 15 Jul 2026 send `sub` as `repo:owner@ownerId/name@re
 
 ## D-042 - Monthly scrape runs from GitHub, not AWS
 ALDI's Akamai bot protection returns 403 to requests from AWS (first live "Scrape now", 22 Nov 2026). The GitHub runner fallback (D-037) works and seeded the catalogue. The AWS EventBridge schedule and its error alarm are now opt-in (`awsScrapeSchedule` context / `AWS_SCRAPE_SCHEDULE=true`), default off, so the blocked job stops failing and emailing monthly. The scraper Lambda stays deployed. Monthly scraping = `scrape-fallback.yml` with `SCRAPE_FALLBACK_ENABLED=true`. Further fallback: run the CLI from home (README).
+
+## Stage 1 sign-off (2026-11-22, PM)
+- **D-043 Stage 1 signed off.** All [S] criteria pass (410 unit tests, E2E 80/80). A10/A11/A15/A16 amended to the D-042 reality (monthly scrape on a GitHub runner; AWS schedule and alarm opt-in). Stage 1 was deployed to production at the user's request before sign-off; sign-off is retrospective. [U] items D9, C9 and A16 stay with the user and do not block.
+- **D-044 Accepted: build-time npm audit advisories (INFO-1).** Same 3 moderate advisories as D-022 (`glob` -> `minimatch`), dev/build-time only, 0 with `--omit=dev`. Still accepted; re-check at Stage 2 start.
+- **D-045 Accepted: no loose `weightType 3` fixture (LOW-1).** The loose -> `kg` mapping is covered by unit inference tests only; add a recorded loose-produce fixture after a future scrape (B-005). Low risk: a wrong default unit is fixable in the quantity modal.
