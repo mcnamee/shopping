@@ -2,7 +2,8 @@
 
 Household shopping list app for two users, optimised for shopping at ALDI Australia from a phone, with AI-assisted list generation and a chatbot (MCP) integration.
 
-Status: **Draft v1 - 2026-11-22**. Owner: Product Manager agent.
+Status: **Draft v1.1 - 2026-11-22** (Stage 0 decisions applied; see docs/DECISIONS.md). Owner: Product Manager agent.
+URL: https://trolley.mcn.am (fallback: CloudFront URL). Region: ap-southeast-2.
 
 ---
 
@@ -93,9 +94,9 @@ Each product has a `unitType` that drives the quantity modal:
 ## 5. Architecture
 
 ```
- Phone (PWA)  ──HTTPS──▶ CloudFront ──▶ S3 (React static build)
-     │
-     └─JWT──▶ API Gateway (HTTP API, Cognito JWT authoriser) ──▶ Lambda (api) ──▶ DynamoDB (single table)
+ Phone (PWA)  ──HTTPS──▶ CloudFront ──▶ S3 (React static build + /config.json)
+                            │ /api/*, /mcp, /oauth/* (same origin, no CORS)
+                            └─JWT──▶ API Gateway (HTTP API, Cognito JWT authoriser) ──▶ Lambda (api) ──▶ DynamoDB (single table)
                                                                      └──────────▶ Bedrock (Claude) [suggest]
  Claude / ChatGPT ──OAuth──▶ API Gateway /oauth/* ──▶ Lambda (oauth shim) ──▶ Cognito Hosted UI (login)
                   ──Bearer─▶ API Gateway /mcp     ──▶ Lambda (mcp)        ──▶ DynamoDB
@@ -107,7 +108,7 @@ Each product has a `unitType` that drives the quantity modal:
 |---|---|---|
 | Frontend | React + TypeScript + Vite, Tailwind, PWA (vite-plugin-pwa), TanStack Query | Mobile-first, fast, cheap static hosting |
 | Hosting | S3 + CloudFront (Origin Access Control) | Free-tier/flat-rate free plan covers this usage |
-| Auth | Amazon Cognito user pool (Lite tier, 10k MAU free), Hosted UI / managed login, self sign-up off | Managed, no servers |
+| Auth | Amazon Cognito user pool (Lite tier, 10k MAU free), email username, self sign-up off; in-app login form via `aws-amplify/auth` (no Hosted UI redirect, D-012) | Managed, no servers; reliable in iOS home-screen PWA |
 | API | API Gateway HTTP API + Lambda (Node 22, TypeScript) | 1M Lambda requests/month free; HTTP API is pennies |
 | Database | DynamoDB on-demand, single table | 25 GB always free; no patching |
 | AI | Amazon Bedrock (Claude Haiku-class) | IAM auth, no API key to manage, pay-per-token |
@@ -148,8 +149,8 @@ infra             CDK app
 |---|---|
 | Lambda, API Gateway, DynamoDB, Cognito, CloudFront, S3, Scheduler | $0 - $0.50 |
 | Bedrock (approx. 10 suggestion runs x ~15k tokens) | < $0.20 |
-| Route 53 hosted zone (optional custom domain) | $0.50 (+ domain ~$15-20/yr) |
-| **Total** | **~$0-1/month** (without domain) |
+| Custom domain trolley.mcn.am (external DNS, ACM cert free) | $0 |
+| **Total** | **~$0-1/month** |
 
 Note: AWS accounts created after July 2025 use the new credit-based free plan for the first 6 months; the "always free" allowances for Lambda, DynamoDB, Cognito and CloudFront continue after that. Set an AWS Budget alert at $5 in Stage 0.
 
@@ -170,7 +171,7 @@ Each stage is sized to fit one working session and ends deployable. Each stage f
 - GitHub Actions: `ci.yml` (PR checks), `deploy.yml` (main -> AWS via OIDC). Budget alarm.
 - Web: login/logout shell, bottom navigation (Lists, Search, Templates, Settings).
 - **Your one-off manual steps:** create AWS account, run CDK bootstrap once, create the GitHub OIDC role (we provide a script), add repo variables, request Bedrock model access.
-- **Done when:** both of you can log in on your phones at the CloudFront URL.
+- **Done when:** both of you can log in on your phones at https://trolley.mcn.am (or the CloudFront URL). Criteria: docs/stages/stage-0.md.
 
 ### Stage 1 - Catalogue and search
 - ALDI scraper Lambda + monthly schedule + manual "run now" workflow; category seed; custom products.
@@ -195,10 +196,10 @@ Each stage is sized to fit one working session and ends deployable. Each stage f
 - Offline read cache for shop mode, install prompt, dark mode, list sharing link, price display/estimated total, meal planner (pick meals -> merge meal templates).
 
 ## 8. Open questions for you
-1. App name and whether you want a custom domain (adds ~$0.50/month + domain).
-2. Preferred AWS region - default **ap-southeast-2 (Sydney)**.
-3. Your ALDI store/state (prices and ranges can vary by state).
-4. OK with AI suggestions running via Amazon Bedrock (data stays in your AWS account) rather than a separate Anthropic API key?
+1. ~~App name / custom domain~~ - Trolley at trolley.mcn.am (D-001, D-004).
+2. ~~Region~~ - ap-southeast-2 (D-002).
+3. Your ALDI store/state (prices and ranges can vary by state) - needed before Stage 1.
+4. ~~Bedrock OK?~~ - yes (D-003).
 
 ## 9. Sources consulted
 - Third-party ALDI AU scrapers confirming the site's product data is programmatically accessible: https://apify.com/solidcode/aldi-com-au-scraper
