@@ -50,6 +50,8 @@ jobs:
         env:
           ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
           CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+          # Optional ALDI store id for the scraper (default G526, ALDI Casey ACT).
+          ALDI_SERVICE_POINT: ${{ vars.ALDI_SERVICE_POINT }}
         run: >-
           npx cdk deploy TrolleyStack
           --require-approval never

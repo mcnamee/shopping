@@ -1,0 +1,57 @@
+name: Scrape now
+
+# Runs the ALDI catalogue scrape immediately by invoking the deployed trolley-scraper
+# Lambda (same code, safety rules and alarm as the monthly schedule). Uses the deploy
+# OIDC role, which may invoke only that one function (docs/DECISIONS.md D-036).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write # GitHub OIDC -> AWS role (no long-lived keys)
+  contents: read
+
+concurrency:
+  group: catalogue-scrape
+  cancel-in-progress: false
+
+jobs:
+  invoke:
+    name: Invoke trolley-scraper
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run this workflow on main (the AWS role only trusts main)."
+          exit 1
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-southeast-2
+          role-session-name: trolley-scrape-${{ github.run_id }}
+
+      - name: Invoke (waits up to 16 minutes)
+        run: |
+          aws lambda invoke \
+            --function-name trolley-scraper \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{"trigger":"github-scrape-now"}' \
+            --cli-read-timeout 960 \
+            --output json \
+            response.json > meta.json
+          {
+            echo "### trolley-scraper result"
+            echo
+            echo '```json'
+            cat response.json
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if jq -e '.FunctionError' meta.json > /dev/null; then
+            echo "::error::Scrape failed - see the summary above and the trolley-scraper CloudWatch logs. Existing products were not discontinued."
+            exit 1
+          fi
