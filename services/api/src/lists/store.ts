@@ -46,7 +46,7 @@ import {
   type DbItem,
   type TransactOp,
 } from '../db';
-import { fail } from '../http';
+import { fail, HttpFailure } from '../http';
 import { lineFields, toListItem } from '../lines';
 
 export interface ListRecord {
@@ -90,6 +90,22 @@ export function toListRecord(item: DbItem): ListRecord | null {
     version: num(item.version) ?? 1,
     createdBy: str(item.createdBy) ?? '',
   };
+}
+
+export type BulkFailCode = 'VALIDATION' | 'LIMIT' | 'CONFLICT';
+
+/** A per-line failure from an HttpFailure thrown by addItem. */
+function bulkFailure(err: HttpFailure): { code: BulkFailCode; message: string } {
+  let body: { code?: unknown; reason?: unknown; message?: unknown } = {};
+  try {
+    body = JSON.parse(String(err.result.body ?? '{}')) as typeof body;
+  } catch {
+    // keep defaults
+  }
+  const message = typeof body.message === 'string' ? body.message : 'Could not add this item.';
+  if (err.result.statusCode === 400) return { code: 'VALIDATION', message };
+  if (body.reason === 'LIMIT') return { code: 'LIMIT', message };
+  return { code: 'CONFLICT', message };
 }
 
 async function inBatches<T, R>(items: T[], size: number, fn: (t: T) => Promise<R>): Promise<R[]> {
@@ -562,6 +578,53 @@ export class ListStore {
         if (!(err instanceof ConditionFailed)) throw err;
         const r = await this.addItem(hh, userId, listId, line);
         return { itemId: id, created: !r.merged, addedQty: line.qty, version: r.item.version };
+      }
+    });
+  }
+
+  /**
+   * Add lines one by one by the merge rule (Stage 3 bulk add, D-072), reporting each
+   * line's outcome instead of failing the whole request: lines past the 200-item limit get
+   * LIMIT, a merge past the unit max gets VALIDATION. Each add is addItem's atomic,
+   * version-checked write, so Undo semantics match single adds (merged rows unticked).
+   */
+  async addEach(
+    hh: string,
+    userId: string,
+    listId: string,
+    lines: LineInput[],
+  ): Promise<
+    Array<{ ok: true; change: LineChange } | { ok: false; code: BulkFailCode; message: string }>
+  > {
+    await this.mustGetActive(hh, listId);
+    const existing = new Set((await this.items(hh, listId)).map((i) => i.id));
+    let room = LIMITS.listItems - existing.size;
+    const plan = lines.map((line) => {
+      const id = lineIdFor(line.product.productId, line.unit);
+      if (existing.has(id)) return { line, fits: true };
+      if (room > 0) {
+        room -= 1;
+        return { line, fits: true };
+      }
+      return { line, fits: false };
+    });
+    return inBatches(plan, BULK_CONCURRENCY, async ({ line, fits }) => {
+      if (!fits) {
+        return {
+          ok: false as const,
+          code: 'LIMIT' as const,
+          message: `This list is full (${LIMITS.listItems} items). Remove something first.`,
+        };
+      }
+      try {
+        const { item, merged } = await this.addItem(hh, userId, listId, line);
+        return {
+          ok: true as const,
+          change: { itemId: item.id, created: !merged, addedQty: line.qty, version: item.version },
+        };
+      } catch (err) {
+        if (!(err instanceof HttpFailure)) throw err;
+        return { ok: false as const, ...bulkFailure(err) };
       }
     });
   }

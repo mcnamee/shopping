@@ -10,7 +10,8 @@ import type { SearchableCatalogueProduct } from '../products/catalogue-cache';
 import { CustomProductRepo } from '../products/custom-products';
 import type { ProductDeps } from '../products/routes';
 import { createRouter, type ApiEvent } from '../router';
-import { createRoutes, stage2DepsFor } from '../routes';
+import { createRoutes, stage2DepsFor, stage3DepsFor } from '../routes';
+import type { AiTextModel } from '../suggestions/bedrock';
 import { fakeDynamo } from './fake-dynamo';
 
 export const T0 = Date.parse('2026-11-22T03:00:00.000Z'); // Sun 22 Nov, 2 pm in Canberra
@@ -76,7 +77,13 @@ export interface CallResult<T = Record<string, unknown>> {
   body: T;
 }
 
-export function setup() {
+export interface SetupOptions {
+  /** Suggestions AI model (default none: rules only). */
+  ai?: AiTextModel | null;
+  aiTimeoutMs?: number;
+}
+
+export function setup(opts: SetupOptions = {}) {
   const table = fakeDynamo();
   const db = new Db(table.doc, 'T');
   let clock = T0;
@@ -94,7 +101,20 @@ export function setup() {
   };
   const stage2 = stage2DepsFor(db, productDeps, now);
   productDeps.settings = stage2.settings;
-  const handler = createHandler(createRouter(createRoutes(productDeps, () => stage2)));
+  const warnings: Array<Record<string, unknown>> = [];
+  const stage3 = {
+    ...stage3DepsFor(db, stage2, opts.ai ?? null, opts.aiTimeoutMs),
+    warn: (e: Record<string, unknown>) => warnings.push(e),
+  };
+  const handler = createHandler(
+    createRouter(
+      createRoutes(
+        productDeps,
+        () => stage2,
+        () => stage3,
+      ),
+    ),
+  );
 
   async function call<T = Record<string, unknown>>(
     routeKey: string,
@@ -145,6 +165,8 @@ export function setup() {
     table,
     db,
     stage2,
+    stage3,
+    warnings,
     call,
     custom,
     advance: (ms: number) => {

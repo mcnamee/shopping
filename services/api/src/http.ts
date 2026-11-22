@@ -23,6 +23,7 @@ export const errors = {
   validation: (message: string, field?: string) =>
     json(400, { code: 'VALIDATION', message, ...(field ? { field } : {}) }),
   internal: () => json(500, { code: 'INTERNAL', message: 'Internal server error' }),
+  rateLimited: (message: string) => json(429, { code: 'RATE_LIMITED', message }),
   conflict: (reason: ConflictReason, message: string, current?: unknown) =>
     json(409, { code: 'CONFLICT', reason, message, ...(current !== undefined ? { current } : {}) }),
 };
@@ -49,6 +50,9 @@ export const fail = {
   },
   conflict: (reason: ConflictReason, message: string, current?: unknown): never => {
     throw new HttpFailure(errors.conflict(reason, message, current));
+  },
+  rateLimited: (message: string): never => {
+    throw new HttpFailure(errors.rateLimited(message));
   },
 };
 

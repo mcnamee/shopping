@@ -12,6 +12,9 @@ import { createProductRoutes, type ProductDeps } from './products/routes';
 import type { RouteTable } from './router';
 import { SettingsStore } from './settings/store';
 import { createStage2Routes, type Stage2Deps } from './stage2';
+import { bedrockModel, type AiTextModel } from './suggestions/bedrock';
+import { AI_TIMEOUT_MS, createSuggestionRoutes, type Stage3Deps } from './suggestions/routes';
+import { SuggestionStore } from './suggestions/store';
 import { TemplateStore } from './templates/store';
 
 export const baseRoutes: RouteTable = {
@@ -89,16 +92,52 @@ export function stage2DepsFor(
   };
 }
 
-export function createRoutes(productDeps?: ProductDeps, stage2?: () => Stage2Deps): RouteTable {
+/**
+ * The suggestions model from SUGGEST_MODEL_ID (CDK context `suggestModelId`, D-061); unset
+ * or "none" means rules only.
+ */
+export function aiModelFromEnv(env: NodeJS.ProcessEnv = process.env): AiTextModel | null {
+  const id = env.SUGGEST_MODEL_ID?.trim();
+  return id && id !== 'none' ? bedrockModel(id) : null;
+}
+
+/** Stage 3 dependencies, sharing the Stage 2 stores. */
+export function stage3DepsFor(
+  db: Db,
+  stage2: Stage2Deps,
+  ai: AiTextModel | null,
+  aiTimeoutMs = AI_TIMEOUT_MS,
+): Stage3Deps {
+  return {
+    lists: stage2.lists,
+    templates: stage2.templates,
+    settings: stage2.settings,
+    suggestions: new SuggestionStore(db),
+    resolveProduct: stage2.resolveProduct,
+    ai,
+    aiTimeoutMs,
+    now: stage2.now,
+  };
+}
+
+export function createRoutes(
+  productDeps?: ProductDeps,
+  stage2?: () => Stage2Deps,
+  stage3?: () => Stage3Deps,
+): RouteTable {
   const prod = lazyProd();
   const products = productDeps ?? productDepsFrom(prod);
   let s2: Stage2Deps | undefined;
   const getStage2 =
     stage2 ?? (() => (s2 ??= { ...stage2DepsFor(prod().db, products), settings: prod().settings }));
+  let s3: Stage3Deps | undefined;
+  const getStage3 =
+    stage3 ?? (() => (s3 ??= stage3DepsFor(prod().db, getStage2(), aiModelFromEnv())));
   return {
     ...baseRoutes,
     ...createProductRoutes(products),
     ...createStage2Routes(getStage2),
+    ...createSuggestionRoutes(getStage3),
   };
 }
 
