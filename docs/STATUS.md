@@ -19,3 +19,8 @@ Likely cause: the app client's `writeAttributes` set (which excludes `custom:hou
 ## Housekeeping
 - Actions warn Node 20 is deprecated for actions/checkout@v4, setup-node@v4, configure-aws-credentials@v4 - bump to current majors.
 - Backlog: docs/BACKLOG.md (B-001..B-004).
+
+## Scraper (update)
+- AWS Lambda scrape is BLOCKED by ALDI (Akamai 403 on api.aldi.com.au from AWS IPs).
+- GitHub runner dry run succeeded -> user is setting up the fallback (SETUP "Scrape fallback": OIDC stack with scrapeFallbackTableName, vars AWS_SCRAPE_ROLE_ARN, TROLLEY_TABLE_NAME, SCRAPE_FALLBACK_ENABLED=true).
+- TODO next session: disable the monthly AWS scraper schedule + error alarm (or make it opt-in) so it stops failing/emailing; record decision; local CLI scrape from home is a further fallback.
