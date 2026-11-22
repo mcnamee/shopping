@@ -150,6 +150,10 @@ describe('TrolleyStack', () => {
       ReadAttributes: Match.arrayWith(['custom:householdId']),
       WriteAttributes: Match.not(Match.arrayWith(['custom:householdId'])),
     });
+    // Cognito rejects a client that cannot write a required attribute (failed first deploy).
+    template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+      WriteAttributes: Match.arrayWith(['email']),
+    });
   });
 
   it('protects /api/me with the JWT authoriser and leaves /api/health public', () => {
