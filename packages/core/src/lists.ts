@@ -19,8 +19,14 @@ import { convertQuantity, roundQuantity } from './quantity';
 // ---------------------------------------------------------------------------------------
 // Constants
 
-export const TEMPLATE_TYPES = ['weekly', 'meal'] as const;
+export const TEMPLATE_TYPES = ['weekly', 'meal', 'regulars'] as const;
 export type TemplateType = (typeof TEMPLATE_TYPES)[number];
+
+export const TEMPLATE_TYPE_LABELS: Record<TemplateType, string> = {
+  weekly: 'Weekly',
+  meal: 'Meal',
+  regulars: 'Regulars',
+};
 
 export function isTemplateType(value: unknown): value is TemplateType {
   return typeof value === 'string' && (TEMPLATE_TYPES as readonly string[]).includes(value);
@@ -507,7 +513,7 @@ export function parseCreateTemplateRequest(body: unknown): Parsed<CreateTemplate
   const name = parseEntityName(body.name, 'template');
   if (!name.ok) return name;
   const type = body.type ?? 'weekly';
-  if (!isTemplateType(type)) return fail('Choose Weekly or Meal', 'type');
+  if (!isTemplateType(type)) return fail('Choose Weekly, Meal or Regulars', 'type');
   return { ok: true, value: { name: name.value, type } };
 }
 
@@ -526,7 +532,7 @@ export function parseUpdateTemplateRequest(body: unknown): Parsed<UpdateTemplate
     out.name = name.value;
   }
   if (body.type !== undefined) {
-    if (!isTemplateType(body.type)) return fail('Choose Weekly or Meal', 'type');
+    if (!isTemplateType(body.type)) return fail('Choose Weekly, Meal or Regulars', 'type');
     out.type = body.type;
   }
   if (out.name === undefined && out.type === undefined) return fail('Nothing to change');
@@ -883,13 +889,33 @@ export function templatePreview(
     .map((i) => i.product.name);
 }
 
+export interface TemplateSection<T extends Line> {
+  group: GroupSummary;
+  items: T[];
+}
+
+/** Template items grouped like shop mode: aisle order, empty groups hidden, name within (C1). */
+export function groupTemplateItems<T extends Line>(
+  items: readonly T[],
+  aisleOrder: readonly string[],
+): TemplateSection<T>[] {
+  const out: TemplateSection<T>[] = [];
+  for (const item of sortTemplateItems(items, aisleOrder)) {
+    const gid = GROUP_BY_ID.has(item.product.groupId) ? item.product.groupId : OTHER_GROUP_ID;
+    const last = out[out.length - 1];
+    if (last && last.group.id === gid) last.items.push(item);
+    else out.push({ group: GROUP_BY_ID.get(gid) as GroupSummary, items: [item] });
+  }
+  return out;
+}
+
 /** Templates: weekly first, then name A to Z (B1). */
 export function sortTemplates<T extends { type: TemplateType; name: string; id: string }>(
   templates: readonly T[],
 ): T[] {
   return [...templates].sort(
     (a, b) =>
-      (a.type === b.type ? 0 : a.type === 'weekly' ? -1 : 1) ||
+      TEMPLATE_TYPES.indexOf(a.type) - TEMPLATE_TYPES.indexOf(b.type) ||
       a.name.localeCompare(b.name, 'en-AU', { sensitivity: 'base' }) ||
       a.id.localeCompare(b.id),
   );

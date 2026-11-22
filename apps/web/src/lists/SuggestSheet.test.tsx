@@ -285,3 +285,42 @@ describe('Suggest items sheet', () => {
     expect((await within(s).findAllByRole('checkbox')).length).toBeGreaterThan(0);
   });
 });
+
+describe('Review regulars sheet', () => {
+  it('lists Regulars template items unticked, hides the option without one, and adds ticked ones', async () => {
+    const app = await renderMockApp(`/lists/${LIST_ID}`);
+    await screen.findByRole('heading', { level: 1, name: /Week of/ }, { timeout: 3000 });
+    const optionsBtn = () => screen.getByRole('button', { name: 'List options' });
+    await app.user.click(optionsBtn());
+    await screen.findByRole('button', { name: 'Suggest items' });
+    expect(screen.queryByRole('button', { name: 'Review regulars' })).toBeNull();
+    await app.user.keyboard('{Escape}');
+
+    const made = await callMock<{ id: string; version: number }>('POST', '/templates', {
+      name: 'Top-ups',
+      type: 'regulars',
+    });
+    expect(made.status).toBe(201);
+    const tacos = await callMock<{ items: { product: { productId: string }; unit: string }[] }>(
+      'GET',
+      `/templates/${MOCK_SEED_IDS.mealTemplate}`,
+    );
+    const first = tacos.body.items[0] as (typeof tacos.body.items)[number];
+    await callMock('POST', `/templates/${made.body.id}/items`, {
+      productId: first.product.productId,
+      qty: 1,
+      unit: first.unit,
+    });
+
+    fireEvent.click(screen.getByRole('link', { name: 'Back to lists' }));
+    await app.user.click(await screen.findByRole('link', { name: /Week of/ }));
+    await screen.findByRole('heading', { level: 1, name: /Week of/ });
+    await app.user.click(optionsBtn());
+    await app.user.click(await screen.findByRole('button', { name: 'Review regulars' }));
+    const s = await screen.findByRole('dialog', { name: 'Review regulars' });
+    expect(await within(s).findByText('0 of 1 selected')).toBeVisible();
+    await app.user.click(within(s).getByRole('checkbox'));
+    await app.user.click(within(s).getByRole('button', { name: /^Add 1 item$/ }));
+    expect(await toast()).toHaveTextContent(/Added|combined/);
+  });
+});

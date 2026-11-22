@@ -67,7 +67,8 @@ const DELETE_UNDO_MS = 5000;
 const ARCHIVE_UNDO_MS = 8000;
 const HIGHLIGHT_MS = 2000;
 
-type Sheet = null | 'options' | 'rename' | 'template' | 'suggest' | 'finish' | 'delete';
+type Sheet =
+  null | 'options' | 'rename' | 'template' | 'suggest' | 'regulars' | 'finish' | 'delete';
 type ArchiveInfo = 'own' | 'other' | null;
 
 const progressOf = (items: readonly ListItem[]) => ({
@@ -105,7 +106,12 @@ export function ListPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const { online } = useOnlineStatus();
-  const routeState = location.state as { name?: string; from?: string; suggest?: boolean } | null;
+  const routeState = location.state as {
+    name?: string;
+    from?: string;
+    suggest?: boolean;
+    regulars?: boolean;
+  } | null;
 
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState<{
@@ -129,7 +135,7 @@ export function ListPage() {
   const sheetOpen = sheet !== null || editing !== null;
   pollRef.current = active && !sheetOpen && !swiping;
   const aisle = useAisleOrder(active);
-  const templates = useTemplatesQuery(sheet === 'template');
+  const templates = useTemplatesQuery(sheet === 'template' || sheet === 'options');
   const key = qk.list(id);
   const now = useNow(5000);
   const showSkeleton = useDelayedFlag(query.isPending, 150);
@@ -189,8 +195,31 @@ export function ListPage() {
     navigate(location.pathname, { replace: true, state: { name: routeState?.name } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantsSuggest, active]);
+  const hasRegulars = templates.data?.templates.some((t) => t.type === 'regulars') ?? false;
+  const openRegulars = useCallback(() => {
+    if (!online) {
+      setSheet(null);
+      toast.show("You're offline. Reconnect to review regulars.");
+      return;
+    }
+    setSheet('regulars');
+  }, [online, toast]);
+  // New list flow with a Regulars template: review them (after suggestions, if asked for).
+  const wantsRegulars = routeState?.regulars === true;
+  const regularsPending = useRef(false);
+  useEffect(() => {
+    if (!wantsRegulars || !active) return;
+    if (wantsSuggest) regularsPending.current = true;
+    else setSheet('regulars');
+    navigate(location.pathname, {
+      replace: true,
+      state: { name: routeState?.name },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsRegulars, active]);
   const closeSuggest = (added: boolean) => {
-    setSheet(null);
+    setSheet(regularsPending.current ? 'regulars' : null);
+    regularsPending.current = false;
     if (createdForSuggest.current && !added && list) toast.show(`Created ${list.name}`);
     createdForSuggest.current = false;
   };
@@ -893,6 +922,7 @@ export function ListPage() {
           onSetThisWeek={() => void setThisWeek()}
           onAddFromTemplate={() => setSheet('template')}
           onSuggest={openSuggest}
+          {...(hasRegulars ? { onRegulars: openRegulars } : {})}
           offline={!online}
           onFinish={() => setSheet('finish')}
           onDelete={() => setSheet('delete')}
@@ -912,6 +942,15 @@ export function ListPage() {
         <SuggestSheet
           list={{ id, name: list.name }}
           onClose={closeSuggest}
+          onAdded={suggestionsAdded}
+          returnFocusRef={optionsButton}
+        />
+      )}
+      {sheet === 'regulars' && (
+        <SuggestSheet
+          list={{ id, name: list.name }}
+          mode="regulars"
+          onClose={() => setSheet(null)}
           onAdded={suggestionsAdded}
           returnFocusRef={optionsButton}
         />

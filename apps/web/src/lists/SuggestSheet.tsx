@@ -26,11 +26,19 @@ import {
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
 import { useNavigate } from 'react-router';
-import { addListItemsBulk, ApiError, getListSuggestions, undoListItemsBulk } from '../api';
+import {
+  addListItemsBulk,
+  ApiError,
+  getListSuggestions,
+  getTemplate,
+  getTemplates,
+  undoListItemsBulk,
+} from '../api';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
 import { Skeleton } from '../components/StateViews';
 import { useToast } from '../components/Toast';
+import { ProductThumb } from '../search/ProductImage';
 import { qk, summaryOf, upsertListSummary, useAisleOrder } from './data';
 import { SheetHeader } from './ListSheets';
 import { shownPackSize } from './ShopRow';
@@ -56,11 +64,40 @@ type Phase =
 
 export interface SuggestSheetProps {
   list: { id: string; name: string };
+  /** `regulars`: review the household's Regulars templates, everything unticked to start. */
+  mode?: 'suggest' | 'regulars';
   /** `added` is true when rows were added (the sheet then shows its own toast). */
   onClose: (added: boolean) => void;
   /** Ids of every row added or merged into, so the list can highlight them. */
   onAdded?: (itemIds: string[]) => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
+}
+
+/** Items of every Regulars template as review rows, one per product and unit. */
+async function getRegularsSuggestions(signal: AbortSignal): Promise<SuggestionsResponse> {
+  const { templates } = await getTemplates();
+  const regulars = templates.filter((t) => t.type === 'regulars');
+  const full = await Promise.all(regulars.map((t) => getTemplate(t.id)));
+  if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+  const seen = new Set<string>();
+  const suggestions: Suggestion[] = [];
+  for (const t of full) {
+    for (const i of t.items) {
+      if (seen.has(i.id)) continue;
+      seen.add(i.id);
+      suggestions.push({
+        productId: i.product.productId,
+        snapshot: i.product,
+        qty: i.qty,
+        unit: i.unit,
+        note: i.note,
+        reason: `On ${t.name}`,
+        fromTemplate: false,
+        fromHistory: false,
+      });
+    }
+  }
+  return { source: 'rules', coldStart: false, note: null, suggestions };
 }
 
 /** Copy rotates once, never more (docs/ux/suggestions.md 2.1). */
@@ -173,6 +210,7 @@ function SuggestRow({
   onToggle,
   onQty,
   announce,
+  showWeekly = true,
 }: {
   suggestion: Suggestion;
   ticked: boolean;
@@ -180,6 +218,7 @@ function SuggestRow({
   onToggle: () => void;
   onQty: (next: number) => void;
   announce: (message: string) => void;
+  showWeekly?: boolean;
 }) {
   const id = useId();
   const { snapshot: p } = suggestion;
@@ -205,14 +244,15 @@ function SuggestRow({
             {ticked && <Check className="h-4 w-4" strokeWidth={3} />}
           </span>
         </span>
-        <span className={`min-w-0 flex-1 py-2 ${ticked ? 'text-text' : 'text-muted'}`}>
+        <ProductThumb src={p.imageUrl} name={p.name} dim={!ticked} />
+        <span className={`min-w-0 flex-1 py-2 pl-2 ${ticked ? 'text-text' : 'text-muted'}`}>
           <span id={`${id}-name`} className="line-clamp-2 text-lg font-semibold">
             {p.name}
             {pack && <span className="font-normal text-muted"> {pack}</span>}
           </span>
           <span id={`${id}-why`} className="block text-sm text-muted">
             <span className="line-clamp-2">{reason}</span>
-            {suggestion.fromTemplate && (
+            {showWeekly && suggestion.fromTemplate && (
               <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface px-2 text-xs font-semibold text-muted">
                 <LayoutTemplate aria-hidden className="h-3.5 w-3.5" />
                 Weekly
@@ -259,13 +299,15 @@ function Centered({
   );
 }
 
-function LoadingBody({ seconds }: { seconds: number }) {
+function LoadingBody({ seconds, regulars }: { seconds: number; regulars: boolean }) {
   return (
     <div>
       <div className="flex items-center gap-3 py-2">
         <Loader2 aria-hidden className="h-6 w-6 shrink-0 animate-spin text-accent" />
         <div>
-          <p className="text-lg font-semibold">{loadingCopy(seconds)}</p>
+          <p className="text-lg font-semibold">
+            {regulars ? 'Loading your regulars...' : loadingCopy(seconds)}
+          </p>
           {seconds >= 3 && <p className="text-sm text-muted">This can take a few seconds.</p>}
         </div>
       </div>
@@ -294,7 +336,14 @@ function LoadingBody({ seconds }: { seconds: number }) {
  * Review sheet for AI suggestions (docs/ux/suggestions.md). Fetches on open (cancellable),
  * lets the shopper tick and adjust, and writes nothing until "Add N items".
  */
-export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: SuggestSheetProps) {
+export function SuggestSheet({
+  list,
+  mode = 'suggest',
+  onClose,
+  onAdded,
+  returnFocusRef,
+}: SuggestSheetProps) {
+  const regulars = mode === 'regulars';
   const qc = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
@@ -309,22 +358,25 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
   const [qtys, setQtys] = useState<ReadonlyMap<number, number>>(new Map());
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
-  const [live, setLive] = useState('Looking for suggestions');
+  const [live, setLive] = useState(regulars ? 'Loading your regulars' : 'Looking for suggestions');
 
   // ---- fetch (aborted on Cancel, Close or unmount)
   useEffect(() => {
     const ctrl = new AbortController();
     setPhase({ kind: 'loading' });
     setSeconds(0);
-    getListSuggestions(list.id, ctrl.signal).then(
+    (regulars
+      ? getRegularsSuggestions(ctrl.signal)
+      : getListSuggestions(list.id, ctrl.signal)
+    ).then(
       (data) => {
-        setOff(new Set());
+        setOff(regulars ? new Set(data.suggestions.map((_, i) => i)) : new Set());
         setQtys(new Map());
         setPhase({ kind: 'ready', data });
         const n = data.suggestions.length;
         setLive(
           n > 0
-            ? `Suggestions ready, ${countItems(n)}`
+            ? `${regulars ? 'Regulars' : 'Suggestions'} ready, ${countItems(n)}`
             : data.coldStart
               ? 'Nothing to suggest yet'
               : "You're all set",
@@ -338,7 +390,7 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
       },
     );
     return () => ctrl.abort();
-  }, [list.id, attempt]);
+  }, [list.id, attempt, regulars]);
 
   useEffect(() => {
     if (phase.kind !== 'loading') return;
@@ -432,7 +484,7 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
   let body;
   let footer;
   if (phase.kind === 'loading') {
-    body = <LoadingBody seconds={seconds} />;
+    body = <LoadingBody seconds={seconds} regulars={regulars} />;
     footer = (
       <Button variant="secondary" onClick={close}>
         Cancel
@@ -456,7 +508,9 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
         className="flex items-start gap-2 rounded-sm bg-danger-soft px-3 py-3 text-base font-semibold text-danger"
       >
         <CircleAlert aria-hidden className="mt-0.5 h-5 w-5 shrink-0" />
-        Couldn't get suggestions right now.
+        {regulars
+          ? "Couldn't load your regulars right now."
+          : "Couldn't get suggestions right now."}
       </p>
     );
     footer = (
@@ -468,7 +522,14 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
       </>
     );
   } else if (suggestions.length === 0) {
-    body = coldStart ? (
+    body = regulars ? (
+      <Centered
+        tone="accent"
+        Icon={ListChecks}
+        title="No regulars yet"
+        body="Add items to a Regulars template and they will show up here to review."
+      />
+    ) : coldStart ? (
       <Centered
         tone="accent"
         Icon={ListChecks}
@@ -486,7 +547,9 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
         body="Nothing else looks due this week."
       />
     );
-    footer = coldStart ? (
+    footer = regulars ? (
+      <Button onClick={close}>Done</Button>
+    ) : coldStart ? (
       <>
         <Button
           onClick={() => {
@@ -543,6 +606,7 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
                   onToggle={() => toggle(index)}
                   onQty={(next) => setQtys((m) => new Map(m).set(index, next))}
                   announce={setLive}
+                  showWeekly={!regulars}
                 />
               ))}
             </ul>
@@ -584,7 +648,12 @@ export function SuggestSheet({ list, onClose, onAdded, returnFocusRef }: Suggest
       busy={busy}
       onClose={close}
       header={
-        <SheetHeader id={headingId} title="Suggested items" headingRef={heading} onClose={close} />
+        <SheetHeader
+          id={headingId}
+          title={regulars ? 'Review regulars' : 'Suggested items'}
+          headingRef={heading}
+          onClose={close}
+        />
       }
       footer={footer}
     >

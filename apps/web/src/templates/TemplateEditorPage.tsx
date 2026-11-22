@@ -2,6 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ENTITY_NAME_MAX_LENGTH,
   TEMPLATE_TYPES,
+  TEMPLATE_TYPE_LABELS,
+  isTemplateType,
+  groupTemplateItems,
   sortTemplateItems,
   type Template,
   type TemplateItem,
@@ -41,6 +44,7 @@ import {
 import { qtyLabel } from '../lists/format';
 import { NewListSheet } from '../lists/NewListSheet';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
+import { ProductThumb } from '../search/ProductImage';
 import { ModalError, QuantityModal, type QuantitySelection } from '../search/QuantityModal';
 import { SegmentedControl } from '../search/SegmentedControl';
 import { useDelayedFlag } from '../search/hooks';
@@ -49,6 +53,7 @@ import { AddToListSheet } from './AddToListSheet';
 const HELPERS: Record<TemplateType, string> = {
   weekly: 'For items you buy most weeks. Pre-ticked when you start a new list.',
   meal: 'For a specific meal, like tacos. Add it to a list when you need it.',
+  regulars: 'Things we buy now and then - review each shop.',
 };
 const UNDO_MS = 5000;
 
@@ -87,7 +92,9 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
   const overrides = useUnitOverridesQuery();
   const showSkeleton = useDelayedFlag(!isNew && query.isPending, 150);
 
-  const initialType: TemplateType = search.get('type') === 'meal' ? 'meal' : 'weekly';
+  const initialType: TemplateType = isTemplateType(search.get('type'))
+    ? (search.get('type') as TemplateType)
+    : 'weekly';
   const baseline = { name: tpl?.name ?? '', type: tpl?.type ?? initialType };
   const [edits, setEdits] = useState<Partial<typeof baseline>>({});
   const form = { ...baseline, ...edits };
@@ -114,6 +121,7 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
   const templates = useTemplatesQuery(sheet === 'new-list');
 
   const items = useMemo(() => (tpl ? sortTemplateItems(tpl.items, aisle) : []), [tpl, aisle]);
+  const sections = useMemo(() => (tpl ? groupTemplateItems(tpl.items, aisle) : []), [tpl, aisle]);
 
   // Rows added elsewhere (Search) flash for 2 s when we come back.
   const seen = useRef<Set<string> | null>(null);
@@ -440,11 +448,11 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
           <p className="mb-1 text-sm font-semibold">Type</p>
           <SegmentedControl
             label="Template type"
-            columns={2}
+            columns={3}
             options={TEMPLATE_TYPES}
             value={form.type}
             onChange={(type) => setEdits((s) => ({ ...s, type }))}
-            optionLabel={(t) => (t === 'weekly' ? 'Weekly' : 'Meal')}
+            optionLabel={(t) => TEMPLATE_TYPE_LABELS[t]}
           />
           <p className="mt-1 text-sm text-muted">{HELPERS[form.type]}</p>
         </div>
@@ -460,47 +468,66 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
               <p className="text-base text-muted">Add the things you buy for this.</p>
             </div>
           ) : (
-            <ul
+            <div
+              role="group"
               aria-label={`Items in ${tpl?.name ?? 'template'}`}
-              className="overflow-hidden rounded-md bg-surface"
+              className="space-y-3"
             >
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className={`flex min-h-16 items-center border-b border-border-subtle last:border-b-0 ${
-                    fresh.has(item.id) ? 'bg-accent-soft' : ''
-                  }`}
-                >
-                  <button
-                    type="button"
-                    data-item-edit={item.id}
-                    onClick={(e) => setEditing({ item, opener: e.currentTarget })}
-                    className="flex min-h-16 min-w-0 flex-1 items-center gap-2 py-2 pl-4 text-left active:bg-accent-soft"
+              {sections.map((section) => (
+                <section key={section.group.id} aria-labelledby={`tpl-group-${section.group.id}`}>
+                  <h3
+                    id={`tpl-group-${section.group.id}`}
+                    className="mb-1 text-xs font-bold uppercase tracking-wide text-muted"
                   >
-                    <span className="min-w-0 flex-1">
-                      <span className="sr-only">Edit</span>{' '}
-                      <span className="line-clamp-2 break-words text-lg">{item.product.name}</span>
-                      {metaLine(item) && (
-                        <span className="block truncate text-sm font-normal text-muted">
-                          {metaLine(item)}
-                        </span>
-                      )}
-                    </span>
-                    <span className="max-w-24 shrink-0 whitespace-nowrap text-lg font-bold tabular-nums">
-                      {qtyLabel(item.qty, item.unit)}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${item.product.name}`}
-                    onClick={() => void removeItem(item)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-muted active:bg-accent-soft"
+                    {section.group.name}
+                  </h3>
+                  <ul
+                    aria-label={`${section.group.name} items in ${tpl?.name ?? 'template'}`}
+                    className="overflow-hidden rounded-md bg-surface"
                   >
-                    <Trash2 aria-hidden className="h-5 w-5" />
-                  </button>
-                </li>
+                    {section.items.map((item) => (
+                      <li
+                        key={item.id}
+                        className={`flex min-h-16 items-center border-b border-border-subtle last:border-b-0 ${
+                          fresh.has(item.id) ? 'bg-accent-soft' : ''
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          data-item-edit={item.id}
+                          onClick={(e) => setEditing({ item, opener: e.currentTarget })}
+                          className="flex min-h-16 min-w-0 flex-1 items-center gap-2 py-2 pl-3 text-left active:bg-accent-soft"
+                        >
+                          <ProductThumb src={item.product.imageUrl} name={item.product.name} />
+                          <span className="min-w-0 flex-1">
+                            <span className="sr-only">Edit</span>{' '}
+                            <span className="line-clamp-2 break-words text-lg">
+                              {item.product.name}
+                            </span>
+                            {metaLine(item) && (
+                              <span className="block truncate text-sm font-normal text-muted">
+                                {metaLine(item)}
+                              </span>
+                            )}
+                          </span>
+                          <span className="max-w-24 shrink-0 whitespace-nowrap text-lg font-bold tabular-nums">
+                            {qtyLabel(item.qty, item.unit)}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${item.product.name}`}
+                          onClick={() => void removeItem(item)}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-muted active:bg-accent-soft"
+                        >
+                          <Trash2 aria-hidden className="h-5 w-5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </div>
           )}
           <div aria-live="polite" role="status" className="sr-only">
             {announcement}

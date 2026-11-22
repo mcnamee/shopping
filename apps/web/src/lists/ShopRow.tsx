@@ -1,6 +1,7 @@
 import type { ListItem } from '@trolley/core';
 import { Check, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { ProductThumb } from '../search/ProductImage';
 import { qtyLabel } from './format';
 
 const OPEN_PX = 96;
@@ -132,6 +133,8 @@ export function ShopRow({
     </>
   );
 
+  const thumb = <ProductThumb src={product.imageUrl} name={product.name} dim={ticked} />;
+
   const qtyEl = (
     <span
       className={`max-w-24 shrink-0 whitespace-nowrap text-right text-lg font-bold tabular-nums ${
@@ -157,6 +160,7 @@ export function ShopRow({
     return (
       <li className="flex min-h-16 items-center gap-3 border-b border-border-subtle px-[max(16px,var(--safe-left))] py-2">
         {box}
+        {thumb}
         <span className="min-w-0 flex-1">{bodyText}</span>
         {qtyEl}
       </li>
@@ -222,6 +226,7 @@ export function ShopRow({
           className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-2 pl-[max(16px,var(--safe-left))] text-left active:bg-accent-soft"
         >
           {box}
+          {thumb}
           <span className="min-w-0 flex-1">{bodyText}</span>
           {qtyEl}
         </button>

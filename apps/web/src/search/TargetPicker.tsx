@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ENTITY_NAME_MAX_LENGTH,
   TEMPLATE_TYPES,
+  TEMPLATE_TYPE_LABELS,
   defaultListName,
   sortActiveLists,
   sortTemplates,
@@ -369,11 +370,11 @@ function NewTemplateForm({
         <p className="mb-1 text-sm font-semibold">Type</p>
         <SegmentedControl
           label="Template type"
-          columns={2}
+          columns={3}
           options={TEMPLATE_TYPES}
           value={type}
           onChange={setType}
-          optionLabel={(t) => (t === 'weekly' ? 'Weekly' : 'Meal')}
+          optionLabel={(t) => TEMPLATE_TYPE_LABELS[t]}
         />
       </div>
       {failed && (
