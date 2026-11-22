@@ -11,7 +11,9 @@ interface SegmentedControlProps<T extends string> {
   optionLabel?: (value: T) => string;
   describedBy?: string;
   /** Grid columns (default 6, the unit control). */
-  columns?: 2 | 6;
+  columns?: 2 | 3 | 6;
+  /** Accessible names that differ from the visible label. */
+  ariaLabels?: Partial<Record<T, string>>;
 }
 
 /**
@@ -27,6 +29,7 @@ export function SegmentedControl<T extends string>({
   optionLabel = (v) => v,
   describedBy,
   columns = 6,
+  ariaLabels,
 }: SegmentedControlProps<T>) {
   const refs = useRef(new Map<T, HTMLButtonElement>());
 
@@ -49,7 +52,9 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={label}
       {...(describedBy ? { 'aria-describedby': describedBy } : {})}
-      className={`grid gap-1 ${columns === 2 ? 'grid-cols-2' : 'grid-cols-6'}`}
+      className={`grid gap-1 ${
+        columns === 2 ? 'grid-cols-2' : columns === 3 ? 'grid-cols-3' : 'grid-cols-6'
+      }`}
     >
       {options.map((opt, i) => {
         const selected = opt === value;
@@ -71,6 +76,7 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
+            {...(ariaLabels?.[opt] ? { 'aria-label': ariaLabels[opt] } : {})}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(opt)}
             onKeyDown={(e) => onKeyDown(e, i)}

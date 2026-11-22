@@ -1,6 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { ENTITY_NAME_MAX_LENGTH, type ListDetail, type TemplateSummary } from '@trolley/core';
-import { CircleAlert, CircleCheck, LayoutTemplate, Pencil, Star, Trash2, X } from 'lucide-react';
+import {
+  CircleAlert,
+  CircleCheck,
+  LayoutTemplate,
+  Pencil,
+  Sparkles,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
@@ -48,19 +57,22 @@ function OptionRow({
   children,
   onClick,
   danger = false,
+  disabled = false,
 }: {
   Icon: typeof Pencil;
   children: ReactNode;
   onClick: () => void;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <li>
       <button
         type="button"
         onClick={onClick}
+        aria-disabled={disabled || undefined}
         className={`flex min-h-14 w-full items-center gap-4 rounded-sm px-2 text-left text-lg active:bg-accent-soft ${
-          danger ? 'text-danger' : 'text-text'
+          danger ? 'text-danger' : disabled ? 'text-muted' : 'text-text'
         }`}
       >
         <Icon aria-hidden className="h-6 w-6 shrink-0" />
@@ -76,6 +88,9 @@ interface OptionsSheetProps {
   onRename: () => void;
   onSetThisWeek: () => void;
   onAddFromTemplate: () => void;
+  onSuggest: () => void;
+  /** Suggestions need the server: the row is aria-disabled while offline. */
+  offline?: boolean;
   onFinish: () => void;
   onDelete: () => void;
 }
@@ -110,6 +125,9 @@ export function ListOptionsSheet(p: OptionsSheetProps) {
         )}
         <OptionRow Icon={LayoutTemplate} onClick={p.onAddFromTemplate}>
           Add from template
+        </OptionRow>
+        <OptionRow Icon={Sparkles} disabled={!!p.offline} onClick={p.onSuggest}>
+          Suggest items
         </OptionRow>
         {!allTicked && (
           <OptionRow Icon={CircleCheck} onClick={p.onFinish}>
