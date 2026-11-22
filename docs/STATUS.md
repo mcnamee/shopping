@@ -11,7 +11,7 @@ Run 44979466972 (main): OIDC auth now works (D-041). CloudFormation failed creat
 Likely cause: the app client's `writeAttributes` set (which excludes `custom:householdId`) is invalid - e.g. includes a non-writable attribute such as `email_verified`, or omits a required attribute. Fix in trolley-stack.ts, add an assertion test, then get it onto `main`.
 
 ## Next session - do in order
-1. Fix the Cognito `writeAttributes` error (senior-engineer). Check whether the failed create left a stack in ROLLBACK_COMPLETE (CDK normally replaces it) and RETAIN'd orphans (user pool, table, bucket) - user may need to delete them in the console before redeploying.
+1. DONE: Cognito fix (email writable) + flaky test fix cherry-picked to `main` (4ed5370), deploy triggered by that push - check its result first. Check whether the failed create left a stack in ROLLBACK_COMPLETE (CDK normally replaces it) and RETAIN'd orphans (user pool, table, bucket) - user may need to delete them in the console before redeploying.
 2. Decide how to ship: either cherry-pick the fix onto `main` (Stage 0 only) or finish Stage 1 QA + PM sign-off and merge the branch to `main`.
 3. Resume Stage 1 QA (qa-tester) -> PM sign-off.
 4. After a green deploy: create users (scripts/create-user.sh), CNAME `trolley` -> CloudFront domain (if CERTIFICATE_ARN set), confirm SNS alert email, run "Scrape now", user [U] checklists (stage-0-qa.md section 5, stage-1.md).
