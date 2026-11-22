@@ -7,7 +7,7 @@ Format: ID - date - decision. Why. (Supersedes / status.)
 - **D-002** AWS region **ap-southeast-2 (Sydney)** for all resources, except the ACM certificate for CloudFront (must be us-east-1).
 - **D-003** AI suggestions use **Amazon Bedrock** (no separate Anthropic API key). Model access requested by the user as a one-off manual step.
 - **D-004** Custom domain **https://trolley.mcn.am**. DNS for mcn.am is held at an external provider (not Route 53), so no hosted zone is created; the user adds records manually.
-- **D-005** ALDI store/state: **OPEN - blocks Stage 1.** Ask the user which state they shop in (prices and ranges vary by state); the scraper and price display depend on it.
+- **D-005** ALDI store: **Casey, ACT (Canberra)**. Closed 2026-11-22. Scraper store is configurable, default Casey ACT; prices/range shown are for that store.
 
 ## Stage 0 technical decisions (2026-11-22, lead engineer, accepted by PM)
 - **D-010 Same-origin hosting.** CloudFront serves the SPA from S3 (Origin Access Control, bucket private) and routes `/api/*` to the API Gateway HTTP API. No CORS. `/mcp` and `/oauth/*` will be routed the same way in Stage 4.
@@ -27,3 +27,9 @@ Format: ID - date - decision. Why. (Supersedes / status.)
 - **D-022 Accepted risk: build-time npm audit advisories.** 3 moderate advisories (`minimatch` via `workbox-build`) are in the PWA build toolchain only and never ship to the browser or Lambda. Accepted; re-check `npm audit` at each stage start and upgrade when `vite-plugin-pwa`/`workbox-build` publish a fix. No `npm audit fix --force`.
 - **D-023 Accepted risk: CDK BucketDeployment helper role.** The CDK-generated helper Lambda uses `AWSLambdaBasicExecutionRole` and `cloudfront:CreateInvalidation` on `*` (CloudFront invalidation does not support narrower scoping in the CDK construct). It runs only at deploy time. H3 least-privilege applies to our own Lambdas, which are clean. Revisit only if CDK offers scoped invalidation.
 - **D-024 Stage 0 criteria wording.** E7 is measured at 390 px width (iPhone 13 Playwright profile); G3/H6 no longer require confirming a budget email subscription (AWS Budgets needs none). Intent unchanged.
+
+## Stage 1 decisions (2026-11-22, PM)
+- **D-025 Custom domain stays on CloudFront + free ACM cert; no CNAME straight to S3.** User asked about pointing `trolley.mcn.am` at the S3 bucket. Rejected: S3 website endpoints are HTTP-only (no HTTPS), need a public bucket named exactly as the domain, and lose same-origin `/api/*` routing (D-010). ACM cert is free; D-011 unchanged.
+- **D-026 Stage 1 has no list to add to.** The quantity modal is fully functional, but confirm only shows a toast summarising the choice ("Added 1.5 kg Potatoes - lists arrive in Stage 2"); nothing is persisted. The add-to-template icon shows "Templates arrive in Stage 2". Why: simplest option that lets QA verify the modal; a local draft list would be throwaway work Stage 2 must migrate.
+- **D-027 Stage 1 runs before Stage 0 is deployed.** The AWS account is not set up yet, so Stage 1 [U] criteria (live scrape from AWS IPs, monthly run, images on phones) are verified after the first deploy; [S] criteria gate the build sign-off.
+- **D-028 Scraper safety rules.** Throttle <= 1 req/s, max 3 attempts per request; a run fetching < 50% of the previous successful run's count is aborted with no writes and alerts by email; products are never deleted. Monthly schedule: 1st of the month 03:00 Australia/Sydney. Fallback if ALDI blocks AWS IPs: scheduled GitHub Actions runner scrape via OIDC.

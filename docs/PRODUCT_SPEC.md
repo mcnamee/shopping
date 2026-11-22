@@ -2,7 +2,7 @@
 
 Household shopping list app for two users, optimised for shopping at ALDI Australia from a phone, with AI-assisted list generation and a chatbot (MCP) integration.
 
-Status: **Draft v1.1 - 2026-11-22** (Stage 0 decisions applied; see docs/DECISIONS.md). Owner: Product Manager agent.
+Status: **Draft v1.1 - 2026-11-22** (Stage 0 and Stage 1 decisions applied; see docs/DECISIONS.md). Owner: Product Manager agent.
 URL: https://trolley.mcn.am (fallback: CloudFront URL). Region: ap-southeast-2.
 
 ---
@@ -176,7 +176,8 @@ Each stage is sized to fit one working session and ends deployable. Each stage f
 ### Stage 1 - Catalogue and search
 - ALDI scraper Lambda + monthly schedule + manual "run now" workflow; category seed; custom products.
 - Search screen (2-column grid), quantity modal with unit types.
-- **Done when:** searching "milk" shows ALDI milk with images and the modal handles each/kg/L correctly.
+- Store: Casey, ACT (D-005). No lists yet, so the modal's confirm shows a toast (D-026).
+- **Done when:** searching "milk" shows ALDI milk with images and the modal handles each/kg/L correctly. Criteria: docs/stages/stage-1.md.
 
 ### Stage 2 - Lists and templates (MVP - usable in store)
 - Templates CRUD (weekly/meal), add-to-template from search.
@@ -198,7 +199,8 @@ Each stage is sized to fit one working session and ends deployable. Each stage f
 ## 8. Open questions for you
 1. ~~App name / custom domain~~ - Trolley at trolley.mcn.am (D-001, D-004).
 2. ~~Region~~ - ap-southeast-2 (D-002).
-3. Your ALDI store/state (prices and ranges can vary by state) - **still open, blocks Stage 1** (D-005).
+3. ~~ALDI store/state~~ - Casey, ACT (D-005).
+5. ~~CNAME the domain straight to S3?~~ - no; CloudFront + free ACM cert stays (D-025).
 4. ~~Bedrock OK?~~ - yes (D-003).
 
 ## 9. Sources consulted
