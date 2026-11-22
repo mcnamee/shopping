@@ -1,0 +1,11 @@
+node_modules
+dist
+cdk.out
+coverage
+playwright-report
+test-results
+package-lock.json
+# Markdown docs are written by several agents; not enforced by CI.
+*.md
+.claude
+infra/test/fixtures

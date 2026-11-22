@@ -1,0 +1,36 @@
+{
+  "name": "trolley",
+  "private": true,
+  "description": "Trolley - household shopping list PWA",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*",
+    "infra"
+  ],
+  "scripts": {
+    "lint": "eslint . && prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build -w @trolley/web",
+    "synth": "npm run synth -w @trolley/infra",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^22.20.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.6.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vite": "^6.4.0",
+    "vitest": "^4.1.12"
+  }
+}

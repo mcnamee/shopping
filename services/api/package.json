@@ -1,0 +1,16 @@
+{
+  "name": "@trolley/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Trolley REST API Lambda (bundled by CDK NodejsFunction)",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@trolley/core": "*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.150"
+  }
+}

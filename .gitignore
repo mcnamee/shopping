@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+cdk.out/
+infra/cdk.context.json
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# OS / editor
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

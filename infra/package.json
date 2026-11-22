@@ -1,0 +1,23 @@
+{
+  "name": "@trolley/infra",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AWS CDK app for Trolley",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "synth": "cdk synth --quiet",
+    "cdk": "cdk",
+    "deploy:oidc": "cdk deploy TrolleyGithubOidcStack"
+  },
+  "dependencies": {
+    "@trolley/api": "*",
+    "aws-cdk-lib": "^2.220.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.1100.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.20.0"
+  }
+}
