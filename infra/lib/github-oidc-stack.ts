@@ -9,6 +9,13 @@ export interface GithubOidcStackProps extends StackProps {
   repo: string;
   /** Branch allowed to deploy, e.g. "main". */
   branch: string;
+  /**
+   * Numeric GitHub owner and repository IDs (D-041). Repos created after 15 Jul 2026 emit
+   * GitHub's immutable subject claim "repo:owner@ownerId/name@repoId:ref:...", so the trust
+   * policy accepts that exact form as well as the legacy name-only form.
+   */
+  ownerId: string;
+  repoId: string;
   /** Re-use an existing GitHub OIDC provider in the account instead of creating one. */
   existingProviderArn?: string;
   /** Lambda the "scrape-now" workflow may invoke (D-036). */
@@ -34,6 +41,15 @@ export class GithubOidcStack extends Stack {
 
     if (!/^[\w.-]+\/[\w.-]+$/.test(props.repo)) throw new Error('repo must be "owner/name"');
     if (!/^[\w./-]+$/.test(props.branch)) throw new Error('invalid branch');
+    if (!/^\d+$/.test(props.ownerId) || !/^\d+$/.test(props.repoId)) {
+      throw new Error('ownerId and repoId must be numeric GitHub IDs');
+    }
+    const [owner, name] = props.repo.split('/');
+    const ref = `ref:refs/heads/${props.branch}`;
+    const allowedSubjects = [
+      `repo:${owner}@${props.ownerId}/${name}@${props.repoId}:${ref}`,
+      `repo:${props.repo}:${ref}`,
+    ];
     if (!/^[\w-]{1,64}$/.test(props.scraperFunctionName)) throw new Error('invalid function name');
     if (props.scrapeFallbackTableName && !/^[\w.-]{3,255}$/.test(props.scrapeFallbackTableName)) {
       throw new Error('invalid table name');
@@ -50,7 +66,7 @@ export class GithubOidcStack extends Stack {
       new iam.WebIdentityPrincipal(providerArn, {
         StringEquals: {
           [`${GITHUB_OIDC_HOST}:aud`]: 'sts.amazonaws.com',
-          [`${GITHUB_OIDC_HOST}:sub`]: `repo:${props.repo}:ref:refs/heads/${props.branch}`,
+          [`${GITHUB_OIDC_HOST}:sub`]: allowedSubjects,
         },
       });
 

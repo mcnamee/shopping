@@ -14,6 +14,8 @@ function synth(existingProviderArn?: string, scrapeFallbackTableName?: string) {
     env: { account: '123456789012', region: 'ap-southeast-2' },
     repo: 'mcnamee/shopping',
     branch: 'main',
+    ownerId: '1809236',
+    repoId: '1467089057',
     scraperFunctionName: 'trolley-scraper',
     ...(existingProviderArn ? { existingProviderArn } : {}),
     ...(scrapeFallbackTableName ? { scrapeFallbackTableName } : {}),
@@ -42,8 +44,10 @@ describe('GithubOidcStack', () => {
             Condition: {
               StringEquals: {
                 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-                'token.actions.githubusercontent.com:sub':
+                'token.actions.githubusercontent.com:sub': [
+                  'repo:mcnamee@1809236/shopping@1467089057:ref:refs/heads/main',
                   'repo:mcnamee/shopping:ref:refs/heads/main',
+                ],
               },
             },
           },
@@ -84,8 +88,10 @@ describe('GithubOidcStack', () => {
           Match.objectLike({
             Condition: {
               StringEquals: Match.objectLike({
-                'token.actions.githubusercontent.com:sub':
+                'token.actions.githubusercontent.com:sub': [
+                  'repo:mcnamee@1809236/shopping@1467089057:ref:refs/heads/main',
                   'repo:mcnamee/shopping:ref:refs/heads/main',
+                ],
               }),
             },
           }),

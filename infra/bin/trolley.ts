@@ -53,6 +53,8 @@ new GithubOidcStack(app, 'TrolleyGithubOidcStack', {
   description: 'One-off: GitHub Actions OIDC deploy role for Trolley',
   repo: setting(app, 'githubRepo', 'GITHUB_REPO') ?? 'mcnamee/shopping',
   branch: setting(app, 'githubBranch', 'GITHUB_BRANCH') ?? 'main',
+  ownerId: setting(app, 'githubOwnerId', 'GITHUB_OWNER_ID') ?? '1809236',
+  repoId: setting(app, 'githubRepoId', 'GITHUB_REPO_ID') ?? '1467089057',
   scraperFunctionName: SCRAPER_FUNCTION_NAME,
   ...(existingProviderArn ? { existingProviderArn } : {}),
   ...(scrapeFallbackTableName ? { scrapeFallbackTableName } : {}),
