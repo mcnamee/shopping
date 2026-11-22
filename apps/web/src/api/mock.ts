@@ -430,7 +430,14 @@ export const mockFetch: typeof fetch = async (input, init) => {
   const match = matchRoute(method, url.pathname);
   const route = match ? mockRoutes[match.key] : undefined;
   const slow = url.searchParams.get('q')?.trim() === MOCK_SLOW_QUERY;
-  await new Promise((resolve) => setTimeout(resolve, slow ? 3000 : 100));
+  // Test seam: `window.__mockApiDelay = { match: 'POST /api/lists/', ms: 3000 }` slows the
+  // matching requests (method + path prefix), e.g. to see a loading state or cancel it.
+  const delay = (globalThis as { __mockApiDelay?: { match: string; ms: number } | null })
+    .__mockApiDelay;
+  const delayed = delay && `${method} ${url.pathname}`.startsWith(delay.match) ? delay.ms : null;
+  await new Promise((resolve) => setTimeout(resolve, delayed ?? (slow ? 3000 : 100)));
+  // A cancelled request rejects like fetch does.
+  if (init?.signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
   // Behave like the network when the browser is offline (Playwright context.setOffline).
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     throw new TypeError('Failed to fetch');

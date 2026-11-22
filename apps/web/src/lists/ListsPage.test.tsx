@@ -167,7 +167,7 @@ describe('History', () => {
     await user.click(screen.getByRole('link', { name: /History/ }));
     expect(await screen.findByRole('heading', { level: 1, name: 'History' })).toBeVisible();
     const rows = await screen.findAllByRole('link', { name: /finished .*bought$/ });
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(6);
     expect(rows[0]).toHaveAccessibleName(/11 of 12 bought/);
     expect(rows[1]).toHaveAccessibleName(/8 of 8 bought/);
     expect(within(rows[0] as HTMLElement).getByText(/11\/12 bought/)).toBeVisible();

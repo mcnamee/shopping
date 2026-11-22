@@ -81,7 +81,8 @@ export function createApiClient(options: ApiClientOptions) {
     request,
     get: <T>(path: string, options?: { signal?: AbortSignal }) =>
       request<T>('GET', path, undefined, options?.signal),
-    post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+    post: <T>(path: string, body?: unknown, options?: { signal?: AbortSignal }) =>
+      request<T>('POST', path, body, options?.signal),
     put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
     patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
     delete: <T>(path: string) => request<T>('DELETE', path),
