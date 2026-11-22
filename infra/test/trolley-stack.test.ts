@@ -294,7 +294,12 @@ describe('TrolleyStack', () => {
     expect(all).not.toMatch(/dynamodb:(DeleteItem|UpdateItem|Scan|GetItem|\*)/);
   });
 
-  it('schedules the scraper monthly on the 1st at 03:00 Sydney time', () => {
+  it('has no AWS scrape schedule by default (ALDI blocks AWS, D-042)', () => {
+    template.resourceCountIs('AWS::Scheduler::Schedule', 0);
+  });
+
+  it('schedules the scraper monthly on the 1st at 03:00 Sydney time when enabled', () => {
+    const { template } = synth({ awsScrapeSchedule: true });
     template.hasResourceProperties('AWS::Scheduler::Schedule', {
       ScheduleExpression: 'cron(0 3 1 * ? *)',
       ScheduleExpressionTimezone: 'Australia/Sydney',
@@ -373,8 +378,13 @@ describe('TrolleyStack options', () => {
     });
   });
 
-  it('alarms on scraper errors to an SNS email subscription when alertEmail is set', () => {
+  it('creates no scraper alarm with alertEmail when the AWS schedule is off', () => {
     const { template } = synth({ alertEmail: 'alerts@example.com' });
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 0);
+  });
+
+  it('alarms on scraper errors to an SNS email subscription when enabled', () => {
+    const { template } = synth({ alertEmail: 'alerts@example.com', awsScrapeSchedule: true });
     template.hasResourceProperties('AWS::SNS::Subscription', {
       Protocol: 'email',
       Endpoint: 'alerts@example.com',

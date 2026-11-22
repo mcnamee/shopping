@@ -20,13 +20,13 @@ Lists, templates (beyond a stub action), editing aisle order or category mapping
 - A7 [S] Each run writes a run record: start/end time, status (`succeeded` | `failed` | `aborted`), counts (fetched, new, updated, unchanged, discontinued, errors), store.
 - A8 [S] Abort-safety: if a run fetches < 50% of the previous successful run's product count, it writes no product changes, marks nothing discontinued, records status `aborted`, and exits with an error (triggers A11). First-ever run is exempt.
 - A9 [S] Local CLI dry run (`npm run scrape -- --dry-run [--fixtures]`) prints the same counts without writing to DynamoDB; documented in README.
-- A10 [S] Assertion: EventBridge Scheduler schedule `cron(0 3 1 * ? *)` in timezone `Australia/Sydney` targets the scraper Lambda; Lambda timeout and memory sufficient for a full crawl (documented estimate).
-- A11 [S] Assertion: CloudWatch alarm on scraper errors (failed or aborted run) -> SNS topic with email subscription to `ALERT_EMAIL` from config.
+- A10 [S] Assertion (amended per D-042): the monthly scrape is `scrape-fallback.yml` on a GitHub runner, scheduled for the 1st of the month and writing only when `SCRAPE_FALLBACK_ENABLED=true`. The AWS EventBridge schedule `cron(0 3 1 * ? *)` (`Australia/Sydney`) is opt-in (`awsScrapeSchedule` / `AWS_SCRAPE_SCHEDULE=true`), default off, and when enabled targets the scraper Lambda; Lambda timeout and memory sufficient for a full crawl (documented estimate).
+- A11 [S] Assertion (amended per D-042): when the AWS schedule is enabled, a CloudWatch alarm on scraper errors (failed or aborted run) -> SNS topic with email subscription to `ALERT_EMAIL` from config. A failed or aborted GitHub fallback run fails the workflow (GitHub emails the repo owner).
 - A12 [S] `.github/workflows/scrape.yml` has `workflow_dispatch` ("Scrape now") that invokes the deployed scraper via the OIDC role (no keys); the role is allowed `lambda:InvokeFunction` on the scraper only.
 - A13 [S] Fallback documented in `docs/SETUP.md`: if ALDI blocks AWS IPs, a scheduled GitHub Actions job runs the scraper CLI from the runner and writes to DynamoDB via OIDC; how to switch over is copy-paste steps.
 - A14 [S] Scraper Lambda role: read/write on the table only; no `*` actions.
-- A15 [U] "Scrape now" run in AWS succeeds from AWS IPs (not blocked) and loads >= 1,000 products; run record shows sensible counts.
-- A16 [U] The scheduled monthly run fires on the 1st at 03:00 Sydney time and succeeds (checked after the first 1st of the month post-deploy).
+- A15 [U] (amended per D-042) A live scrape loads >= 1,000 products into the production catalogue and the run record shows sensible counts. ALDI blocks AWS IPs, so this is met by the GitHub runner fallback (done 22 Nov 2026: seeded the live catalogue).
+- A16 [U] (amended per D-042) The scheduled monthly GitHub fallback scrape (`SCRAPE_FALLBACK_ENABLED=true`) fires on the 1st and succeeds (checked after the first 1st of the month post-deploy).
 
 ## B. Product model (packages/core)
 - B1 [S] `inferUnitType(packSizeText)` unit tests cover at least: "per kg" / "kg" loose -> `kg`; "per 100g" -> `g`; "2L" -> `pack`; "500mL" -> `pack`; "6 pack" / "x 12" -> `pack`; "each" / blank / unparseable -> `each`; loose litre products -> `L`. Matches spec 3.2 table.

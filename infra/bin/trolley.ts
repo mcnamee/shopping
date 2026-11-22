@@ -40,6 +40,7 @@ new TrolleyStack(app, 'TrolleyStack', {
   ...(alertEmail ? { alertEmail: assertEmail(alertEmail) } : {}),
   ...(certificateArn ? { certificateArn: assertCertificateArn(certificateArn) } : {}),
   ...(aldiServicePoint ? { aldiServicePoint: assertServicePoint(aldiServicePoint) } : {}),
+  awsScrapeSchedule: setting(app, 'awsScrapeSchedule', 'AWS_SCRAPE_SCHEDULE') === 'true',
 });
 
 const existingProviderArn = setting(app, 'existingOidcProviderArn', 'EXISTING_OIDC_PROVIDER_ARN');

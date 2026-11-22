@@ -63,6 +63,12 @@ export interface TrolleyStackProps extends StackProps {
   domainName: string;
   /** ALDI store ("service point") the scraper uses; "none" for no store. Default G526. */
   aldiServicePoint?: string;
+  /**
+   * Run the monthly scrape (and its error alarm) from AWS. Off by default: ALDI's bot
+   * protection blocks AWS addresses, so the GitHub runner fallback does the monthly scrape
+   * (D-042). The Lambda stays deployed for "Scrape now" experiments.
+   */
+  awsScrapeSchedule?: boolean;
 }
 
 export class TrolleyStack extends Stack {
@@ -285,22 +291,23 @@ export class TrolleyStack extends Stack {
       bundling: LAMBDA_BUNDLING,
     });
 
-    // 1st of each month, 03:00 Sydney time (D-035).
-    new scheduler.Schedule(this, 'ScraperSchedule', {
-      description: 'Monthly ALDI catalogue scrape',
-      schedule: scheduler.ScheduleExpression.cron({
-        minute: '0',
-        hour: '3',
-        day: '1',
-        timeZone: TimeZone.AUSTRALIA_SYDNEY,
-      }),
-      target: new schedulerTargets.LambdaInvoke(scraperFunction, {
-        input: scheduler.ScheduleTargetInput.fromObject({ trigger: 'schedule' }),
-        retryAttempts: 0,
-      }),
-    });
+    // 1st of each month, 03:00 Sydney time (D-035). Opt-in since ALDI blocks AWS (D-042).
+    if (props.awsScrapeSchedule)
+      new scheduler.Schedule(this, 'ScraperSchedule', {
+        description: 'Monthly ALDI catalogue scrape',
+        schedule: scheduler.ScheduleExpression.cron({
+          minute: '0',
+          hour: '3',
+          day: '1',
+          timeZone: TimeZone.AUSTRALIA_SYDNEY,
+        }),
+        target: new schedulerTargets.LambdaInvoke(scraperFunction, {
+          input: scheduler.ScheduleTargetInput.fromObject({ trigger: 'schedule' }),
+          retryAttempts: 0,
+        }),
+      });
 
-    if (props.alertEmail) {
+    if (props.alertEmail && props.awsScrapeSchedule) {
       const alertTopic = new sns.Topic(this, 'ScraperAlertTopic', {
         displayName: 'Trolley scraper alerts',
         enforceSSL: true,
