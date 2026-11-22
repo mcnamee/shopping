@@ -96,3 +96,75 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Toast enter (docs/ux/search.md 2.6): 150 ms fade + 8 px slide; reduced motion: fade only. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes toast-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+@layer utilities {
+  .toast-enter {
+    animation: toast-in 150ms ease-out;
+  }
+  .sheet-enter {
+    animation: sheet-up 150ms ease-out;
+  }
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--surface) 25%,
+      var(--border-subtle) 50%,
+      var(--surface) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter {
+    animation: toast-fade 150ms linear !important;
+  }
+  .sheet-enter {
+    animation: toast-fade 150ms linear !important;
+  }
+  .shimmer {
+    animation: none !important;
+    background: var(--surface);
+  }
+}

@@ -35,7 +35,12 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export function createApiClient(options: ApiClientOptions) {
   const baseUrl = options.baseUrl ?? '/api';
 
-  async function request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
+  async function request<T>(
+    method: HttpMethod,
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+  ): Promise<T> {
     if (!path.startsWith('/')) throw new Error(`API path must start with '/': ${path}`);
     const fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
 
@@ -48,6 +53,7 @@ export function createApiClient(options: ApiClientOptions) {
       method,
       headers,
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(signal ? { signal } : {}),
     });
 
     const text = await res.text();
@@ -73,7 +79,8 @@ export function createApiClient(options: ApiClientOptions) {
 
   return {
     request,
-    get: <T>(path: string) => request<T>('GET', path),
+    get: <T>(path: string, options?: { signal?: AbortSignal }) =>
+      request<T>('GET', path, undefined, options?.signal),
     post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
     put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
     patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
