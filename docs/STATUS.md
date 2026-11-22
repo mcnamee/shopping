@@ -11,7 +11,8 @@
 - Low priority: orphaned RETAIN'd resources (user pool, table, bucket) from the first failed deploy may exist; check the console and delete if unused.
 
 ## Next: Stage 2 (templates + lists)
-- Acceptance criteria written: `docs/stages/stage-2.md` (D-046 to D-051). Next: UX spec, then build.
+- Acceptance criteria written: `docs/stages/stage-2.md` (D-046 to D-051).
+- Backend, core rules and mock API built (D-052 to D-059; endpoints in `docs/api.md`; new GSI2 deploys with the next merge). Next: UI build, then QA.
 - Stage 2 needs household-settings work: the per-product unit override (B-004, "Remember unit" in the quantity modal) and the household aisle/group order (group editing replaces the fixed `GET /api/groups` defaults).
 - Replace the Stage 1 "lists arrive in Stage 2" toast and "Templates arrive in Stage 2" message (D-026).
 - Re-check `npm audit` at stage start (D-044).

@@ -31,14 +31,17 @@ import type {
 import { getAuth } from '../auth/service';
 import { MOCK_AUTH } from '../env';
 import { createApiClient } from './client';
-import { mockFetch } from './mock';
+
+/** The mock API loads on first use, so production bundles never fetch it (only mock mode calls it). */
+const lazyMockFetch: typeof fetch = async (input, init) =>
+  (await import('./mock')).mockFetch(input, init);
 
 export { ApiError, createApiClient, type ApiClient } from './client';
 
 /** App-wide API client. Uses the in-browser mock when VITE_MOCK_AUTH=true. */
 export const api = createApiClient({
   getIdToken: () => getAuth().getIdToken(),
-  ...(MOCK_AUTH ? { fetchImpl: mockFetch } : {}),
+  ...(MOCK_AUTH ? { fetchImpl: lazyMockFetch } : {}),
 });
 
 export const getMe = () => api.get<MeResponse>('/me');
