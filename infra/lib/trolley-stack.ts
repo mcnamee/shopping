@@ -89,6 +89,14 @@ export class TrolleyStack extends Stack {
       partitionKey: { name: 'gsi1pk', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'gsi1sk', type: dynamodb.AttributeType.STRING },
     });
+    // Household lists by status (D-057): HH#<hh>#LISTS#active|archived, sorted by date.
+    // Separate from GSI1 so the scraper roles (Query on GSI1 only) can never read
+    // household data. On-demand: no fixed cost.
+    table.addGlobalSecondaryIndex({
+      indexName: 'GSI2',
+      partitionKey: { name: 'gsi2pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'gsi2sk', type: dynamodb.AttributeType.STRING },
+    });
 
     // ---------------------------------------------------------------- Auth
     const userPool = new cognito.UserPool(this, 'UserPool', {
@@ -208,12 +216,41 @@ export class TrolleyStack extends Stack {
       methods: [apigw.HttpMethod.GET],
       integration,
     });
+    const { GET, POST, PUT, PATCH, DELETE } = apigw.HttpMethod;
     const authedRoutes: Array<[string, apigw.HttpMethod]> = [
-      ['/api/me', apigw.HttpMethod.GET],
-      ['/api/products/search', apigw.HttpMethod.GET],
-      ['/api/products/{sku}', apigw.HttpMethod.GET],
-      ['/api/products/custom', apigw.HttpMethod.POST],
-      ['/api/groups', apigw.HttpMethod.GET],
+      ['/api/me', GET],
+      ['/api/products/search', GET],
+      ['/api/products/{sku}', GET],
+      ['/api/products/custom', POST],
+      ['/api/groups', GET],
+      // Stage 2 (docs/api.md). Must match services/api/src/stage2.ts.
+      ['/api/templates', GET],
+      ['/api/templates', POST],
+      ['/api/templates/{templateId}', GET],
+      ['/api/templates/{templateId}', PATCH],
+      ['/api/templates/{templateId}', DELETE],
+      ['/api/templates/{templateId}/items', POST],
+      ['/api/templates/{templateId}/items/{itemId}', PATCH],
+      ['/api/templates/{templateId}/items/{itemId}', DELETE],
+      ['/api/lists', GET],
+      ['/api/lists', POST],
+      ['/api/lists/{listId}', GET],
+      ['/api/lists/{listId}', PATCH],
+      ['/api/lists/{listId}', DELETE],
+      ['/api/lists/{listId}/templates', POST],
+      ['/api/lists/{listId}/items', POST],
+      ['/api/lists/{listId}/items/{itemId}', PATCH],
+      ['/api/lists/{listId}/items/{itemId}', DELETE],
+      ['/api/lists/{listId}/finish', POST],
+      ['/api/lists/{listId}/reopen', POST],
+      ['/api/history', GET],
+      ['/api/this-week/items', POST],
+      ['/api/settings/aisle-order', GET],
+      ['/api/settings/aisle-order', PUT],
+      ['/api/settings/aisle-order', DELETE],
+      ['/api/settings/unit-overrides', GET],
+      ['/api/settings/unit-overrides/{productId}', PUT],
+      ['/api/settings/unit-overrides/{productId}', DELETE],
     ];
     for (const [routePath, method] of authedRoutes) {
       httpApi.addRoutes({

@@ -14,7 +14,7 @@
 import type { GroupSummary, ProductSummary } from './api-types';
 import { DEFAULT_AISLE_ORDER, DEFAULT_GROUPS, OTHER_GROUP_ID } from './groups';
 import { isUnitType, isValidSku, type UnitType } from './product';
-import { roundQuantity } from './quantity';
+import { convertQuantity, roundQuantity } from './quantity';
 
 // ---------------------------------------------------------------------------------------
 // Constants
@@ -236,6 +236,81 @@ export function addLine(
     updatedAt: now,
   };
   return { items: [...items, item], item, merged: false };
+}
+
+export interface LineChangeInput {
+  qty?: number;
+  unit?: UnitType;
+  note?: string | null;
+}
+
+export interface EditLineResult<T extends Line> {
+  items: T[];
+  /** The row after the change (a new id when the unit changed). */
+  item: T;
+  /** Set when a unit change re-keyed the row (the old id is gone). */
+  replacedItemId?: string;
+  /** True when a unit change folded the row into an existing row with that unit (D-046). */
+  merged: boolean;
+}
+
+/**
+ * Edit qty/unit/note of one line in a collection. Changing the unit re-keys the line
+ * (ids are product + unit); if a line with the new unit exists the two merge by D-046.
+ * Without a new qty, a unit change converts within kg/g and L/mL (else the unit default).
+ * Throws QuantityTooLargeError on a merge past the max. The caller checks `itemId` exists.
+ */
+export function editLine<T extends Line>(
+  items: readonly T[],
+  itemId: string,
+  change: LineChangeInput,
+  now: string,
+): EditLineResult<T> {
+  const existing = items.find((i) => i.id === itemId);
+  if (!existing) throw new Error(`No line ${itemId}`);
+  const unit = change.unit ?? existing.unit;
+  const qty =
+    change.qty ??
+    (unit === existing.unit ? existing.qty : convertQuantity(existing.qty, existing.unit, unit));
+  const note = change.note !== undefined ? change.note : existing.note;
+  if (unit === existing.unit) {
+    const item: T = { ...existing, qty, note, version: existing.version + 1, updatedAt: now };
+    return { items: items.map((i) => (i.id === itemId ? item : i)), item, merged: false };
+  }
+  const newId = lineIdFor(existing.product.productId, unit);
+  const target = items.find((i) => i.id === newId);
+  if (target) {
+    const sum = sumQuantity(target.qty, qty, unit);
+    if (!qtyWithinMax(sum, unit)) throw new QuantityTooLargeError(unit);
+    const item: T = {
+      ...target,
+      qty: sum,
+      note: mergeNotes(target.note, note),
+      version: target.version + 1,
+      updatedAt: now,
+    };
+    return {
+      items: items.filter((i) => i.id !== itemId).map((i) => (i.id === newId ? item : i)),
+      item,
+      replacedItemId: itemId,
+      merged: true,
+    };
+  }
+  const item: T = {
+    ...existing,
+    id: newId,
+    unit,
+    qty,
+    note,
+    version: existing.version + 1,
+    updatedAt: now,
+  };
+  return {
+    items: items.map((i) => (i.id === itemId ? item : i)),
+    item,
+    replacedItemId: itemId,
+    merged: false,
+  };
 }
 
 export class QuantityTooLargeError extends Error {
@@ -559,11 +634,14 @@ export function parseAisleOrderRequest(body: unknown): Parsed<AisleOrderInput> {
     seen.add(id);
   }
   if (seen.size !== expected.size) return fail('Every group must be included', 'order');
-  const version = parseVersion(body.version, false);
-  if (!version.ok) return version;
+  // The aisle order starts at version 0 (never saved), so 0 is a valid version here.
+  const v = body.version;
+  if (v !== undefined && v !== null && (typeof v !== 'number' || !Number.isInteger(v) || v < 0)) {
+    return fail('version must be a whole number', 'version');
+  }
   return {
     ok: true,
-    value: { order: order as string[], ...(version.value ? { version: version.value } : {}) },
+    value: { order: order as string[], ...(typeof v === 'number' ? { version: v } : {}) },
   };
 }
 

@@ -3,6 +3,7 @@ import { DEFAULT_AISLE_ORDER } from './groups';
 import { keys } from './keys';
 import {
   addLine,
+  editLine,
   applyUnitOverride,
   canUndoArchive,
   defaultListName,
@@ -524,5 +525,39 @@ describe('Stage 2 keys', () => {
     );
     expect(() => keys.listItemSk('a#b')).toThrow();
     expect(() => keys.listsGsi2Pk('bad#hh', 'active')).toThrow();
+  });
+});
+
+describe('editLine', () => {
+  const base = () =>
+    addLine(addLine([], line('1', 2, 'kg', 'ripe'), 't0').items, line('1', 3, 'each'), 't0').items;
+
+  it('edits qty and note in place', () => {
+    const r = editLine(base(), '1~kg', { qty: 1.5, note: null }, 't1');
+    expect(r.item).toMatchObject({ id: '1~kg', qty: 1.5, note: null, version: 2, updatedAt: 't1' });
+    expect(r.replacedItemId).toBeUndefined();
+    expect(r.items).toHaveLength(2);
+  });
+
+  it('re-keys on a unit change, converting within a family', () => {
+    const r = editLine(base(), '1~kg', { unit: 'g' }, 't1');
+    expect(r.item).toMatchObject({ id: '1~g', unit: 'g', qty: 2000, note: 'ripe', version: 2 });
+    expect(r.replacedItemId).toBe('1~kg');
+    expect(r.merged).toBe(false);
+    expect(r.items.map((i) => i.id)).toEqual(['1~g', '1~each']);
+  });
+
+  it('merges into an existing row with the new unit', () => {
+    const r = editLine(base(), '1~kg', { unit: 'each', qty: 2 }, 't1');
+    expect(r.merged).toBe(true);
+    expect(r.item).toMatchObject({ id: '1~each', qty: 5, note: 'ripe', version: 2 });
+    expect(r.items.map((i) => i.id)).toEqual(['1~each']);
+  });
+
+  it('refuses a merge past the max', () => {
+    const items = addLine(base(), line('1', 990, 'pack'), 't').items;
+    expect(() => editLine(items, '1~each', { unit: 'pack', qty: 10 }, 't')).toThrow(
+      QuantityTooLargeError,
+    );
   });
 });

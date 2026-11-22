@@ -7,7 +7,9 @@
  * All authed; household comes only from verified claims.
  */
 import {
+  applyUnitOverride,
   catalogueSummary,
+  groupsInOrder,
   customSummary,
   decodeCursor,
   isCustomSku,
@@ -27,6 +29,7 @@ import {
   type ProductDetailResponse,
   type ProductSearchResponse,
   type ProductSummary,
+  type UnitType,
 } from '@trolley/core';
 import { errors, json, type HttpResult } from '../http';
 import type { AuthedRequest, RouteTable } from '../router';
@@ -48,6 +51,14 @@ export interface ProductDeps {
    * (e.g. "usual product"). Returns 0 for neutral.
    */
   historyBoost?: (householdId: string) => Promise<(sku: string) => number>;
+  /**
+   * Household settings (Stage 2): unit overrides shape search results and product detail
+   * (C5); the aisle order orders GET /api/groups (G1). Absent: defaults.
+   */
+  settings?: {
+    unitOverrideMap(householdId: string): Promise<Record<string, { unit: UnitType }>>;
+    aisleOrder(householdId: string): Promise<{ order: string[] }>;
+  };
 }
 
 export const DEFAULT_PAGE_SIZE = 20;
@@ -84,6 +95,9 @@ function cleanName(value: string): string {
 }
 
 export function createProductRoutes(deps: ProductDeps): RouteTable {
+  const overridesFor = (householdId: string) =>
+    deps.settings ? deps.settings.unitOverrideMap(householdId) : Promise.resolve({});
+
   async function search(req: AuthedRequest): Promise<HttpResult> {
     const params = req.event.queryStringParameters ?? {};
     const q = (params.q ?? '').trim();
@@ -110,10 +124,11 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
     }
 
     const householdId = req.household.householdId;
-    const [snapshot, customs, boostFn] = await Promise.all([
+    const [snapshot, customs, boostFn, overrides] = await Promise.all([
       deps.catalogue.get(),
       deps.custom.list(householdId),
       deps.historyBoost ? deps.historyBoost(householdId) : Promise.resolve(undefined),
+      overridesFor(householdId),
     ]);
     const options = {
       ...(category ? { groupId: category } : {}),
@@ -128,7 +143,7 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
     );
     const page = paginate(ranked, offset, limit);
     return json(200, {
-      items: page.items.map((r) => toSummary(r.item)),
+      items: page.items.map((r) => applyUnitOverride(toSummary(r.item), overrides)),
       total: ranked.length,
       nextCursor: page.nextCursor,
     } satisfies ProductSearchResponse);
@@ -137,18 +152,19 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
   async function detail(req: AuthedRequest): Promise<HttpResult> {
     const sku = req.event.pathParameters?.sku;
     if (!isValidSku(sku)) return errors.notFound();
+    const overrides = overridesFor(req.household.householdId);
     if (isCustomSku(sku)) {
       const custom = await deps.custom.get(req.household.householdId, sku);
       if (!custom) return errors.notFound();
       return json(200, {
-        ...customSummary(custom),
+        ...applyUnitOverride(customSummary(custom), await overrides),
         discontinued: false,
       } satisfies ProductDetailResponse);
     }
     const product = (await deps.catalogue.get()).bySku.get(sku);
     if (!product) return errors.notFound();
     return json(200, {
-      ...catalogueSummary(product),
+      ...applyUnitOverride(catalogueSummary(product), await overrides),
       discontinued: product.discontinued,
     } satisfies ProductDetailResponse);
   }
@@ -210,13 +226,15 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
     'GET /api/products/search': { auth: true, handler: search },
     'GET /api/products/{sku}': { auth: true, handler: detail },
     'POST /api/products/custom': { auth: true, handler: createCustom },
-    // Household aisle order is editable in Stage 2; until then everyone gets the defaults.
+    // The household's aisle order (Settings > Aisle order, G1); defaults until changed.
     'GET /api/groups': {
       auth: true,
-      handler: () =>
-        json(200, {
-          groups: DEFAULT_GROUPS.map(({ id, name, shortName }) => ({ id, name, shortName })),
-        } satisfies GroupsResponse),
+      handler: async (req) => {
+        const order = deps.settings
+          ? (await deps.settings.aisleOrder(req.household.householdId)).order
+          : DEFAULT_GROUPS.map((g) => g.id);
+        return json(200, { groups: groupsInOrder(order) } satisfies GroupsResponse);
+      },
     },
   };
 }

@@ -121,13 +121,14 @@ export interface GroupsResponse {
 /**
  * 409 CONFLICT. `reason`:
  * - STALE: the `version` sent is old (other phone changed it); `current` holds the latest.
- * - LIST_ARCHIVED: the list is archived (read-only) - or, for reopen, not archived.
+ * - LIST_ARCHIVED: the list is archived (read-only).
+ * - NOT_ARCHIVED: reopen (Undo) of a list that is already active.
  * - LIMIT: a count limit (A2) would be exceeded.
  * - UNDO_EXPIRED: reopen asked after the undo window.
  */
 export interface ConflictErrorResponse extends ErrorResponse {
   code: 'CONFLICT';
-  reason: 'STALE' | 'LIST_ARCHIVED' | 'LIMIT' | 'UNDO_EXPIRED';
+  reason: 'STALE' | 'LIST_ARCHIVED' | 'NOT_ARCHIVED' | 'LIMIT' | 'UNDO_EXPIRED';
   current?: unknown;
 }
 

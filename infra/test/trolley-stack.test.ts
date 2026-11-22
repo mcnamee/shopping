@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import { App } from 'aws-cdk-lib';
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
+import { routes as apiRoutes } from '../../services/api/src/routes';
 import { TrolleyStack, type TrolleyStackProps } from '../lib/trolley-stack';
 
 const FIXTURE_DIST = path.join(__dirname, 'fixtures', 'web-dist');
@@ -246,6 +247,50 @@ describe('TrolleyStack', () => {
     }
   });
 
+  it('has an HTTP API route with the JWT authoriser for every authed API route, and no extras', () => {
+    const routes = Object.values(template.findResources('AWS::ApiGatewayV2::Route')).map(
+      (r) => (r as Resource).Properties,
+    );
+    const deployed = new Map(routes.map((p) => [p.RouteKey as string, p]));
+    for (const [routeKey, route] of Object.entries(apiRoutes)) {
+      const p = deployed.get(routeKey);
+      expect(p, `${routeKey} is not deployed`).toBeDefined();
+      if (route.auth) {
+        expect([routeKey, p?.AuthorizationType]).toEqual([routeKey, 'JWT']);
+        expect(p?.AuthorizerId).toBeDefined();
+      } else {
+        expect([routeKey, p?.AuthorizationType ?? 'NONE']).toEqual([routeKey, 'NONE']);
+      }
+    }
+    expect([...deployed.keys()].sort()).toEqual(Object.keys(apiRoutes).sort());
+  });
+
+  it('protects every Stage 2 route with the JWT authoriser (A1)', () => {
+    for (const routeKey of [
+      'GET /api/lists',
+      'POST /api/lists/{listId}/items',
+      'PATCH /api/lists/{listId}/items/{itemId}',
+      'POST /api/lists/{listId}/reopen',
+      'GET /api/history',
+      'POST /api/this-week/items',
+      'DELETE /api/templates/{templateId}/items/{itemId}',
+      'PUT /api/settings/aisle-order',
+      'DELETE /api/settings/unit-overrides/{productId}',
+    ]) {
+      template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+        RouteKey: routeKey,
+        AuthorizationType: 'JWT',
+        AuthorizerId: Match.anyValue(),
+      });
+    }
+  });
+
+  it('keeps the scraper away from GSI2 (household lists)', () => {
+    const statements = statementsFor(template, roleIdOf(template, /^ScraperFunctionRole/));
+    expect(JSON.stringify(statements)).not.toContain('GSI2');
+    expect(JSON.stringify(statements)).not.toContain('index/*');
+  });
+
   it('runs the scraper on Node 22 arm64, 512 MB, 15 min, Casey service point, no async retries', () => {
     const fn = functionByName(template, 'trolley-scraper');
     expect(fn.Properties).toMatchObject({
@@ -317,14 +362,25 @@ describe('TrolleyStack', () => {
     template.resourceCountIs('AWS::SNS::Topic', 0);
   });
 
-  it('creates the single table with GSI1, PITR, TTL and retain policy', () => {
+  it('creates the single table with GSI1, GSI2, PITR, TTL and retain policy', () => {
     template.hasResourceProperties('AWS::DynamoDB::Table', {
       BillingMode: 'PAY_PER_REQUEST',
       KeySchema: [
         { AttributeName: 'pk', KeyType: 'HASH' },
         { AttributeName: 'sk', KeyType: 'RANGE' },
       ],
-      GlobalSecondaryIndexes: [Match.objectLike({ IndexName: 'GSI1' })],
+      GlobalSecondaryIndexes: [
+        Match.objectLike({ IndexName: 'GSI1' }),
+        // Household lists by status (D-057); all attributes projected.
+        {
+          IndexName: 'GSI2',
+          KeySchema: [
+            { AttributeName: 'gsi2pk', KeyType: 'HASH' },
+            { AttributeName: 'gsi2sk', KeyType: 'RANGE' },
+          ],
+          Projection: { ProjectionType: 'ALL' },
+        },
+      ],
       PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true },
       TimeToLiveSpecification: { AttributeName: 'ttl', Enabled: true },
     });
