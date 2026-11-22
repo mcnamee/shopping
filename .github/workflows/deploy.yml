@@ -1,0 +1,70 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Never run two deploys at once; let an in-progress deploy finish.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # GitHub OIDC -> AWS role (no long-lived keys)
+  contents: read
+
+jobs:
+  deploy:
+    name: Check and deploy TrolleyStack
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AWS_REGION: ap-southeast-2
+      # Pins the CDK stack to this account (see infra/bin/trolley.ts).
+      TROLLEY_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-southeast-2
+          role-session-name: trolley-deploy-${{ github.run_id }}
+
+      - name: CDK deploy
+        working-directory: infra
+        env:
+          ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+          CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+        run: >-
+          npx cdk deploy TrolleyStack
+          --require-approval never
+          --context requireAlertEmail=true
+          --context "alertEmail=${ALERT_EMAIL}"
+          --context "certificateArn=${CERTIFICATE_ARN}"
+          --outputs-file cdk-outputs.json
+
+      - name: Summary
+        working-directory: infra
+        run: |
+          {
+            echo "### Deployed TrolleyStack"
+            echo
+            echo '```json'
+            cat cdk-outputs.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
