@@ -71,7 +71,7 @@ describe('mock Stage 2 seed data', () => {
     expect(detail.items.some((i) => i.product.productId.startsWith('custom-'))).toBe(true);
   });
 
-  it('seeds a weekly and a meal template, and two archived lists in History', async () => {
+  it('seeds a weekly and a meal template, and six archived lists in History', async () => {
     const templates = (await call<TemplatesResponse>('GET', '/templates')).body.templates;
     expect(templates.map((t) => [t.name, t.type])).toEqual([
       ['Weekly basics', 'weekly'],
@@ -83,7 +83,12 @@ describe('mock Stage 2 seed data', () => {
     expect(history.lists.map((l) => [l.status, l.itemCount, l.tickedCount])).toEqual([
       ['archived', 12, 11],
       ['archived', 8, 8],
+      ['archived', 5, 5],
+      ['archived', 4, 4],
+      ['archived', 3, 3],
+      ['archived', 3, 3],
     ]);
+    expect(history.lists.map((l) => l.id)).toEqual(MOCK_SEED_IDS.archivedLists);
   });
 });
 

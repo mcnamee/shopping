@@ -225,6 +225,10 @@ describe('TrolleyStack', () => {
       if (actions.some((a) => a.startsWith('dynamodb:'))) {
         expect(json).toMatch(/Table[0-9A-F]{8}/);
         expect(json).not.toMatch(/ApiFunctionLogs/);
+      } else if (actions.some((a) => a.startsWith('bedrock:'))) {
+        // Covered in detail by the Bedrock tests below.
+        expect(actions).toEqual(['bedrock:InvokeModel']);
+        expect(json).toMatch(/nova-micro/);
       } else {
         expect(actions.every((a) => a.startsWith('logs:'))).toBe(true);
         expect(json).toMatch(/ApiFunctionLogs/);
@@ -481,5 +485,94 @@ describe('TrolleyStack options', () => {
     const { stack, template } = synth({ webDistPath: path.join(__dirname, 'does-not-exist') });
     Annotations.fromStack(stack).hasError('*', Match.stringLikeRegexp('Web build not found'));
     template.resourceCountIs('Custom::CDKBucketDeployment', 0);
+  });
+});
+
+describe('TrolleyStack suggestions model (Bedrock, D-061, D-073)', () => {
+  const bedrockStatements = (template: Template) =>
+    statementsFor(template, roleIdOf(template, /^ApiFunctionRole/)).filter((s) =>
+      ([] as string[]).concat(s.Action as string | string[]).some((a) => a.startsWith('bedrock:')),
+    );
+  const apiFunction = (template: Template) =>
+    Object.values(template.findResources('AWS::Lambda::Function')).find((r) =>
+      JSON.stringify((r as Resource).Properties.Environment ?? {}).includes('SUGGEST_MODEL_ID'),
+    ) as Resource;
+
+  it('defaults to Nova Micro via the APAC inference profile, invoke-only on that profile and model', () => {
+    const { template } = synth();
+    const statements = bedrockStatements(template);
+    expect(statements).toHaveLength(2);
+    const profileArn = {
+      'Fn::Join': [
+        '',
+        [
+          'arn:',
+          { Ref: 'AWS::Partition' },
+          ':bedrock:ap-southeast-2:123456789012:inference-profile/apac.amazon.nova-micro-v1:0',
+        ],
+      ],
+    };
+    expect(statements).toEqual(
+      expect.arrayContaining([
+        {
+          Sid: 'SuggestInferenceProfile',
+          Effect: 'Allow',
+          Action: 'bedrock:InvokeModel',
+          Resource: profileArn,
+        },
+        {
+          Sid: 'SuggestFoundationModelViaProfile',
+          Effect: 'Allow',
+          Action: 'bedrock:InvokeModel',
+          Resource: {
+            'Fn::Join': [
+              '',
+              [
+                'arn:',
+                { Ref: 'AWS::Partition' },
+                ':bedrock:*::foundation-model/amazon.nova-micro-v1:0',
+              ],
+            ],
+          },
+          Condition: { StringEquals: { 'bedrock:InferenceProfileArn': profileArn } },
+        },
+      ]),
+    );
+    // Nothing broader: no wildcard model, no other Bedrock actions, no Marketplace.
+    const json = JSON.stringify(statements);
+    expect(json).not.toMatch(/foundation-model\/\*|inference-profile\/\*|"\*"|aws-marketplace/);
+    expect(json).not.toMatch(/InvokeModelWithResponseStream|"bedrock:\*"/);
+    expect(apiFunction(template).Properties).toMatchObject({
+      Timeout: 20,
+      Environment: { Variables: { SUGGEST_MODEL_ID: 'apac.amazon.nova-micro-v1:0' } },
+    });
+  });
+
+  it('a plain foundation model id is allowed in this region only', () => {
+    const { template } = synth({ suggestModelId: 'amazon.nova-lite-v1:0' });
+    const statements = bedrockStatements(template);
+    expect(statements).toHaveLength(1);
+    expect(JSON.stringify(statements[0]?.Resource)).toContain(
+      ':bedrock:ap-southeast-2::foundation-model/amazon.nova-lite-v1:0',
+    );
+    expect(statements[0]?.Condition).toBeUndefined();
+  });
+
+  it('"none" grants no Bedrock access (rules-only suggestions)', () => {
+    const { template } = synth({ suggestModelId: 'none' });
+    expect(bedrockStatements(template)).toHaveLength(0);
+    expect(apiFunction(template).Properties).toMatchObject({
+      Environment: { Variables: { SUGGEST_MODEL_ID: 'none' } },
+    });
+  });
+
+  it('only the API role can call Bedrock', () => {
+    const { template } = synth();
+    const others = Object.values(template.findResources('AWS::IAM::Policy')).filter(
+      (p) =>
+        JSON.stringify((p as Resource).Properties.PolicyDocument).includes('bedrock:') &&
+        !JSON.stringify((p as Resource).Properties.Roles).includes('ApiFunctionRole'),
+    );
+    expect(others).toHaveLength(0);
   });
 });

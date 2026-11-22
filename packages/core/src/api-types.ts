@@ -1,5 +1,12 @@
 /** Response shapes shared between services/api and apps/web. */
-import type { ListItem, ListStatus, TemplateItem, TemplateType, UnitOverride } from './lists';
+import type {
+  ListItem,
+  ListStatus,
+  ProductSnapshot,
+  TemplateItem,
+  TemplateType,
+  UnitOverride,
+} from './lists';
 import type { UnitType } from './product';
 
 export interface HealthResponse {
@@ -19,6 +26,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'VALIDATION'
   | 'CONFLICT'
+  | 'RATE_LIMITED'
   | 'INTERNAL';
 
 export interface ErrorResponse {
@@ -339,4 +347,96 @@ export interface UnitOverrideRequest {
 export interface UnitOverrideResponse {
   /** Null when the override was removed (unit equals the product default). */
   override: UnitOverride | null;
+}
+
+// ---------------------------------------------------------------------------------------
+// Stage 3: suggestions (docs/api.md, docs/stages/stage-3.md, D-061 to D-073)
+
+/** How the order and reasons were produced: the AI pass, or the deterministic rules alone. */
+export type SuggestionSource = 'ai' | 'rules';
+
+export interface Suggestion {
+  productId: string;
+  /** Product as it would be added (D-047): name, brand, image, pack size, group, unit type. */
+  snapshot: ProductSnapshot;
+  /** Pre-filled quantity, valid for `unit` (D-052). */
+  qty: number;
+  unit: UnitType;
+  /** Template note, if the item comes from a weekly template. */
+  note: string | null;
+  /** One line, plain text, <= 90 chars (render as text, never as HTML). */
+  reason: string;
+  /** On a weekly template ("Weekly" badge). */
+  fromTemplate: boolean;
+  /** Due from purchase history. Both can be true. */
+  fromHistory: boolean;
+}
+
+/**
+ * POST /api/lists/{listId}/suggestions (excludes products already on the list) and
+ * POST /api/suggestions (no list, nothing excluded). Read-only. 429 RATE_LIMITED after
+ * 20 runs per household per day.
+ */
+export interface SuggestionsResponse {
+  source: SuggestionSource;
+  /** Fewer than 3 archived lists: weekly template items only. */
+  coldStart: boolean;
+  /** Cold-start note to show above the list (null otherwise). */
+  note: string | null;
+  /** In display order, at most 40. Empty: "Nothing to suggest yet". */
+  suggestions: Suggestion[];
+}
+
+/** POST /api/lists/{listId}/items/bulk: 1-50 items, each added by the merge rule (D-046). */
+export interface BulkAddItemsRequest {
+  items: AddItemRequest[];
+}
+
+export type BulkAddItemResult =
+  | {
+      ok: true;
+      productId: string;
+      unit: UnitType;
+      /** For Undo: created -> DELETE ?version=; merged -> PATCH qty = item.qty - addedQty. */
+      change: LineChange;
+    }
+  | {
+      ok: false;
+      productId: string;
+      unit: UnitType;
+      /** VALIDATION (bad qty, unknown product, over the unit max), LIMIT (list full), CONFLICT. */
+      code: 'VALIDATION' | 'LIMIT' | 'CONFLICT';
+      message: string;
+    };
+
+export interface BulkAddItemsResponse {
+  /** The list after the adds. */
+  list: ListDetail;
+  /** One per request item, in request order. */
+  results: BulkAddItemResult[];
+  /** Count of ok results. */
+  added: number;
+  failed: number;
+}
+
+/** POST /api/lists/{listId}/items/undo: the `change`s of a bulk add (or add templates). */
+export interface BulkUndoRequest {
+  changes: LineChange[];
+}
+
+export type BulkUndoResult =
+  | { ok: true; itemId: string }
+  | {
+      ok: false;
+      itemId: string;
+      /** CONFLICT: the row changed since the add (other phone); it is left as it is. */
+      code: 'VALIDATION' | 'LIMIT' | 'CONFLICT';
+      message: string;
+    };
+
+export interface BulkUndoResponse {
+  list: ListDetail;
+  results: BulkUndoResult[];
+  undone: number;
+  failed: number;
 }

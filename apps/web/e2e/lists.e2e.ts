@@ -59,7 +59,7 @@ test.describe('Lists tab', () => {
     await page.getByRole('link', { name: /History/ }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'History' })).toBeVisible();
     const rows = page.getByRole('link', { name: /finished .*bought$/ });
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(6);
     await expectNoSeriousAxeViolations(page);
     await expectTapTargets(page);
     await expectNoHorizontalScroll(page);

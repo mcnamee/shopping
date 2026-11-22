@@ -2,6 +2,9 @@ import type {
   AddItemRequest,
   AddTemplatesToListResponse,
   AisleOrderResponse,
+  BulkAddItemsResponse,
+  BulkUndoResponse,
+  LineChange,
   CreateCustomProductRequest,
   CreateCustomProductResponse,
   CreateListRequest,
@@ -19,6 +22,7 @@ import type {
   ListSummary,
   MeResponse,
   ProductSearchResponse,
+  SuggestionsResponse,
   Template,
   TemplateItemMutationResponse,
   TemplatesResponse,
@@ -137,3 +141,21 @@ export const saveUnitOverride = (productId: string, unit: UnitType) =>
   api.put<UnitOverrideResponse>(`/settings/unit-overrides/${enc(productId)}`, { unit });
 export const deleteUnitOverride = (productId: string) =>
   api.delete<undefined>(`/settings/unit-overrides/${enc(productId)}`);
+
+// Stage 3 suggestions (docs/api.md). 429 { code: 'RATE_LIMITED', message } after 20 runs a day.
+/** Suggestions for a list (products already on it are excluded). Read-only. */
+export const getListSuggestions = (listId: string, signal?: AbortSignal) =>
+  api.post<SuggestionsResponse>(
+    `/lists/${enc(listId)}/suggestions`,
+    undefined,
+    signal ? { signal } : {},
+  );
+/** Suggestions with no list (nothing excluded). */
+export const getSuggestions = (signal?: AbortSignal) =>
+  api.post<SuggestionsResponse>('/suggestions', undefined, signal ? { signal } : {});
+/** Add many items with per-item results; Undo each `change` like a template add. */
+export const addListItemsBulk = (listId: string, items: AddItemRequest[]) =>
+  api.post<BulkAddItemsResponse>(`/lists/${enc(listId)}/items/bulk`, { items });
+/** Undo a bulk add (or add templates) in one request: pass the ok results' `change`s. */
+export const undoListItemsBulk = (listId: string, changes: LineChange[]) =>
+  api.post<BulkUndoResponse>(`/lists/${enc(listId)}/items/undo`, { changes });

@@ -40,7 +40,7 @@ export function NewListSheet({ lists, templates, initialTemplateIds, onClose }: 
   const heading = useRef<HTMLHeadingElement>(null);
 
   const [name, setName] = useState(() => defaultListName(new Date()));
-  const [mode, setMode] = useState<'blank' | 'templates'>(
+  const [mode, setMode] = useState<'blank' | 'templates' | 'suggestions'>(
     initialTemplateIds?.length ? 'templates' : 'blank',
   );
   const [selected, setSelected] = useState<Set<string>>(new Set(initialTemplateIds ?? []));
@@ -52,7 +52,7 @@ export function NewListSheet({ lists, templates, initialTemplateIds, onClose }: 
   const [failed, setFailed] = useState(false);
   const [blocked, setBlocked] = useState(lists.length >= MAX_LISTS);
 
-  const chooseMode = (next: 'blank' | 'templates') => {
+  const chooseMode = (next: 'blank' | 'templates' | 'suggestions') => {
     setMode(next);
     if (next === 'templates' && selected.size === 0) {
       setSelected(new Set(templates.filter((t) => t.type === 'weekly').map((t) => t.id)));
@@ -72,7 +72,9 @@ export function NewListSheet({ lists, templates, initialTemplateIds, onClose }: 
       ? `Create from ${chosen.length} templates`
       : chosen.length === 1
         ? `Create from ${truncate(chosen[0]?.name ?? '', 20)}`
-        : 'Create list';
+        : mode === 'suggestions'
+          ? 'Create and suggest'
+          : 'Create list';
 
   const validate = (value: string) => {
     const t = value.trim();
@@ -100,14 +102,19 @@ export function NewListSheet({ lists, templates, initialTemplateIds, onClose }: 
       upsertListSummary(qc, summaryOf(res.list));
       void qc.invalidateQueries({ queryKey: qk.lists });
       const n = res.list.itemCount;
-      toast.show(
-        chosen.length
-          ? `Created ${res.list.name} with ${n} ${n === 1 ? 'item' : 'items'}${
-              res.combined > 0 ? ` (${res.combined} combined)` : ''
-            }`
-          : `Created ${res.list.name}`,
-      );
-      navigate(`/lists/${res.list.id}`, { state: { name: res.list.name } });
+      // "Create and suggest": the list page opens the review sheet and toasts if nothing is added.
+      if (mode !== 'suggestions') {
+        toast.show(
+          chosen.length
+            ? `Created ${res.list.name} with ${n} ${n === 1 ? 'item' : 'items'}${
+                res.combined > 0 ? ` (${res.combined} combined)` : ''
+              }`
+            : `Created ${res.list.name}`,
+        );
+      }
+      navigate(`/lists/${res.list.id}`, {
+        state: { name: res.list.name, ...(mode === 'suggestions' ? { suggest: true } : {}) },
+      });
       onClose();
     } catch (e) {
       setBusy(false);
@@ -232,12 +239,20 @@ export function NewListSheet({ lists, templates, initialTemplateIds, onClose }: 
           <p className="mb-1 text-sm font-semibold">Start with</p>
           <SegmentedControl
             label="Start with"
-            columns={2}
-            options={['blank', 'templates'] as const}
+            columns={3}
+            options={['blank', 'templates', 'suggestions'] as const}
             value={mode}
             onChange={chooseMode}
-            optionLabel={(m) => (m === 'blank' ? 'Blank' : 'From templates')}
+            optionLabel={(m) =>
+              m === 'blank' ? 'Blank' : m === 'templates' ? 'From templates' : 'Suggestions'
+            }
+            ariaLabels={{ suggestions: 'Start with suggestions' }}
           />
+          {mode === 'suggestions' && (
+            <p className="mt-1 text-sm text-muted">
+              We'll look at what you usually buy and suggest items to review.
+            </p>
+          )}
         </div>
 
         {mode === 'templates' &&

@@ -1,8 +1,8 @@
-# Trolley API (Stage 2)
+# Trolley API (Stages 2 and 3)
 
 All routes are under `/api`, need the Cognito ID token (`Authorization: Bearer <id token>`, JWT authoriser) and are scoped to the token's household; ids from another household are 404. Never send a `householdId` (it is ignored). Types: `packages/core/src/api-types.ts`; rules: `packages/core/src/lists.ts`; server: `services/api/src/stage2.ts`; mock: `apps/web/src/api/mock-stage2.ts`; client calls: `apps/web/src/api/index.ts`.
 
-Errors: `400 { code: 'VALIDATION', message, field? }`, `404 { code: 'NOT_FOUND' }`, `409 { code: 'CONFLICT', reason, message, current? }` with reason `STALE` (send the latest `version`; `current` is the latest row/template/summary), `LIST_ARCHIVED`, `NOT_ARCHIVED`, `LIMIT`, `UNDO_EXPIRED` (D-058).
+Errors: `400 { code: 'VALIDATION', message, field? }`, `404 { code: 'NOT_FOUND' }`, `409 { code: 'CONFLICT', reason, message, current? }` with reason `STALE` (send the latest `version`; `current` is the latest row/template/summary), `LIST_ARCHIVED`, `NOT_ARCHIVED`, `LIMIT`, `UNDO_EXPIRED` (D-058), `429 { code: 'RATE_LIMITED', message }` (suggestions, D-071).
 
 Ids: lists and templates are UUIDs. Items (list and template) are `<productId>~<unit>`, e.g. `000000000000398689~pack` (D-053); a unit change returns the new id.
 
@@ -37,6 +37,24 @@ Ids: lists and templates are UUIDs. Items (list and template) are `<productId>~<
 
 `ListSummary`: id, name, status, thisWeek, itemCount, tickedCount (archived: bought), createdAt, updatedAt, completedAt, finishedBy (`auto`/`finish`), version. `ListItem`: id, listId, product snapshot (productId, name, brand, imageUrl, packSize, groupId, unitType), qty, unit, note, ticked, tickedAt, version, createdAt, updatedAt, updatedBy.
 
+## Suggestions (Stage 3)
+Engine: `packages/core/src/suggestions.ts`; AI pass and routes: `services/api/src/suggestions/`; mock: `apps/web/src/api/mock-stage2.ts`; decisions D-061 to D-074.
+
+| Method and path | Body | Response |
+|---|---|---|
+| POST `/lists/{listId}/suggestions` | none | `SuggestionsResponse`. List must be active (404 / 409 LIST_ARCHIVED); products already on it, any unit, ticked or not, are excluded. Read-only |
+| POST `/suggestions` | none | same, nothing excluded (New list sheet before the list exists) |
+| POST `/lists/{listId}/items/bulk` | `{ items: AddItemRequest[] }` (1-50) | 200 `{ list: ListDetail, results: BulkAddItemResult[], added, failed }`, one result per item in order |
+| POST `/lists/{listId}/items/undo` | `{ changes: LineChange[] }` (1-50, the ok results' `change`) | 200 `{ list, results: [{ ok, itemId, code?, message? }], undone, failed }` |
+
+`SuggestionsResponse`: `{ source: 'ai' | 'rules', coldStart, note: string | null, suggestions: Suggestion[] }` (at most 40, in display order). `note` is the cold-start text ("Suggestions get smarter after a few shops - for now these are from your weekly template.") when `coldStart`, else null. Empty `suggestions` = "Nothing to suggest yet". `source` is informational (the UI shows no error either way).
+
+`Suggestion`: `{ productId, snapshot: ProductSnapshot, qty, unit, note, reason, fromTemplate, fromHistory }`. `qty` is valid for `unit` (D-052); `reason` is one line of plain text (<= 90 chars, render as text): "On your weekly template", "Usually every ~4 weeks, last bought 27 days ago", or "On your weekly template - usually every ~7 days, last bought 6 days ago". `fromTemplate` = "Weekly" badge.
+
+Rate limit: 20 runs (either suggestions route) per household per Canberra day; the 21st is 429 `RATE_LIMITED` "You've used today's suggestions - try again tomorrow." 404/409 do not use a run. The AI pass is skipped on cold start and falls back to the rules result on any failure or after 8 s (HTTP 200, `source: 'rules'`).
+
+Adding from the review sheet: send the ticked suggestions (with any edited qty/unit) as `items` to `/items/bulk`. Each result is `{ ok: true, productId, unit, change: LineChange }` or `{ ok: false, productId, unit, code: 'VALIDATION' | 'LIMIT' | 'CONFLICT', message }`; report "Added 10 of 12" when `failed > 0`. Merged rows (`change.created: false`) are unticked. Undo: POST the ok results' `change`s to `/items/undo`; rows the other phone changed since come back `ok: false, code: 'CONFLICT'` and are left alone.
+
 ## Settings
 | Method and path | Body | Response |
 |---|---|---|
@@ -58,3 +76,4 @@ Ids: lists and templates are UUIDs. Items (list and template) are `<productId>~<
 | Settings | `HH#<hh>` | `SETTINGS` (aisleOrder, aisleVersion, unitOverrides map) |
 | This week | `HH#<hh>` | `THISWEEK` (listId) |
 | Purchase | `HH#<hh>` | `PURCHASE#<productId>#<YYYY-MM-DD>#<listId>#<unit>` |
+| Suggestion runs | `HH#<hh>` | `SUGGESTRUNS#<YYYY-MM-DD>` (runs, `ttl`; D-071) |

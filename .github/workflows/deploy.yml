@@ -52,6 +52,8 @@ jobs:
           CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
           # Optional ALDI store id for the scraper (default G526, ALDI Casey ACT).
           ALDI_SERVICE_POINT: ${{ vars.ALDI_SERVICE_POINT }}
+          # Optional suggestions model (default apac.amazon.nova-micro-v1:0; "none" = rules only).
+          SUGGEST_MODEL_ID: ${{ vars.SUGGEST_MODEL_ID }}
         run: >-
           npx cdk deploy TrolleyStack
           --require-approval never

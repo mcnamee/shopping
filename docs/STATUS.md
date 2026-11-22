@@ -12,13 +12,19 @@
 - `trolley.mcn.am` CNAME not resolving yet - user's DNS provider side (`trolley` -> CloudFront domain).
 - Low priority: possible orphaned RETAIN'd resources (user pool, table, bucket) from the first failed deploy; check the console and delete if unused.
 
-## Next: Stage 3 (AI suggestions)
-- Start with PM acceptance criteria in `docs/stages/stage-3.md`; inputs are the Stage 2 purchase rows (`PURCHASE#`).
-- Model choice is open: the user is happy with non-Claude models, e.g. cheap Bedrock models such as Amazon Nova Micro or Meta Llama. Pick on cost (~$0-3/month budget) and quality; record it in DECISIONS.
-- Bedrock model access: the one-time Bedrock playground step is only needed if an Anthropic model is chosen.
+## Stage 3 (AI suggestions) - in progress
+- PM acceptance criteria written: `docs/stages/stage-3.md` (decisions D-061 to D-068). Next: UX spec for the review sheet, then build, QA, PM sign-off.
+- Model: Amazon Nova Micro on Bedrock via the APAC cross-region inference profile, id in CDK context (D-061); no Anthropic use-case form needed. Deterministic engine works without AI (D-062).
+- Inputs: Stage 2 purchase rows (`PURCHASE#`, D-054) and weekly templates.
 - Re-check `npm audit` at stage start (D-044).
 - Feed in anything the user notes from the first real shop.
 
 ## Housekeeping
 - Actions warn Node 20 is deprecated for actions/checkout@v4, setup-node@v4, configure-aws-credentials@v4 - bump to current majors.
 - Backlog: `docs/BACKLOG.md` (B-001..B-013).
+
+
+## Session end (Stage 3 in progress)
+- Stage 3 done so far (branch only, NOT on main): PM criteria (docs/stages/stage-3.md), UX (docs/ux/suggestions.md), backend + suggestion engine + Bedrock Nova Micro (`apac.amazon.nova-micro-v1:0`, configurable via SUGGEST_MODEL_ID; unverified id/IAM condition - wrong = silent rules fallback, check logs for `suggestions_ai_fallback`).
+- Stopped: software-engineer building the suggestions review UI (any partial commits listed above this note in git log). Next: finish UI per the backend handoff in docs/api.md + D-069..D-074 -> QA -> PM sign-off -> merge to main.
+- Production = Stage 2 (main 7ef192e).

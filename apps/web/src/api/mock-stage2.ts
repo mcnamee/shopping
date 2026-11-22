@@ -6,8 +6,15 @@
  * State is per household and persisted to localStorage (key MOCK_STATE_KEY) on every
  * change and re-read on every request, so a reload keeps it and two pages of one browser
  * context share it (the two-phone sync E2E). Each household is seeded on first use with a
- * "this week" list (21 items across groups, 6 ticked), two templates (weekly + meal) and two
- * archived lists in History.
+ * "this week" list (21 items across groups, 6 ticked), two templates (weekly + meal) and six
+ * archived lists in History (enough purchase history for Stage 3 suggestions: weekly items
+ * plus periodic ones such as razor cartridges every ~4 weeks).
+ *
+ * Stage 3 (D-059, D-074): POST /api/lists/{id}/suggestions and /api/suggestions run the real
+ * core engine over the seeded purchase rows and report `source: 'ai'` (deterministic
+ * reasons; the mock has no model). Seam: `window.__mockSuggest = { mode }` with mode
+ * 'rules' (source rules), 'coldStart' (no history), 'empty' (no history, no templates) or
+ * 'limit' (429). POST /api/lists/{id}/items/bulk and /items/undo mirror the API.
  */
 import {
   addLine,
@@ -20,6 +27,7 @@ import {
   isValidEntityId,
   isValidSku,
   ITEM_QTY_MAX,
+  localDate,
   LIMITS,
   lineIdFor,
   listProgress,
@@ -33,6 +41,7 @@ import {
   parseEditItemRequest,
   parseLineId,
   parseTemplateIdsRequest,
+  parseUndoRequest,
   parseUnitOverrideRequest,
   parseUpdateListRequest,
   parseUpdateTemplateRequest,
@@ -46,10 +55,15 @@ import {
   sortTemplateItems,
   sortTemplates,
   sortUnitOverrides,
+  suggestCandidates,
   sumQuantity,
   templatePreview,
   tooMuchMessage,
   type AisleOrderResponse,
+  type BulkAddItemResult,
+  type BulkAddItemsResponse,
+  type BulkUndoResponse,
+  type BulkUndoResult,
   type LineChange,
   type LineInput,
   type ListDetail,
@@ -58,6 +72,8 @@ import {
   type ListSummary,
   type Parsed,
   type ProductSummary,
+  type Suggestion,
+  type SuggestionsResponse,
   type PurchaseRecord,
   type Template,
   type TemplateItem,
@@ -100,6 +116,8 @@ interface MockHousehold {
   aisleVersion: number;
   overrides: Record<string, UnitOverride>;
   purchases: Record<string, PurchaseRecord>;
+  /** Suggestion runs today (D-066); missing in state saved before Stage 3. */
+  suggestRuns?: { day: string; runs: number };
 }
 
 interface MockState {
@@ -206,11 +224,19 @@ const SEED_TEMPLATE_TACOS = '00000000-0000-4000-8000-0000000000a2';
 const SEED_LIST_THIS_WEEK = '00000000-0000-4000-8000-0000000000b1';
 const SEED_LIST_LAST_WEEK = '00000000-0000-4000-8000-0000000000b2';
 const SEED_LIST_TWO_WEEKS = '00000000-0000-4000-8000-0000000000b3';
+/** Older shops (20, 34, 48 and 62 days ago) for Stage 3 suggestions. */
+const SEED_OLDER_LISTS = [
+  '00000000-0000-4000-8000-0000000000b4',
+  '00000000-0000-4000-8000-0000000000b5',
+  '00000000-0000-4000-8000-0000000000b6',
+  '00000000-0000-4000-8000-0000000000b7',
+];
 export const MOCK_SEED_IDS = {
   weeklyTemplate: SEED_TEMPLATE_WEEKLY,
   mealTemplate: SEED_TEMPLATE_TACOS,
   thisWeekList: SEED_LIST_THIS_WEEK,
-  archivedLists: [SEED_LIST_LAST_WEEK, SEED_LIST_TWO_WEEKS],
+  /** Newest first: last week, two weeks ago, then the older shops. */
+  archivedLists: [SEED_LIST_LAST_WEEK, SEED_LIST_TWO_WEEKS, ...SEED_OLDER_LISTS],
 };
 
 const sku = (n: string) => n.padStart(18, '0');
@@ -236,6 +262,12 @@ const P = {
   dogFood: sku('398524'),
   salmon: sku('286737'),
   prawns: sku('332441'),
+  // Periodic buys in the older shops (Stage 3 suggestions).
+  bigDogFood: sku('398755'),
+  kiwifruit: sku('380078'),
+  razorCartridges: sku('399547'),
+  coffeeCapsules: sku('365851'),
+  soap: sku('529279'),
 };
 
 /** [productId, qty, unit, note?, ticked?]. */
@@ -309,6 +341,50 @@ const TWO_WEEKS_LINES: SeedLine[] = [
   [P.beans, 2, 'pack', null, true],
   [P.lightMilk, 1, 'pack', null, true],
   [P.coffee, 1, 'pack', null, true],
+];
+
+/**
+ * Older shops, all bought. With last week (6 days ago) and two weeks ago (13) this makes
+ * suggestions for a new list: the 10 weekly-template items plus three periodic items that
+ * are due - big dog food (~2 weeks, 20 days ago), kiwifruit (~2 weeks, 20 days ago) and razor
+ * cartridges (~4 weeks, 34 days ago). Coffee capsules and soap are not due yet.
+ */
+const OLDER_SHOPS: Array<[number, SeedLine[]]> = [
+  [
+    20,
+    [
+      [P.milk, 2, 'pack', null, true],
+      [P.bigDogFood, 1, 'pack', null, true],
+      [P.kiwifruit, 0.5, 'kg', null, true],
+      [P.coffeeCapsules, 1, 'pack', null, true],
+      [P.soap, 1, 'pack', null, true],
+    ],
+  ],
+  [
+    34,
+    [
+      [P.milk, 2, 'pack', null, true],
+      [P.bigDogFood, 1, 'pack', null, true],
+      [P.kiwifruit, 0.5, 'kg', null, true],
+      [P.razorCartridges, 1, 'pack', null, true],
+    ],
+  ],
+  [
+    48,
+    [
+      [P.bigDogFood, 1, 'pack', null, true],
+      [P.kiwifruit, 0.5, 'kg', null, true],
+      [P.coffeeCapsules, 1, 'pack', null, true],
+    ],
+  ],
+  [
+    62,
+    [
+      [P.bigDogFood, 1, 'pack', null, true],
+      [P.razorCartridges, 1, 'pack', null, true],
+      [P.soap, 1, 'pack', null, true],
+    ],
+  ],
 ];
 
 function seedHousehold(householdId: string, source: MockProductSource): MockHousehold {
@@ -403,9 +479,14 @@ function seedHousehold(householdId: string, source: MockProductSource): MockHous
 
   const lastWeek = archived(SEED_LIST_LAST_WEEK, 6, LAST_WEEK_LINES);
   const twoWeeks = archived(SEED_LIST_TWO_WEEKS, 13, TWO_WEEKS_LINES);
+  const older = OLDER_SHOPS.map(([daysAgo, lines], i) =>
+    archived(SEED_OLDER_LISTS[i] as string, daysAgo, lines),
+  );
   const created = at(DAY);
   const purchases: Record<string, PurchaseRecord> = {};
-  for (const p of [...lastWeek.purchases, ...twoWeeks.purchases]) purchases[purchaseSortKey(p)] = p;
+  for (const a of [lastWeek, twoWeeks, ...older]) {
+    for (const p of a.purchases) purchases[purchaseSortKey(p)] = p;
+  }
 
   return {
     lists: [
@@ -424,6 +505,7 @@ function seedHousehold(householdId: string, source: MockProductSource): MockHous
       },
       lastWeek.list,
       twoWeeks.list,
+      ...older.map((a) => a.list),
     ],
     templates: [
       template(SEED_TEMPLATE_WEEKLY, 'Weekly basics', 'weekly', WEEKLY_LINES),
@@ -651,6 +733,142 @@ function archive(hh: MockHousehold, list: MockList, mode: 'auto' | 'finish') {
   for (const row of purchasesForList(list.id, at, list.items)) {
     hh.purchases[purchaseSortKey(row)] = row;
   }
+}
+
+// ------------------------------------------------------------------ Stage 3 suggestions
+
+const SUGGEST_DAILY_LIMIT = 20;
+const BULK_ADD_MAX = 50;
+const RATE_LIMIT_MESSAGE = "You've used today's suggestions - try again tomorrow.";
+
+type SuggestMode = 'rules' | 'coldStart' | 'empty' | 'limit';
+
+function suggestMode(): SuggestMode | null {
+  const seam = (globalThis as { __mockSuggest?: { mode?: SuggestMode } | null }).__mockSuggest;
+  return seam?.mode ?? null;
+}
+
+function rateLimited(): never {
+  throw new MockFailure(json(429, { code: 'RATE_LIMITED', message: RATE_LIMIT_MESSAGE }));
+}
+
+/** Same engine as the API; the mock reports source 'ai' unless the seam says otherwise. */
+function suggestionsFor(
+  hh: MockHousehold,
+  householdId: string,
+  list: MockList | null,
+): SuggestionsResponse {
+  const mode = suggestMode();
+  if (mode === 'limit') rateLimited();
+  const today = localDate(new Date());
+  const runs = hh.suggestRuns?.day === today ? hh.suggestRuns.runs : 0;
+  if (runs >= SUGGEST_DAILY_LIMIT) rateLimited();
+  hh.suggestRuns = { day: today, runs: runs + 1 };
+  const noHistory = mode === 'coldStart' || mode === 'empty';
+  const result = suggestCandidates({
+    purchases: noHistory ? [] : Object.values(hh.purchases),
+    templates: mode === 'empty' ? [] : hh.templates,
+    exclude: list ? list.items.map((i) => i.product.productId) : [],
+    today,
+    aisleOrder: normaliseAisleOrder(hh.aisleOrder),
+  });
+  const suggestions: Suggestion[] = result.candidates.flatMap((c) => {
+    let snapshot = c.templateProduct;
+    if (!snapshot) {
+      const p = productLookup(householdId, c.productId);
+      if (!p) return [];
+      snapshot = snapshotOf({ ...p, unitType: p.defaultUnitType ?? p.unitType });
+    }
+    return [
+      {
+        productId: c.productId,
+        snapshot,
+        qty: c.qty,
+        unit: c.unit,
+        note: c.note,
+        reason: c.reason,
+        fromTemplate: c.fromTemplate,
+        fromHistory: c.origin !== 'template',
+      },
+    ];
+  });
+  return {
+    source: result.coldStart || mode === 'rules' || suggestions.length === 0 ? 'rules' : 'ai',
+    coldStart: result.coldStart,
+    note: result.note,
+    suggestions,
+  };
+}
+
+function bulkAdd(
+  hh: MockHousehold,
+  householdId: string,
+  userId: string,
+  list: MockList,
+  body: unknown,
+): BulkAddItemsResponse {
+  const raw = (body as { items?: unknown } | undefined)?.items;
+  if (typeof body !== 'object' || body === null || !Array.isArray(raw)) {
+    return invalid('items must be a list', 'items');
+  }
+  if (raw.length < 1 || raw.length > BULK_ADD_MAX) {
+    return invalid(`Add 1 to ${BULK_ADD_MAX} items at a time`, 'items');
+  }
+  const seen = new Set<string>();
+  const results: BulkAddItemResult[] = raw.map((entry) => {
+    const r = (typeof entry === 'object' && entry !== null ? entry : {}) as Record<string, unknown>;
+    const ref = {
+      productId: typeof r.productId === 'string' ? r.productId.slice(0, 64) : '',
+      unit: (typeof r.unit === 'string' ? r.unit : 'each') as UnitType,
+    };
+    const fail = (code: 'VALIDATION' | 'LIMIT' | 'CONFLICT', message: string) =>
+      ({ ok: false, ...ref, code, message }) as const;
+    const parsed = parseAddItemRequest(entry);
+    if (!parsed.ok) return fail('VALIDATION', parsed.message);
+    const id = lineIdFor(parsed.value.productId, parsed.value.unit);
+    if (seen.has(id)) return fail('VALIDATION', 'This product and unit is already in the request.');
+    seen.add(id);
+    const p = productLookup(householdId, parsed.value.productId);
+    if (!p) return fail('VALIDATION', 'That product is not in the catalogue');
+    const line: LineInput = {
+      product: snapshotOf({ ...p, unitType: p.defaultUnitType ?? p.unitType }),
+      qty: parsed.value.qty,
+      unit: parsed.value.unit,
+      note: parsed.value.note,
+    };
+    try {
+      const { item, merged } = addItem(list, line, userId);
+      return {
+        ok: true,
+        productId: line.product.productId,
+        unit: line.unit,
+        change: { itemId: item.id, created: !merged, addedQty: line.qty, version: item.version },
+      };
+    } catch (err) {
+      if (!(err instanceof MockFailure)) throw err;
+      return fail(err.response.status === 409 ? 'LIMIT' : 'VALIDATION', 'Could not add this item.');
+    }
+  });
+  const added = results.filter((r) => r.ok).length;
+  return { list: detail(hh, list), results, added, failed: results.length - added };
+}
+
+function bulkUndo(hh: MockHousehold, list: MockList, body: unknown): BulkUndoResponse {
+  const changes = unwrap(parseUndoRequest(body, BULK_ADD_MAX));
+  const at = nowIso();
+  const results: BulkUndoResult[] = changes.map((c) => {
+    const cur = list.items.find((i) => i.id === c.itemId);
+    if (c.created && !cur) return { ok: true, itemId: c.itemId };
+    if (!cur || cur.version !== c.version) {
+      return { ok: false, itemId: c.itemId, code: 'CONFLICT', message: 'Changed on another phone' };
+    }
+    const qty = roundQuantity(cur.qty - c.addedQty, cur.unit);
+    if (c.created || qty <= 0) list.items = list.items.filter((i) => i.id !== c.itemId);
+    else Object.assign(cur, { qty, version: cur.version + 1, updatedAt: at });
+    return { ok: true, itemId: c.itemId };
+  });
+  const undone = results.filter((r) => r.ok).length;
+  return { list: detail(hh, list), results, undone, failed: results.length - undone };
 }
 
 // ------------------------------------------------------------------ routes
@@ -1107,5 +1325,19 @@ export function createStage2MockRoutes(source: MockProductSource) {
       Reflect.deleteProperty(hh.overrides, id);
       return json(204, null);
     }),
+
+    // ---- Stage 3 (docs/api.md)
+    'POST /api/lists/{listId}/suggestions': write((hh, { params, householdId }) =>
+      json(200, suggestionsFor(hh, householdId, activeList(hh, params.listId))),
+    ),
+    'POST /api/suggestions': write((hh, { householdId }) =>
+      json(200, suggestionsFor(hh, householdId, null)),
+    ),
+    'POST /api/lists/{listId}/items/bulk': write((hh, { params, body, householdId, userId }) =>
+      json(200, bulkAdd(hh, householdId, userId, activeList(hh, params.listId), body)),
+    ),
+    'POST /api/lists/{listId}/items/undo': write((hh, { params, body }) =>
+      json(200, bulkUndo(hh, activeList(hh, params.listId), body)),
+    ),
   };
 }

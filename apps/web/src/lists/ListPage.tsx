@@ -19,6 +19,7 @@ import {
   Plus,
   RefreshCw,
   ShoppingBasket,
+  Sparkles,
   WifiOff,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -59,13 +60,14 @@ import {
 import { countLabel, shortDay, updatedLabel } from './format';
 import { useNow, useSettledTicks } from './hooks';
 import { AddFromTemplateSheet, ListOptionsSheet, RenameSheet } from './ListSheets';
+import { SuggestSheet } from './SuggestSheet';
 import { ShopRow } from './ShopRow';
 
 const DELETE_UNDO_MS = 5000;
 const ARCHIVE_UNDO_MS = 8000;
 const HIGHLIGHT_MS = 2000;
 
-type Sheet = null | 'options' | 'rename' | 'template' | 'finish' | 'delete';
+type Sheet = null | 'options' | 'rename' | 'template' | 'suggest' | 'finish' | 'delete';
 type ArchiveInfo = 'own' | 'other' | null;
 
 const progressOf = (items: readonly ListItem[]) => ({
@@ -103,7 +105,7 @@ export function ListPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const { online } = useOnlineStatus();
-  const routeState = location.state as { name?: string; from?: string } | null;
+  const routeState = location.state as { name?: string; from?: string; suggest?: boolean } | null;
 
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState<{
@@ -116,6 +118,9 @@ export function ListPage() {
   const [archiveInfo, setArchiveInfo] = useState<ArchiveInfo>(null);
   const [announcement, setAnnouncement] = useState('');
   const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
+  const optionsButton = useRef<HTMLButtonElement>(null);
+  const createdForSuggest = useRef(false);
+  const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pollRef = useRef(false);
   const query = useListQuery(id, () => pollRef.current);
@@ -165,6 +170,42 @@ export function ListPage() {
       return () => clearTimeout(t);
     }
   }, [list]);
+
+  // ---- suggestions (docs/ux/suggestions.md)
+  const openSuggest = useCallback(() => {
+    if (!online) {
+      setSheet(null);
+      toast.show("You're offline. Reconnect to get suggestions.");
+      return;
+    }
+    setSheet('suggest');
+  }, [online, toast]);
+  // "Create and suggest" lands here with state.suggest: open the sheet once, then clear it.
+  const wantsSuggest = routeState?.suggest === true;
+  useEffect(() => {
+    if (!wantsSuggest || !active) return;
+    createdForSuggest.current = true;
+    setSheet('suggest');
+    navigate(location.pathname, { replace: true, state: { name: routeState?.name } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsSuggest, active]);
+  const closeSuggest = (added: boolean) => {
+    setSheet(null);
+    if (createdForSuggest.current && !added && list) toast.show(`Created ${list.name}`);
+    createdForSuggest.current = false;
+  };
+  const suggestionsAdded = (ids: string[]) => {
+    for (const i of ids) localIds.current.add(i);
+    setFresh(new Set(ids));
+    if (freshTimer.current) clearTimeout(freshTimer.current);
+    freshTimer.current = setTimeout(() => setFresh(new Set()), HIGHLIGHT_MS);
+  };
+  useEffect(
+    () => () => {
+      if (freshTimer.current) clearTimeout(freshTimer.current);
+    },
+    [],
+  );
 
   // ---- finished on another phone
   const wasActive = useRef(false);
@@ -664,6 +705,7 @@ export function ListPage() {
             {active && (
               <button
                 type="button"
+                ref={optionsButton}
                 aria-label="List options"
                 aria-haspopup="dialog"
                 onClick={() => setSheet('options')}
@@ -763,6 +805,10 @@ export function ListPage() {
               <Button variant="secondary" onClick={() => setSheet('template')}>
                 Add from template
               </Button>
+              <Button variant="secondary" onClick={openSuggest}>
+                <Sparkles aria-hidden className="h-5 w-5" />
+                Suggest items
+              </Button>
             </EmptyView>
           )
         ) : (
@@ -846,6 +892,8 @@ export function ListPage() {
           onRename={() => setSheet('rename')}
           onSetThisWeek={() => void setThisWeek()}
           onAddFromTemplate={() => setSheet('template')}
+          onSuggest={openSuggest}
+          offline={!online}
           onFinish={() => setSheet('finish')}
           onDelete={() => setSheet('delete')}
         />
@@ -858,6 +906,14 @@ export function ListPage() {
           list={{ id, name: list.name }}
           templates={templates.data?.templates ?? []}
           onClose={() => setSheet(null)}
+        />
+      )}
+      {sheet === 'suggest' && (
+        <SuggestSheet
+          list={{ id, name: list.name }}
+          onClose={closeSuggest}
+          onAdded={suggestionsAdded}
+          returnFocusRef={optionsButton}
         />
       )}
       {sheet === 'finish' && (

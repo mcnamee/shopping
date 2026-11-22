@@ -222,18 +222,25 @@ Test it: **Actions -> Scrape fallback (runner) -> Run workflow**, untick "Dry ru
 switch back, delete `SCRAPE_FALLBACK_ENABLED` (the AWS schedule keeps running regardless;
 both are safe to run, they upsert the same items).
 
-## Step 6b - enable Claude on Amazon Bedrock (needed from Stage 3)
+## Step 6b - Bedrock for suggestions (nothing to do for the default model)
 
-AI suggestions use Claude through Amazon Bedrock in your account. AWS retired the old
-**Model access** page - models are now enabled on first use. Do this once, any time
-before Stage 3, signed in as an admin in the Trolley account:
+"Suggest items" (Stage 3) calls **Amazon Nova Micro** on Amazon Bedrock through the APAC
+cross-region inference profile `apac.amazon.nova-micro-v1:0`, from Sydney (D-061). Amazon
+models are enabled on first use and need **no use-case form**, so there is no manual step:
+the deploy grants the API Lambda permission to call only that model (D-073).
 
-1. In the AWS console (Sydney region) open **Amazon Bedrock -> Model catalog**.
-2. Open an **Anthropic Claude Haiku** model and click **Open in playground**.
-3. If prompted, fill in Anthropic's one-off use-case form (e.g. "personal shopping list
-   suggestions") and accept the offer.
-4. Send one test message in the playground. Once it replies, the model is enabled for
-   the account, so Trolley's Lambda can call it without extra Marketplace permissions.
+- If suggestions only ever say "rules" (`source: 'rules'` in the response), check the
+  API Lambda logs (CloudWatch log group with `ApiFunctionLogs` in its name) for
+  `suggestions_ai_fallback`; `AccessDeniedException` means the model
+  id or account access needs a look. Suggestions still work without the AI.
+- To change model, set the GitHub repository variable `SUGGEST_MODEL_ID` (or CDK context
+  `-c suggestModelId=...`) to another Bedrock model or inference profile id, e.g.
+  `apac.amazon.nova-lite-v1:0`, and redeploy. `none` turns the AI pass off (rules only).
+- **Only if you switch to an Anthropic (Claude) model:** do the one-off Anthropic step
+  first. In the AWS console (Sydney) open **Amazon Bedrock -> Model catalog**, open the
+  Claude model, click **Open in playground**, fill in Anthropic's use-case form if
+  prompted (e.g. "personal shopping list suggestions"), and send one test message. Once it
+  replies the model is enabled for the account.
 
 ## Step 7 (g) - add Trolley to your home screen
 

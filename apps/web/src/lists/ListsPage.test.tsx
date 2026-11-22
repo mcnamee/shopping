@@ -118,6 +118,20 @@ describe('New list sheet', () => {
     expect(log().some((c) => c.startsWith('POST /api/lists'))).toBe(true);
   });
 
+  it('Suggestions creates a blank list, opens the review sheet and toasts if nothing is added', async () => {
+    const { user, sheet } = await open();
+    await user.click(within(sheet).getByRole('radio', { name: 'Start with suggestions' }));
+    expect(
+      within(sheet).getByText("We'll look at what you usually buy and suggest items to review."),
+    ).toBeVisible();
+    expect(within(sheet).queryByRole('checkbox', { name: /Weekly basics/ })).toBeNull();
+    await user.click(within(sheet).getByRole('button', { name: 'Create and suggest' }));
+    const review = await screen.findByRole('dialog', { name: 'Suggested items' });
+    expect(await screen.findByRole('heading', { level: 1, name: /^Week of/ })).toBeVisible();
+    await user.click(await within(review).findByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByTestId('toast')).toHaveTextContent(/^Created Week of/);
+  });
+
   it('validates the name', async () => {
     const { user, sheet } = await open();
     await user.clear(within(sheet).getByLabelText('Name'));
@@ -167,7 +181,7 @@ describe('History', () => {
     await user.click(screen.getByRole('link', { name: /History/ }));
     expect(await screen.findByRole('heading', { level: 1, name: 'History' })).toBeVisible();
     const rows = await screen.findAllByRole('link', { name: /finished .*bought$/ });
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(6);
     expect(rows[0]).toHaveAccessibleName(/11 of 12 bought/);
     expect(rows[1]).toHaveAccessibleName(/8 of 8 bought/);
     expect(within(rows[0] as HTMLElement).getByText(/11\/12 bought/)).toBeVisible();
