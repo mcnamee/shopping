@@ -86,9 +86,27 @@ Count: 46 [S] sub-criteria (A1-A4, B1-B5, C1-C5, D1-D8, E1-E6, F1-F5, G1-G2, H1-
 
 | ID | Severity | Description and repro |
 |---|---|---|
-| QA-1 | Low | Redundant pack size on rows. Sign in (mock), open "Week of ..." list: "Garlic per kg" shows a second line "per kg"; names ending in the size ("Full Cream Milk 2L" with "2 L") repeat it too. Suggest hiding the pack-size line when the product name already ends with it (case/space-insensitive) |
+| QA-1 | Low - **Fixed** (`33df106`) | Redundant pack size on rows. Fixed after QA: the pack-size line is hidden when the name already ends with it (case/space-insensitive), unit-tested. Sign in (mock), open "Week of ..." list: "Garlic per kg" shows a second line "per kg"; names ending in the size ("Full Cream Milk 2L" with "2 L") repeat it too. Suggest hiding the pack-size line when the product name already ends with it (case/space-insensitive) |
 | INFO-1 | Info | The two-page concurrent tick in Playwright uses the shared localStorage mock (read-modify-write per request), so it proves the UI sync, not DynamoDB atomicity; atomicity is proven by the API tests (H2, F3). Real two-phone behaviour is the K2 check |
 | INFO-2 | Info | The meta line (pack size, note) is `truncate` (one line). A long note such as "approx. 0.854 kg · Thick cut if they have it" can be cut with an ellipsis on a narrow phone; the full note is in the edit sheet. Not a criterion failure |
 | INFO-3 | Info | D-058 known gap (untick landing between the strongly consistent re-read and the archive update archives with the earlier snapshot) is accepted and untested; E6 e2e ticks 15 rows, not 30; a 401 mid-shop uses the shared client handler (E2E-tested only from Search) |
 
 Not defects (checked): FAB and nav never cover the last row; modal Note, "Adding to" and confirm are visible without scrolling at 390x844; remembered units reach search and the modal; aisle order applied to shop mode; delete-then-leave persists; auto-archive then Undo then re-tick re-archives.
+
+## 5. Sign-off (product-manager, 2026-11-22)
+
+**Verdict: Stage 2 signed off (D-060).** All 46 [S] criteria pass (621 unit/integration tests; e2e 109/109 in three clean runs). No open defects: QA-1 fixed after QA in `33df106`. Cleared to merge to main and deploy.
+
+Informational findings, accepted:
+- INFO-1 (two-page tick e2e runs on the mock): accepted. Atomicity is proven by the API tests (H2, F3); the real check is K2 below.
+- INFO-2 (long notes ellipsised in the row): accepted; full note is one tap away in the edit sheet. Backlog B-012.
+- INFO-3 (D-058 untick/archive race untested; E6 e2e ticks 15 not 30; 401 mid-shop e2e'd only from Search): accepted. The race is a known, documented gap with Undo as recovery; the 15-tick run shows no per-tick cost growth. Test top-ups in backlog B-013.
+
+K1-K2 [U] stay with the user. A failure that traces to a criterion reopens it.
+
+### [U] First real shop checklist
+- [ ] **Before the shop - aisle order:** Settings > Aisle order, set the groups in Casey walk order; open the list in shop mode and check the groups follow it.
+- [ ] **K1:** build this week's list from "Weekly basics" (or your own weekly template) plus a few searched items in under 5 minutes.
+- [ ] **K2 - both phones:** both open the same list in store; ticks on one phone show on the other within about 10 s; both of you ticking at the same moment loses neither tick.
+- [ ] **K2 - archive + undo:** ticking the last item archives the list ("Shop complete - list archived"); tap Undo once to check the list comes back, then tick again (or Finish shop) so it archives and appears in History.
+- [ ] Note anything odd in store (row text, slow ticks, sign-in prompts) for the Stage 3 kick-off.

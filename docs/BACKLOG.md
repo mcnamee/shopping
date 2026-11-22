@@ -15,3 +15,5 @@ Small items deferred from signed-off stages. Highest priority first. Pull into a
 | B-009 | Low | Edit the ALDI category -> household group mapping (spec 3.6). | Stage 2 cut | Defaults (D-039) are good; aisle order editing covers the in-store need. |
 | B-010 | Low | Rename or add household groups. | Stage 2 cut | 15 default groups suffice. |
 | B-011 | Low | Delete archived lists (and their purchase rows). | Stage 2 cut | History is small; rows feed Stage 3. |
+| B-012 | Low | Shop-mode row: show a long note in full (wrap to a second line) instead of an ellipsis. | Stage 2 QA INFO-2 | Full note is in the edit sheet; revisit if it bites in store. |
+| B-013 | Low | Test top-ups: E6 speed e2e at 30 rows (runs 15); 401 mid-shop e2e from shop mode (only Search today); a test for the accepted D-058 untick/archive race. | Stage 2 QA INFO-3 | Behaviour covered by unit/API tests; race accepted with Undo as recovery. |
