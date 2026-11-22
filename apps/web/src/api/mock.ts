@@ -304,6 +304,10 @@ export const mockFetch: typeof fetch = async (input, init) => {
     'http://mock.local',
   );
   const method = (init?.method ?? 'GET').toUpperCase();
+  // Test seam: Playwright sets `window.__mockApiLog = []` to count calls.
+  (globalThis as { __mockApiLog?: string[] }).__mockApiLog?.push(
+    `${method} ${url.pathname}${url.search}`,
+  );
   const match = matchRoute(method, url.pathname);
   const route = match ? mockRoutes[match.key] : undefined;
   const slow = url.searchParams.get('q')?.trim() === MOCK_SLOW_QUERY;

@@ -265,7 +265,7 @@ export function QuantityModal({ product, onConfirm, onClose, returnFocusRef }: Q
                   }
                 }}
                 style={{ width: `${Math.max(2, text.length + 1)}ch` }}
-                className="min-h-[52px] max-w-full bg-transparent text-center text-2xl font-bold text-text focus:outline-none"
+                className="min-h-[52px] min-w-14 max-w-full bg-transparent text-center text-2xl font-bold text-text focus:outline-none"
               />
               {unitSuffix && (
                 <span aria-hidden className="pr-1 text-lg font-semibold text-muted">

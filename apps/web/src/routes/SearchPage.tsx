@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router';
 import { ApiError, getGroups, searchProducts } from '../api';
 import { useToast } from '../components/Toast';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
+import { setLastSearch } from '../search/lastSearch';
 import { CategoryChips } from '../search/CategoryChips';
 import { CustomProductSheet } from '../search/CustomProductSheet';
 import { useDebouncedValue, useDelayedFlag, useNearViewport } from '../search/hooks';
@@ -97,6 +98,10 @@ export function SearchPage() {
       { replace: true },
     );
   }, [trimmed, setParams]);
+
+  useEffect(() => {
+    setLastSearch(params.toString() ? `?${params.toString()}` : '');
+  }, [params]);
 
   const query = useInfiniteQuery({
     queryKey: ['products', 'search', activeQuery, category ?? ''],
