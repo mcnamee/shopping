@@ -1,3 +1,98 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Design tokens: docs/ux/tokens.md section 5. */
+:root {
+  --bg: #ffffff;
+  --surface: #f3f5f6;
+  --surface-raised: #ffffff;
+  --border: #8a949b;
+  --border-subtle: #d5dadd;
+  --text: #0b1215;
+  --text-muted: #44525a;
+  --accent: #0b6b63;
+  --accent-strong: #084f49;
+  --on-accent: #ffffff;
+  --accent-soft: #d6f0ec;
+  --danger: #b3261e;
+  --danger-soft: #fce8e6;
+  --on-danger: #ffffff;
+  --success: #1b6b2f;
+  --success-soft: #e1f4e5;
+  --warning-soft: #fff1cc;
+  --warning-text: #6b4a00;
+  --focus: #0b6b63;
+  --scrim: rgba(0, 0, 0, 0.5);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1416;
+    --surface: #1a2125;
+    --surface-raised: #222b30;
+    --border: #5f6b73;
+    --border-subtle: #2e383e;
+    --text: #f3f6f7;
+    --text-muted: #a9b5bb;
+    --accent: #3adbc8;
+    --accent-strong: #7debdd;
+    --on-accent: #03201d;
+    --accent-soft: #12332f;
+    --danger: #ff8a80;
+    --danger-soft: #3a1715;
+    --on-danger: #2b0a08;
+    --success: #6fdb8a;
+    --success-soft: #14301b;
+    --warning-soft: #3a2e0f;
+    --warning-text: #ffd36b;
+    --focus: #3adbc8;
+    --scrim: rgba(0, 0, 0, 0.65);
+  }
+}
+
+@layer base {
+  html {
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      Arial,
+      sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    scroll-padding-bottom: 96px;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  button {
+    font: inherit;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

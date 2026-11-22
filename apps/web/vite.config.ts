@@ -1,6 +1,12 @@
+/// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
@@ -10,24 +16,40 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
+    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+    test: {
+      // Component tests opt in to jsdom with a `// @vitest-environment jsdom` pragma.
+      setupFiles: ['./src/test/setup.ts'],
+    },
     plugins: [
       react(),
       VitePWA({
         registerType: 'autoUpdate',
         // External script (not inline) so the CSP can stay script-src 'self'.
         injectRegister: 'script-defer',
-        includeAssets: ['icon.svg'],
+        includeAssets: ['icon.svg', 'icons/apple-touch-icon.png'],
         manifest: {
           name: 'Trolley',
           short_name: 'Trolley',
-          description: 'Our household shopping list',
+          description: 'Household shopping list for two',
+          orientation: 'portrait',
+          lang: 'en-AU',
           display: 'standalone',
           start_url: '/',
           scope: '/',
-          // docs/ux/app-shell.md (PWA). Final PNG/maskable icons to be added per UX spec.
           theme_color: '#0B6B63',
-          background_color: '#ffffff',
-          icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+          background_color: '#FFFFFF',
+          icons: [
+            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            {
+              src: '/icons/icon-maskable-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+            { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          ],
         },
         workbox: {
           navigateFallback: '/index.html',
