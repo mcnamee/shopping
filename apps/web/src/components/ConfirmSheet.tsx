@@ -7,6 +7,8 @@ interface ConfirmSheetProps {
   cancel: ReactNode;
   /** Locks the sheet (no Esc/scrim dismissal) while the action runs. */
   busy?: boolean;
+  /** `danger` (default) or `primary` for non-destructive confirms such as Finish shop. */
+  tone?: 'danger' | 'primary';
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -24,6 +26,7 @@ export function ConfirmSheet({
   confirm,
   cancel,
   busy = false,
+  tone = 'danger',
   onConfirm,
   onCancel,
 }: ConfirmSheetProps) {
@@ -90,7 +93,9 @@ export function ConfirmSheet({
             type="button"
             disabled={busy}
             onClick={onConfirm}
-            className="flex min-h-primary w-full items-center justify-center gap-2 rounded-md bg-danger px-4 text-lg text-danger-on disabled:opacity-70"
+            className={`flex min-h-primary w-full items-center justify-center gap-2 rounded-md px-4 text-lg disabled:opacity-70 ${
+              tone === 'danger' ? 'bg-danger text-danger-on' : 'bg-accent text-accent-on'
+            }`}
           >
             {confirm}
           </button>

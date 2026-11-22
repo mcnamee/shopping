@@ -9,6 +9,10 @@ vi.mock('../api', async (importOriginal) => {
     getMe: vi
       .fn()
       .mockResolvedValue({ userId: 'u1', email: 'alex@example.com', householdId: 'h1' }),
+    getAisleOrder: vi.fn().mockResolvedValue({ groups: [], isDefault: false, version: 2 }),
+    getUnitOverrides: vi.fn().mockResolvedValue({
+      overrides: [{ productId: 'a', unit: 'L', defaultUnit: 'pack', name: 'Milk' }],
+    }),
   };
 });
 
@@ -26,6 +30,18 @@ const openSheet = async (user: Awaited<ReturnType<typeof settings>>['user']) => 
   await user.click(screen.getByRole('button', { name: 'Sign out' }));
   return screen.findByRole('alertdialog');
 };
+
+describe('Settings shopping section', () => {
+  it('links to Aisle order and Remembered units with their current values', async () => {
+    await settings();
+    const aisle = screen.getByRole('link', { name: /Aisle order/ });
+    expect(aisle).toHaveAttribute('href', '/settings/aisle-order');
+    expect(await screen.findByText('Custom order')).toBeInTheDocument();
+    const units = screen.getByRole('link', { name: /Remembered units/ });
+    expect(units).toHaveAttribute('href', '/settings/units');
+    expect(await screen.findByText('1 product')).toBeInTheDocument();
+  });
+});
 
 describe('Settings and sign-out confirm', () => {
   it('shows the signed-in email and version', async () => {

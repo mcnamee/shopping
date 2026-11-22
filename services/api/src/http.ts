@@ -23,4 +23,49 @@ export const errors = {
   validation: (message: string, field?: string) =>
     json(400, { code: 'VALIDATION', message, ...(field ? { field } : {}) }),
   internal: () => json(500, { code: 'INTERNAL', message: 'Internal server error' }),
+  conflict: (reason: ConflictReason, message: string, current?: unknown) =>
+    json(409, { code: 'CONFLICT', reason, message, ...(current !== undefined ? { current } : {}) }),
 };
+
+export type ConflictReason = 'STALE' | 'LIST_ARCHIVED' | 'NOT_ARCHIVED' | 'LIMIT' | 'UNDO_EXPIRED';
+
+/**
+ * Thrown from deep inside a route (stores, services) to end the request with an error
+ * response; the router turns it into the HTTP result.
+ */
+export class HttpFailure extends Error {
+  override name = 'HttpFailure';
+  constructor(public readonly result: HttpResult) {
+    super(`HTTP ${String(result.statusCode)}`);
+  }
+}
+
+export const fail = {
+  notFound: (): never => {
+    throw new HttpFailure(errors.notFound());
+  },
+  validation: (message: string, field?: string): never => {
+    throw new HttpFailure(errors.validation(message, field));
+  },
+  conflict: (reason: ConflictReason, message: string, current?: unknown): never => {
+    throw new HttpFailure(errors.conflict(reason, message, current));
+  },
+};
+
+const MAX_BODY_BYTES = 16 * 1024;
+
+/** Parse a JSON body (base64-aware). Missing body is `undefined`; bad JSON is a 400. */
+export function readJsonBody(event: {
+  body?: string | undefined;
+  isBase64Encoded?: boolean;
+}): unknown {
+  const raw = event.body;
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  const text = event.isBase64Encoded ? Buffer.from(raw, 'base64').toString('utf8') : raw;
+  if (text.length > MAX_BODY_BYTES) return fail.validation('Body is too large');
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return fail.validation('Body must be valid JSON');
+  }
+}

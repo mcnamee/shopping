@@ -154,25 +154,20 @@ test.describe('Search tab', () => {
     await expectNoSeriousAxeViolations(page);
   });
 
-  test('template icon shows a toast above the nav', async ({ page }) => {
+  test('template icon opens the target picker with lists and templates', async ({ page }) => {
     await openSearch(page);
     await searchFor(page, 'milk');
     await page
       .getByRole('button', { name: /to a template$/ })
       .first()
       .click();
-    const toast = page.getByTestId('toast');
-    await expect(toast).toHaveText('Templates are coming soon');
-    await expect(page.getByRole('status').filter({ has: toast })).toBeVisible();
-    const t = await toast.boundingBox();
-    const nav = await page.getByRole('navigation', { name: 'Main' }).boundingBox();
-    if (!t || !nav) throw new Error('boxes');
-    expect(t.y + t.height).toBeLessThanOrEqual(nav.y);
-    await expect(toast).toBeHidden({ timeout: 6000 }); // auto-dismisses after about 4 s
+    const picker = page.getByRole('dialog', { name: 'Choose where to add' });
+    await expect(picker).toBeVisible();
+    await expect(picker.getByRole('radio', { name: /Weekly basics/ })).toBeVisible();
+    await expect(picker.getByRole('radio', { name: /Week of/ })).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
   });
-});
 
-test.describe('Quantity modal', () => {
   test('opens as a dialog: focus in, trapped, axe and tap targets pass, Escape returns focus', async ({
     page,
   }) => {
@@ -228,16 +223,17 @@ test.describe('Quantity modal', () => {
     await dialog.getByRole('radio', { name: 'kg', exact: true }).click();
     await expect(qty).toHaveValue('1.5');
 
-    await dialog.getByRole('button', { name: 'Add to list' }).click();
+    await dialog.getByRole('button', { name: /^Add to Week of/ }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId('toast')).toHaveText(
-      'Added 1.5 kg Cavendish Bananas per kg - lists are coming soon',
+    await expect(page.getByTestId('toast')).toContainText(
+      // The seeded this-week list already holds 1.5 kg of bananas, so this merges (D-046).
+      /^Updated Cavendish Bananas per kg: now 3 kg in Week of \d+ \w+(Undo)?$/,
     );
     await expect(addButton(page, 'Cavendish Bananas per kg')).toHaveText('Added');
     await expect(addButton(page, 'Cavendish Bananas per kg')).toBeFocused();
   });
 
-  test('validation: invalid entry shows the message and blocks Add to list', async ({ page }) => {
+  test('validation: invalid entry shows the message and blocks Add', async ({ page }) => {
     await openSearch(page);
     await searchFor(page, 'bananas');
     await addButton(page, 'Cavendish Bananas per kg').click();
@@ -249,7 +245,7 @@ test.describe('Quantity modal', () => {
     await expect(qty).toHaveAttribute('aria-invalid', 'true');
     await expectNoSeriousAxeViolations(page);
     // aria-disabled stays clickable for real users; Playwright would wait, so force it.
-    await dialog.getByRole('button', { name: 'Add to list' }).click({ force: true });
+    await dialog.getByRole('button', { name: /^Add to/ }).click({ force: true });
     await expect(dialog).toBeVisible();
     await expect(qty).toBeFocused();
     await qty.fill('1,5');
@@ -327,10 +323,8 @@ test.describe('Custom product', () => {
     await expect(modal).toBeVisible();
     await expect(modal.getByText('Custom item')).toBeVisible();
     await modal.getByRole('button', { name: '2 kg' }).click();
-    await modal.getByRole('button', { name: 'Add to list' }).click();
-    await expect(page.getByTestId('toast')).toHaveText(
-      'Added 2 kg Wagyu rump - lists are coming soon',
-    );
+    await modal.getByRole('button', { name: /^Add to/ }).click();
+    await expect(page.getByTestId('toast')).toContainText(/^Added 2 kg Wagyu rump to Week of/);
 
     // The new product now shows up in search with a Custom badge.
     const card = page.locator('li', { hasText: 'Wagyu rump' });

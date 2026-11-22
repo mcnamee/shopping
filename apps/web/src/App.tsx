@@ -1,9 +1,15 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { HistoryPage } from './lists/HistoryPage';
+import { ListPage } from './lists/ListPage';
+import { ListsPage } from './lists/ListsPage';
 import { ToastProvider } from './components/Toast';
+import { AisleOrderPage } from './settings/AisleOrderPage';
+import { UnitsPage } from './settings/UnitsPage';
+import { TemplateEditorPage } from './templates/TemplateEditorPage';
+import { TemplatesPage } from './templates/TemplatesPage';
 import { AppLayout } from './routes/AppLayout';
 import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { NewPasswordPage } from './routes/NewPasswordPage';
-import { PlaceholderPage } from './routes/PlaceholderPage';
 import { PublicOnly, RequireAuth } from './routes/RequireAuth';
 import { SearchPage } from './routes/SearchPage';
 import { SettingsPage } from './routes/SettingsPage';
@@ -44,10 +50,16 @@ export function AppRoutes() {
           </RequireAuth>
         }
       >
-        <Route index element={<PlaceholderPage kind="lists" />} />
+        <Route index element={<ListsPage />} />
+        <Route path="/lists/history" element={<HistoryPage />} />
+        <Route path="/lists/:id" element={<ListPage />} />
         <Route path="/search" element={<SearchPage />} />
-        <Route path="/templates" element={<PlaceholderPage kind="templates" />} />
+        <Route path="/templates" element={<TemplatesPage />} />
+        <Route path="/templates/new" element={<TemplateEditorPage isNew />} />
+        <Route path="/templates/:id" element={<TemplateEditorPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/aisle-order" element={<AisleOrderPage />} />
+        <Route path="/settings/units" element={<UnitsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

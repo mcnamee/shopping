@@ -10,6 +10,8 @@ interface SegmentedControlProps<T extends string> {
   variant?: 'primary' | 'quiet';
   optionLabel?: (value: T) => string;
   describedBy?: string;
+  /** Grid columns (default 6, the unit control). */
+  columns?: 2 | 6;
 }
 
 /**
@@ -24,6 +26,7 @@ export function SegmentedControl<T extends string>({
   variant = 'primary',
   optionLabel = (v) => v,
   describedBy,
+  columns = 6,
 }: SegmentedControlProps<T>) {
   const refs = useRef(new Map<T, HTMLButtonElement>());
 
@@ -46,7 +49,7 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={label}
       {...(describedBy ? { 'aria-describedby': describedBy } : {})}
-      className="grid grid-cols-6 gap-1"
+      className={`grid gap-1 ${columns === 2 ? 'grid-cols-2' : 'grid-cols-6'}`}
     >
       {options.map((opt, i) => {
         const selected = opt === value;

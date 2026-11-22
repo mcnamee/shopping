@@ -1,8 +1,23 @@
-import type { DeleteCommand, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import type {
+  BatchWriteCommand,
+  DeleteCommand,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  TransactWriteCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
+
+export type DocCommand =
+  | QueryCommand
+  | GetCommand
+  | PutCommand
+  | DeleteCommand
+  | UpdateCommand
+  | BatchWriteCommand
+  | TransactWriteCommand;
 
 /** The one DocumentClient method we use (tests pass a plain fake). */
 export interface DocSender {
-  send(
-    command: QueryCommand | GetCommand | PutCommand | DeleteCommand,
-  ): Promise<Record<string, unknown>>;
+  send(command: DocCommand): Promise<Record<string, unknown>>;
 }

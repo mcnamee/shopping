@@ -1,4 +1,5 @@
 /** Response shapes shared between services/api and apps/web. */
+import type { ListItem, ListStatus, TemplateItem, TemplateType, UnitOverride } from './lists';
 import type { UnitType } from './product';
 
 export interface HealthResponse {
@@ -12,7 +13,13 @@ export interface MeResponse {
 }
 
 export type ErrorCode =
-  'UNAUTHORISED' | 'NO_HOUSEHOLD' | 'FORBIDDEN' | 'NOT_FOUND' | 'VALIDATION' | 'INTERNAL';
+  | 'UNAUTHORISED'
+  | 'NO_HOUSEHOLD'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'VALIDATION'
+  | 'CONFLICT'
+  | 'INTERNAL';
 
 export interface ErrorResponse {
   code: ErrorCode;
@@ -42,7 +49,13 @@ export interface ProductSummary {
   unitPrice: string | null;
   /** e.g. "2 L", "500 g", "5 each", "per kg", "approx. 0.96 kg". Null when unknown. */
   packSize: string | null;
+  /** Unit the quantity modal opens in: the household's override if any, else the default. */
   unitType: UnitType;
+  /**
+   * The product's own (inferred) unit, before household overrides (Stage 2). Present on
+   * every API response; optional only for older fixtures.
+   */
+  defaultUnitType?: UnitType;
   /** Household group id (see DEFAULT_GROUPS). */
   groupId: string;
   /** True for household custom products. */
@@ -97,7 +110,233 @@ export interface GroupSummary {
   shortName: string;
 }
 
-/** GET /api/groups: the household's groups in aisle order (defaults until Stage 2). */
+/** GET /api/groups: the household's groups in its aisle order (Settings > Aisle order). */
 export interface GroupsResponse {
   groups: GroupSummary[];
+}
+
+// ---------------------------------------------------------------------------------------
+// Stage 2: lists, templates, settings. Endpoint reference: docs/api.md.
+
+/**
+ * 409 CONFLICT. `reason`:
+ * - STALE: the `version` sent is old (other phone changed it); `current` holds the latest.
+ * - LIST_ARCHIVED: the list is archived (read-only).
+ * - NOT_ARCHIVED: reopen (Undo) of a list that is already active.
+ * - LIMIT: a count limit (A2) would be exceeded.
+ * - UNDO_EXPIRED: reopen asked after the undo window.
+ */
+export interface ConflictErrorResponse extends ErrorResponse {
+  code: 'CONFLICT';
+  reason: 'STALE' | 'LIST_ARCHIVED' | 'NOT_ARCHIVED' | 'LIMIT' | 'UNDO_EXPIRED';
+  current?: unknown;
+}
+
+/** Request body for adding to a list or template (POST .../items). */
+export interface AddItemRequest {
+  productId: string;
+  qty: number;
+  unit: UnitType;
+  note?: string | null;
+}
+
+/** PATCH .../items/{itemId}. `version` required when qty/unit/note change. */
+export interface EditItemRequest {
+  qty?: number;
+  unit?: UnitType;
+  note?: string | null;
+  /** Lists only. */
+  ticked?: boolean;
+  version?: number;
+}
+
+// ---- Templates
+
+export interface TemplateSummary {
+  id: string;
+  name: string;
+  type: TemplateType;
+  itemCount: number;
+  /** First 3 item names in aisle order. */
+  preview: string[];
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Template extends Omit<TemplateSummary, 'preview'> {
+  /** Sorted by household aisle order, then name. */
+  items: TemplateItem[];
+}
+
+/** GET /api/templates (weekly first, then by name). */
+export interface TemplatesResponse {
+  templates: TemplateSummary[];
+}
+
+export interface CreateTemplateRequest {
+  name: string;
+  /** Default weekly. */
+  type?: TemplateType;
+}
+
+export interface UpdateTemplateRequest {
+  name?: string;
+  type?: TemplateType;
+  version: number;
+}
+
+/** POST /api/templates/{id}/items (200 merged, 201 new row). */
+export interface TemplateItemMutationResponse {
+  template: Template;
+  item: TemplateItem;
+  /** True when it summed into an existing row (D-046). */
+  merged: boolean;
+}
+
+// ---- Lists
+
+export interface ListSummary {
+  id: string;
+  name: string;
+  status: ListStatus;
+  /** The household's "this week" list (D-048). Always false when archived. */
+  thisWeek: boolean;
+  /** Item rows on the list, and how many are ticked (archived: bought). */
+  itemCount: number;
+  tickedCount: number;
+  createdAt: string;
+  updatedAt: string;
+  /** Set when archived. */
+  completedAt: string | null;
+  /** How it was archived: last tick ("auto") or "Finish shop". */
+  finishedBy: 'auto' | 'finish' | null;
+  /** List row version (rename, archive, reopen). Items have their own. */
+  version: number;
+}
+
+export interface ListDetail extends ListSummary {
+  /** Unsorted; group with groupForShop(items, aisleOrder). */
+  items: ListItem[];
+}
+
+/** GET /api/lists: active lists, "this week" first then newest. */
+export interface ListsResponse {
+  lists: ListSummary[];
+}
+
+/** GET /api/history?cursor=&limit= : archived lists, newest completed first. */
+export interface HistoryResponse {
+  lists: ListSummary[];
+  nextCursor: string | null;
+}
+
+export interface CreateListRequest {
+  /** Default "Week of <Monday>". */
+  name?: string;
+  /** Start from these templates, merged by D-046. */
+  templateIds?: string[];
+  /** See CreateListInput.thisWeek. */
+  thisWeek?: boolean;
+}
+
+/** One line touched by a bulk add, so the client can undo it. */
+export interface LineChange {
+  itemId: string;
+  /** True: a new row (undo = DELETE); false: merged (undo = PATCH qty - addedQty). */
+  created: boolean;
+  addedQty: number;
+  /** Item version after the change (for the undo PATCH/DELETE). */
+  version: number;
+}
+
+/** POST /api/lists (201). */
+export interface CreateListResponse {
+  list: ListDetail;
+  /** Lines folded together when merging templates (for "(4 combined)"). */
+  combined: number;
+}
+
+export interface UpdateListRequest {
+  name?: string;
+  /** Required with name. */
+  version?: number;
+  thisWeek?: boolean;
+}
+
+/** POST /api/lists/{id}/templates. */
+export interface AddTemplatesToListRequest {
+  templateIds: string[];
+}
+
+export interface AddTemplatesToListResponse {
+  list: ListDetail;
+  /** Template lines processed (after merging the templates together). */
+  added: number;
+  /** Lines that summed into an existing row or another template's line. */
+  combined: number;
+  changes: LineChange[];
+}
+
+/** POST /api/lists/{id}/items and POST /api/this-week/items (200 merged, 201 new row). */
+export interface ListItemMutationResponse {
+  item: ListItem;
+  list: ListSummary;
+  merged: boolean;
+  /** Quantity this request added (for Undo of a merge: PATCH qty = item.qty - addedQty). */
+  addedQty: number;
+  /** POST /api/this-week/items only: a new "Week of" list was created (C2). */
+  listCreated?: boolean;
+}
+
+/** PATCH /api/lists/{id}/items/{itemId}. */
+export interface ListItemUpdateResponse {
+  /** The row after the change. A unit change re-keys the row: use item.id from here. */
+  item: ListItem;
+  list: ListSummary;
+  /** This change archived the list (last item ticked, F1). Show the Undo toast. */
+  archived: boolean;
+  /** id of the row that was replaced when a unit change re-keyed it. */
+  replacedItemId?: string;
+}
+
+/** DELETE /api/lists/{id}/items/{itemId}. */
+export interface ListItemDeleteResponse {
+  list: ListSummary;
+}
+
+/** POST /api/lists/{id}/finish and /reopen. */
+export interface ListArchiveResponse {
+  list: ListDetail;
+}
+
+// ---- Settings
+
+/** GET /api/settings/aisle-order, PUT, DELETE (reset). */
+export interface AisleOrderResponse {
+  groups: GroupSummary[];
+  isDefault: boolean;
+  /** Pass back on PUT to detect the other phone's change (409 STALE). */
+  version: number;
+}
+
+export interface AisleOrderRequest {
+  /** All 15 group ids in the new order. */
+  order: string[];
+  version?: number;
+}
+
+/** GET /api/settings/unit-overrides (by name). */
+export interface UnitOverridesResponse {
+  overrides: UnitOverride[];
+}
+
+/** PUT /api/settings/unit-overrides/{productId}. Same as the default unit removes it. */
+export interface UnitOverrideRequest {
+  unit: UnitType;
+}
+
+export interface UnitOverrideResponse {
+  /** Null when the override was removed (unit equals the product default). */
+  override: UnitOverride | null;
 }

@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, within } from '@testing-library/react';
 import type { ProductSummary } from '@trolley/core';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { installMockApi, renderWithProviders } from '../test/mockApp';
 import { QuantityModal } from './QuantityModal';
+
+vi.mock('../auth/service', async () => (await import('../test/authService')).serviceMock);
+
+let auth: Awaited<ReturnType<typeof installMockApi>>;
+beforeEach(async () => {
+  auth = await installMockApi();
+});
 
 const product = (over: Partial<ProductSummary> = {}): ProductSummary => ({
   sku: '1',
@@ -22,8 +29,10 @@ const product = (over: Partial<ProductSummary> = {}): ProductSummary => ({
 function setup(p: ProductSummary = product()) {
   const onConfirm = vi.fn();
   const onClose = vi.fn();
-  const user = userEvent.setup();
-  render(<QuantityModal product={p} onConfirm={onConfirm} onClose={onClose} />);
+  const { user } = renderWithProviders(
+    <QuantityModal product={p} onConfirm={onConfirm} onClose={onClose} />,
+    auth,
+  );
   const field = () => screen.getByRole('textbox', { name: /^Quantity/ });
   return { user, onConfirm, onClose, field };
 }
@@ -48,7 +57,9 @@ describe('QuantityModal', () => {
     expect(field()).toHaveValue('1.75');
     await user.click(screen.getByRole('button', { name: 'Decrease quantity' }));
     expect(field()).toHaveValue('1.5');
-    expect(screen.getByRole('status')).toHaveTextContent('Quantity 1.5 kilograms');
+    expect(within(screen.getByRole('dialog')).getByRole('status')).toHaveTextContent(
+      'Quantity 1.5 kilograms',
+    );
   });
 
   it('shows presets for the unit, marks the current one and sets on tap', async () => {
@@ -78,7 +89,9 @@ describe('QuantityModal', () => {
     expect(dec).toHaveAttribute('aria-disabled', 'true');
     await user.click(dec);
     expect(field()).toHaveValue('1');
-    expect(screen.getByRole('status')).toHaveTextContent('Minimum reached');
+    expect(within(screen.getByRole('dialog')).getByRole('status')).toHaveTextContent(
+      'Minimum reached',
+    );
     await user.click(screen.getByRole('button', { name: 'Increase quantity' }));
     expect(field()).toHaveValue('2');
   });
@@ -101,7 +114,9 @@ describe('QuantityModal', () => {
     await user.click(screen.getByRole('button', { name: '1.5 kg' }));
     await user.click(screen.getByRole('radio', { name: 'g' }));
     expect(field()).toHaveValue('1500');
-    expect(screen.getByRole('status')).toHaveTextContent('Unit changed to grams, quantity 1500');
+    expect(within(screen.getByRole('dialog')).getByRole('status')).toHaveTextContent(
+      'Unit changed to grams, quantity 1500',
+    );
     await user.click(screen.getByRole('radio', { name: 'kg' }));
     expect(field()).toHaveValue('1.5');
     await user.click(screen.getByRole('radio', { name: 'mL' }));
@@ -113,11 +128,36 @@ describe('QuantityModal', () => {
     expect(screen.getByRole('radio', { name: 'each' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('does not offer the "Remember unit" checkbox yet', async () => {
+  it('offers "Remember {unit}" only when the unit differs from the opening unit', async () => {
     const { user } = setup();
     await screen.findByRole('dialog');
-    await user.click(screen.getByRole('radio', { name: 'g' }));
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'g' }));
+    const box = screen.getByRole('checkbox', { name: /Remember g for this product/ });
+    expect(box).toBeChecked();
+    expect(
+      screen.getByText('Next time it opens in g. You can undo this in Settings.'),
+    ).toBeVisible();
+    await user.click(screen.getByRole('radio', { name: 'kg' }));
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('says "Go back to {unit}" when an override exists and the original unit is picked', async () => {
+    const { user } = setup(product({ unitType: 'L', defaultUnitType: 'pack', packSize: '2 L' }));
+    await screen.findByRole('dialog');
+    await user.click(screen.getByRole('radio', { name: 'pack' }));
+    expect(
+      screen.getByRole('checkbox', { name: /Go back to pack for this product/ }),
+    ).toBeChecked();
+  });
+
+  it('passes remember: false when the box is unticked', async () => {
+    const { user, onConfirm } = setup();
+    await screen.findByRole('dialog');
+    await user.click(screen.getByRole('radio', { name: 'g' }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: /^Add to/ }));
+    expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ unit: 'g', remember: false }));
   });
 
   it('validates typed entry with the spec messages and blocks confirm', async () => {
@@ -134,7 +174,7 @@ describe('QuantityModal', () => {
     expect(screen.getByText('Enter an amount from 0.05 to 20 kg.')).toBeInTheDocument();
 
     // Activating Add to list while invalid moves focus to the field.
-    await user.click(screen.getByRole('button', { name: 'Add to list' }));
+    await user.click(screen.getByRole('button', { name: /^Add to/ }));
     expect(onConfirm).not.toHaveBeenCalled();
     expect(field()).toHaveFocus();
   });
@@ -181,12 +221,13 @@ describe('QuantityModal', () => {
     await screen.findByRole('dialog');
     await user.click(screen.getByRole('button', { name: '1.5 kg' }));
     await user.type(screen.getByLabelText('Note (optional)'), ' get the washed ones ');
-    await user.click(screen.getByRole('button', { name: 'Add to list' }));
+    await user.click(screen.getByRole('button', { name: /^Add to/ }));
     expect(onConfirm).toHaveBeenCalledWith({
       product: expect.objectContaining({ name: 'Potatoes' }),
       quantity: 1.5,
       unit: 'kg',
       note: 'get the washed ones',
+      remember: false,
     });
   });
 

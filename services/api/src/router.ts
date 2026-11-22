@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { householdContextFromClaims, type HouseholdContext, type JwtClaims } from '@trolley/core';
-import { errors, type HttpResult } from './http';
+import { errors, HttpFailure, type HttpResult } from './http';
 
 /**
  * HTTP API payload v2 event. `authorizer.jwt.claims` is only present on routes that
@@ -51,6 +51,11 @@ export function createRouter(routes: RouteTable) {
           return errors.forbidden();
       }
     }
-    return route.handler({ event, household: result.context });
+    try {
+      return await route.handler({ event, household: result.context });
+    } catch (err) {
+      if (err instanceof HttpFailure) return err.result;
+      throw err;
+    }
   };
 }

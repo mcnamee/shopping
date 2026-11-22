@@ -100,6 +100,7 @@ export function catalogueSummary(p: CatalogueProduct): ProductSummary {
     unitPrice: p.unitPrice,
     packSize: p.packSize,
     unitType: p.unitType,
+    defaultUnitType: p.unitType,
     groupId: p.groupId,
     custom: false,
   };
@@ -115,6 +116,7 @@ export function customSummary(p: CustomProduct): ProductSummary {
     unitPrice: null,
     packSize: p.packSize,
     unitType: p.unitType,
+    defaultUnitType: p.unitType,
     groupId: p.groupId,
     custom: true,
   };

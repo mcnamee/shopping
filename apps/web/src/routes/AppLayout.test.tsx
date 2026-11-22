@@ -4,7 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../api', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, getMe: vi.fn() };
+  return {
+    ...actual,
+    getMe: vi.fn(),
+    getLists: vi.fn().mockResolvedValue({ lists: [] }),
+    getTemplates: vi.fn().mockResolvedValue({ templates: [] }),
+    getAisleOrder: vi.fn().mockResolvedValue({ groups: [], isDefault: true, version: 0 }),
+    getUnitOverrides: vi.fn().mockResolvedValue({ overrides: [] }),
+    getHistory: vi.fn().mockResolvedValue({ lists: [], nextCursor: null }),
+  };
 });
 
 import { ApiError, getMe } from '../api';
@@ -67,9 +75,20 @@ describe('bottom navigation', () => {
     expect(await screen.findByRole('searchbox', { name: 'Search products' })).toBeInTheDocument();
   });
 
-  it('shows the placeholder copy for each tab', async () => {
+  it('shows the empty states for Lists and Templates', async () => {
     await signedInApp('/templates');
-    expect(await screen.findByText('Templates are coming soon')).toBeInTheDocument();
+    expect(await screen.findByText('No templates yet')).toBeInTheDocument();
+  });
+
+  it('keeps Lists current on a list page and hides the shell app bar there', async () => {
+    await signedInApp('/lists/history');
+    const nav = await screen.findByRole('navigation', { name: 'Main' });
+    expect(within(nav).getByRole('link', { name: 'Lists' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(await screen.findByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 });
 
@@ -92,6 +111,6 @@ describe('/me handling', () => {
       "Can't reach Trolley right now.",
     );
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
-    expect(screen.getByText('Lists are coming soon')).toBeInTheDocument();
+    expect(await screen.findByText('No lists yet')).toBeInTheDocument();
   });
 });

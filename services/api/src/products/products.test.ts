@@ -178,6 +178,7 @@ describe('GET /api/products/search', () => {
       unitPrice: '$1.70 per 1 L',
       packSize: '2 L',
       unitType: 'pack',
+      defaultUnitType: 'pack',
       groupId: 'dairy-eggs',
       custom: false,
     });

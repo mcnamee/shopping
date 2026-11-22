@@ -1,15 +1,10 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import {
-  DEFAULT_GROUPS,
-  describeQuantity,
-  type GroupSummary,
-  type ProductSummary,
-} from '@trolley/core';
-import { Loader2, Plus } from 'lucide-react';
+import { DEFAULT_GROUPS, type GroupSummary, type ProductSummary } from '@trolley/core';
+import { Loader2, Plus, ShoppingCart } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { ApiError, getGroups, searchProducts } from '../api';
-import { useToast } from '../components/Toast';
+import { useListsQuery, useTemplatesQuery } from '../lists/data';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
 import { setLastSearch } from '../search/lastSearch';
 import { CategoryChips } from '../search/CategoryChips';
@@ -19,6 +14,8 @@ import { ProductCard, ProductCardSkeleton } from '../search/ProductCard';
 import { QuantityModal, type QuantitySelection } from '../search/QuantityModal';
 import { SearchField } from '../search/SearchField';
 import { ErrorState, InitialState, NoResultsState, OfflineState } from '../search/SearchStates';
+import { sessionTargets, type AddTarget } from '../search/target';
+import { useAddToTarget } from '../search/useAddToTarget';
 
 const DEBOUNCE_MS = 250;
 const MIN_CHARS = 2;
@@ -27,15 +24,29 @@ const SKELETON_DELAY_MS = 150;
 const ADDED_MS = 1500;
 
 type Modal =
-  { kind: 'quantity'; product: ProductSummary } | { kind: 'custom'; name: string } | null;
+  | {
+      kind: 'quantity';
+      product: ProductSummary;
+      target: AddTarget;
+      startOnPicker: boolean;
+      fromTemplateIcon: boolean;
+    }
+  | { kind: 'custom'; name: string; fromTemplateIcon: boolean }
+  | null;
 
 const FALLBACK_GROUPS: readonly GroupSummary[] = DEFAULT_GROUPS;
 
 /** Search tab (docs/ux/search.md). State lives in the URL: /search?q=milk&cat=dairy-eggs. */
 export function SearchPage() {
   const [params, setParams] = useSearchParams();
-  const toast = useToast();
   const { online } = useOnlineStatus();
+  const addToTarget = useAddToTarget();
+  const listContext = params.get('list');
+  const templateContext = params.get('template');
+  const listsQuery = useListsQuery();
+  const templatesQuery = useTemplatesQuery();
+  const lists = listsQuery.data?.lists;
+  const templates = templatesQuery.data?.templates;
 
   const [text, setText] = useState(() => params.get('q') ?? '');
   const [committed, flush] = useDebouncedValue(text, DEBOUNCE_MS);
@@ -99,8 +110,12 @@ export function SearchPage() {
     );
   }, [trimmed, setParams]);
 
+  // The Add items context is dropped when leaving Search through the bottom nav (lists.md 3.10).
   useEffect(() => {
-    setLastSearch(params.toString() ? `?${params.toString()}` : '');
+    const rest = new URLSearchParams(params);
+    rest.delete('list');
+    rest.delete('template');
+    setLastSearch(rest.toString() ? `?${rest.toString()}` : '');
   }, [params]);
 
   const query = useInfiniteQuery({
@@ -137,23 +152,76 @@ export function SearchPage() {
     enabled && !loadingFirst && query.hasNextPage && !query.isFetchingNextPage && !loadMoreError;
   const sentinel = useNearViewport(() => void fetchNext(), canLoadMore, items.length);
 
+  const contextTarget = (): AddTarget | null => {
+    if (listContext) {
+      return {
+        kind: 'list',
+        id: listContext,
+        name: lists?.find((l) => l.id === listContext)?.name ?? '',
+      };
+    }
+    if (templateContext) {
+      const t = templates?.find((x) => x.id === templateContext);
+      return {
+        kind: 'template',
+        id: templateContext,
+        name: t?.name ?? '',
+        ...(t ? { type: t.type } : {}),
+      };
+    }
+    return null;
+  };
+
+  /** A remembered target only counts while that list or template still exists. */
+  const stillThere = (t: AddTarget | null): AddTarget | null => {
+    if (!t) return null;
+    if (t.kind === 'list' && lists && !lists.some((l) => l.id === t.id)) return null;
+    if (t.kind === 'template' && templates && !templates.some((x) => x.id === t.id)) return null;
+    return t;
+  };
+
+  const openQuantity = (product: ProductSummary, fromTemplateIcon: boolean) => {
+    let target: AddTarget = { kind: 'thisWeek' };
+    let startOnPicker = false;
+    if (fromTemplateIcon) {
+      const remembered = stillThere(sessionTargets.lastTemplate);
+      const only = templates?.length === 1 ? templates[0] : undefined;
+      const ctx = templateContext ? contextTarget() : null;
+      if (ctx) target = ctx;
+      else if (remembered) target = remembered;
+      else if (only) target = { kind: 'template', id: only.id, name: only.name, type: only.type };
+      else startOnPicker = true;
+    } else {
+      target = contextTarget() ?? stillThere(sessionTargets.last) ?? target;
+    }
+    setModal({ kind: 'quantity', product, target, startOnPicker, fromTemplateIcon });
+  };
+
   const openCustom = (name: string, button: HTMLElement | null) => {
     opener.current = button;
-    setModal({ kind: 'custom', name });
+    setModal({ kind: 'custom', name, fromTemplateIcon: false });
   };
 
   const onAdd = (product: ProductSummary, button: HTMLButtonElement) => {
     opener.current = button;
-    setModal({ kind: 'quantity', product });
+    openQuantity(product, false);
   };
 
-  const onConfirm = ({ product, quantity, unit }: QuantitySelection) => {
+  const onTemplateIcon = (product: ProductSummary, button: HTMLButtonElement) => {
+    opener.current = button;
+    openQuantity(product, true);
+  };
+
+  const onConfirm = async (selection: QuantitySelection) => {
+    if (modal?.kind !== 'quantity') return;
+    const { product } = selection;
+    await addToTarget(modal.target, selection);
     setModal(null);
-    setAddedSku(product.sku);
-    if (addedTimer.current) clearTimeout(addedTimer.current);
-    addedTimer.current = setTimeout(() => setAddedSku(null), ADDED_MS);
-    // D-026: Stage 1 has no list to add to, so confirming only summarises the choice.
-    toast.show(`Added ${describeQuantity(quantity, unit, product.name)} - lists are coming soon`);
+    if (modal.target.kind !== 'template') {
+      setAddedSku(product.sku);
+      if (addedTimer.current) clearTimeout(addedTimer.current);
+      addedTimer.current = setTimeout(() => setAddedSku(null), ADDED_MS);
+    }
   };
 
   const changeCategory = (id: string | undefined) => {
@@ -215,7 +283,7 @@ export function SearchPage() {
               product={p}
               added={addedSku === p.sku}
               onAdd={onAdd}
-              onTemplate={() => toast.show('Templates are coming soon')}
+              onTemplate={onTemplateIcon}
             />
           ))}
         </ul>
@@ -258,6 +326,22 @@ export function SearchPage() {
     );
   }
 
+  const contextList = listContext ? lists?.find((l) => l.id === listContext) : undefined;
+  const contextTemplate = templateContext
+    ? templates?.find((t) => t.id === templateContext)
+    : undefined;
+  const contextBar = listContext
+    ? {
+        text: `Adding to ${contextList?.name ?? 'list'}`,
+        doneTo: `/lists/${encodeURIComponent(listContext)}`,
+      }
+    : templateContext
+      ? {
+          text: `Adding to template ${contextTemplate?.name ?? ''}`.trim(),
+          doneTo: `/templates/${encodeURIComponent(templateContext)}`,
+        }
+      : null;
+
   const showMeta =
     enabled && !firstPageError && !loadingFirst && !query.isPending && items.length > 0;
   const metaText = browsing
@@ -267,25 +351,42 @@ export function SearchPage() {
   return (
     <div>
       <div
-        className={`sticky top-[calc(var(--safe-top)+56px)] z-20 -mx-[max(16px,var(--safe-left))] -mt-4 space-y-2 bg-bg pb-2 pt-4 ${
-          scrolled ? 'border-b border-border-subtle' : 'border-b border-transparent'
-        }`}
+        className={`sticky top-[calc(var(--safe-top)+56px)] z-20 -mx-[max(16px,var(--safe-left))] -mt-4 space-y-2 bg-bg pb-2 ${
+          contextBar ? '' : 'pt-4'
+        } ${scrolled ? 'border-b border-border-subtle' : 'border-b border-transparent'}`}
       >
-        <SearchField
-          ref={input}
-          value={text}
-          onChange={setText}
-          onSubmit={() => {
-            flush(text);
-            input.current?.blur();
-          }}
-          onClear={() => {
-            setText('');
-            flush('');
-            input.current?.focus();
-          }}
-        />
-        <CategoryChips groups={groups} value={category} onChange={changeCategory} />
+        {contextBar && (
+          <div
+            data-testid="search-context"
+            className="flex min-h-12 items-center gap-2 bg-accent-soft pl-[max(16px,var(--safe-left))] pr-[max(8px,var(--safe-right))]"
+          >
+            <ShoppingCart aria-hidden className="h-5 w-5 shrink-0 text-accent" />
+            <p className="min-w-0 flex-1 truncate text-base font-semibold">{contextBar.text}</p>
+            <Link
+              to={contextBar.doneTo}
+              className="flex min-h-tap items-center rounded-sm px-3 text-base font-bold text-accent"
+            >
+              Done
+            </Link>
+          </div>
+        )}
+        <div className={contextBar ? 'space-y-2 pt-2' : 'space-y-2'}>
+          <SearchField
+            ref={input}
+            value={text}
+            onChange={setText}
+            onSubmit={() => {
+              flush(text);
+              input.current?.blur();
+            }}
+            onClear={() => {
+              setText('');
+              flush('');
+              input.current?.focus();
+            }}
+          />
+          <CategoryChips groups={groups} value={category} onChange={changeCategory} />
+        </div>
       </div>
 
       <section aria-label="Search results" className="pt-3">
@@ -306,6 +407,12 @@ export function SearchPage() {
       {modal?.kind === 'quantity' && (
         <QuantityModal
           product={modal.product}
+          target={modal.target}
+          onTargetChange={(target) =>
+            setModal((m) => (m?.kind === 'quantity' ? { ...m, target } : m))
+          }
+          startOnPicker={modal.startOnPicker}
+          fromTemplateIcon={modal.fromTemplateIcon}
           onConfirm={onConfirm}
           onClose={() => setModal(null)}
           returnFocusRef={returnFocus}
@@ -316,8 +423,8 @@ export function SearchPage() {
           initialName={modal.name}
           initialGroupId={category}
           groups={groups}
-          onCreated={(product) => setModal({ kind: 'quantity', product })}
-          onUseExisting={(product) => setModal({ kind: 'quantity', product })}
+          onCreated={(product) => openQuantity(product, false)}
+          onUseExisting={(product) => openQuantity(product, false)}
           onClose={() => setModal(null)}
           returnFocusRef={returnFocus}
         />
