@@ -60,6 +60,9 @@ export function itemToCatalogueProduct(item: DbItem): CatalogueProduct | null {
     missedRuns: num(item.missedRuns) ?? 0,
     discontinued: item.discontinued === true,
   };
+  if (item.notAtStore === true) product.notAtStore = true;
+  const onSaleDate = str(item.onSaleDate);
+  if (onSaleDate) product.onSaleDate = onSaleDate;
   const discontinuedAt = str(item.discontinuedAt);
   if (discontinuedAt) product.discontinuedAt = discontinuedAt;
   return product;

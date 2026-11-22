@@ -20,6 +20,10 @@ export interface SearchableProduct {
   brand: string | null;
   groupId: string;
   discontinued?: boolean;
+  /** Not stocked at the household's store (D-080); hidden unless `includeNotAtStore`. */
+  notAtStore?: boolean;
+  /** Date (YYYY-MM-DD) a Special Buy goes on sale; lets `notAtStore` lapse without a re-scrape. */
+  onSaleDate?: string;
   /** Household custom product. */
   custom?: boolean;
 }
@@ -140,11 +144,29 @@ function matchField(
   return { quality: best, position };
 }
 
+/** Today's date (YYYY-MM-DD) in Australia/Sydney (ACT time), for on-sale date checks. */
+export function storeToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Sydney' }).format(now);
+}
+
+/** True when the product is flagged not stocked at the store and its on-sale date (if any) has not arrived. */
+export function isNotAtStore(
+  item: Pick<SearchableProduct, 'notAtStore' | 'onSaleDate'>,
+  today?: string,
+): boolean {
+  if (!item.notAtStore) return false;
+  return !(today && item.onSaleDate && item.onSaleDate <= today);
+}
+
 export interface SearchOptions<T extends SearchableProduct> {
   /** Filter to one group (household group id). */
   groupId?: string;
   /** Include discontinued catalogue products (default false). */
   includeDiscontinued?: boolean;
+  /** Include products flagged `notAtStore` (default false). */
+  includeNotAtStore?: boolean;
+  /** Today as YYYY-MM-DD in the store's time zone; a product whose onSaleDate has arrived is shown. */
+  today?: string;
   /** Group resolver, for household category-map overrides. Defaults to item.groupId. */
   groupOf?: (item: T) => string;
   /** Extra score, e.g. from purchase history (Stage 3). 0 = neutral. */
@@ -205,6 +227,7 @@ export function searchProducts<T extends SearchableProduct>(
   for (const entry of index.entries) {
     const { item } = entry;
     if (item.discontinued && !options.includeDiscontinued) continue;
+    if (!options.includeNotAtStore && isNotAtStore(item, options.today)) continue;
     if (options.groupId && groupOf(item) !== options.groupId) continue;
 
     let score = 0;

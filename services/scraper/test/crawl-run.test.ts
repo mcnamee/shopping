@@ -9,6 +9,7 @@ import {
   ALL_FIXTURE_PRODUCTS,
   fakeAldi,
   fixtureText,
+  LIQUOR_FIXTURE_PRODUCTS,
   node,
   productLike,
   virtualClock,
@@ -30,8 +31,14 @@ const make = (prefix: string, n: number): AldiProduct[] =>
 function setup(
   byCategory: Record<string, AldiProduct[]>,
   override?: Parameters<typeof fakeAldi>[0]['override'],
+  servicePoint?: Parameters<typeof fakeAldi>[0]['servicePoint'],
 ) {
-  const fake = fakeAldi({ tree: TREE, byCategory, ...(override ? { override } : {}) });
+  const fake = fakeAldi({
+    tree: TREE,
+    byCategory,
+    ...(override ? { override } : {}),
+    ...(servicePoint ? { servicePoint } : {}),
+  });
   const clock = virtualClock();
   const client = new AldiClient({
     fetchImpl: fake.fetchImpl,
@@ -184,6 +191,68 @@ describe('runScrape', () => {
     expect(err).toBeInstanceOf(ScrapeFailedError);
     return (err as ScrapeFailedError).run;
   };
+
+  it('flags spirits as notAtStore using the store licence, and keeps them stored', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const whisky = LIQUOR_FIXTURE_PRODUCTS.find((p) => p.name === 'Blended Scotch Whisky 700ml')!;
+    const ale = LIQUOR_FIXTURE_PRODUCTS.find((p) => p.name === 'Pacific Ale 12x330ml')!;
+    const { client } = setup({ [DAIRY.key]: [...make('1', 2), whisky, ale] }, undefined, {
+      id: 'G526',
+      alcoholAvailability: ['Beer', 'Wine'],
+    });
+    const r = await runScrape({
+      client,
+      store,
+      servicePoint: 'G526',
+      now: () => new Date(Date.UTC(2026, 11, 2)),
+      trigger: 'test',
+    });
+    expect(r.run).toMatchObject({ notAtStore: 1, alcoholAvailability: ['Beer', 'Wine'] });
+    const all = await store.loadProducts();
+    expect(all.find((p) => p.sku === whisky.sku)).toMatchObject({ notAtStore: true });
+    expect(all.find((p) => p.sku === ale.sku)).toMatchObject({ notAtStore: false });
+  });
+
+  it('carries on (flagging no liquor) when the service point cannot be read', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const whisky = LIQUOR_FIXTURE_PRODUCTS.find((p) => p.name === 'Blended Scotch Whisky 700ml')!;
+    const { client } = setup({ [DAIRY.key]: [...make('1', 2), whisky] }); // service point 404s
+    const r = await runScrape({
+      client,
+      store,
+      servicePoint: 'G526',
+      now: () => new Date(Date.UTC(2026, 11, 2)),
+      trigger: 'test',
+    });
+    expect(r.run.status).toBe('succeeded');
+    expect(r.run.notAtStore).toBe(0);
+    expect(r.run.alcoholAvailability).toBeNull();
+  });
+
+  it('flags upcoming Special Buys notAtStore, keeps them, and clears the flag once on sale', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const dairy = make('1', 3);
+    dairy[0] = { ...dairy[0]!, onSaleDate: '2026-12-20', onSaleDateDisplay: 'On Sale Sun 20 Dec' };
+
+    const r1 = await scrape(store, { [DAIRY.key]: dairy }); // run date 2026-12-02
+    expect(r1.run.notAtStore).toBe(1);
+    const stored = (await store.loadProducts()).find((p) => p.sku === dairy[0]!.sku)!;
+    expect(stored).toMatchObject({
+      notAtStore: true,
+      onSaleDate: '2026-12-20',
+      discontinued: false,
+    });
+
+    day = 20; // next run lands on the on-sale date
+    const r2 = await scrape(store, { [DAIRY.key]: dairy });
+    expect(r2.run.notAtStore).toBe(0);
+    expect(r2.run.updated).toBe(1);
+    const after = (await store.loadProducts()).find((p) => p.sku === dairy[0]!.sku)!;
+    expect(after.notAtStore).toBe(false);
+  });
 
   it('upserts, counts missed runs, discontinues after 2 successful misses, reactivates, never deletes', async () => {
     day = 1;

@@ -11,6 +11,8 @@
  *       -> { meta: { pagination: { offset, limit, totalCount } }, data: AldiProduct[] }
  *   GET /v2/service-points?limit=100&offset=<n>
  *       -> { data: AldiServicePoint[] }  (all stores; ACT/Casey = "G526")
+ *   GET /v2/service-points/<id>
+ *       -> { data: AldiServicePoint }    (one store, incl. alcoholAvailability)
  */
 
 export interface AldiCategoryNode {
@@ -55,6 +57,12 @@ export interface AldiProduct {
   brandName?: string | null;
   urlSlugText?: string | null;
   discontinued?: boolean;
+  /** 18 for alcohol (D-080); null otherwise. */
+  ageRestriction?: number | string | null;
+  /** Special Buy go-on-sale date "YYYY-MM-DD"; null for the everyday range (D-080). */
+  onSaleDate?: string | null;
+  /** e.g. "While Stocks Last", "On Sale Sat 05 Dec"; null for the everyday range. */
+  onSaleDateDisplay?: string | null;
   notForSale?: boolean;
   /** "ea" | "kg" | "bt" | "pac" */
   quantityUnit?: string | null;
@@ -70,4 +78,12 @@ export interface AldiProduct {
 export interface AldiSearchResponse {
   meta: { pagination: { offset: number; limit: number; totalCount: number } };
   data: AldiProduct[];
+}
+
+export interface AldiServicePoint {
+  id: string;
+  name?: string;
+  /** Kinds of alcohol the store may sell: "Beer", "Wine" (Casey: both; some stores: none). */
+  alcoholAvailability?: string[] | null;
+  availableCustomerServiceTypes?: string[] | null;
 }

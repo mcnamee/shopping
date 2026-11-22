@@ -35,6 +35,10 @@ export interface ScrapeRunRecord {
   /** Number of errors (details in errorMessages, max 20). */
   errors: number;
   discontinueStep: 'applied' | 'skipped';
+  /** Fetched products flagged not on the shelves yet (future onSaleDate, D-080). */
+  notAtStore?: number;
+  /** Store licence read from the service point, e.g. ["Beer","Wine"]; null if unknown. */
+  alcoholAvailability?: string[] | null;
   unmappedCategories: Record<string, number>;
   unitTypes: Record<string, number>;
   errorMessages: string[];

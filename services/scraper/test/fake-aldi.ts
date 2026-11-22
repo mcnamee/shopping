@@ -23,6 +23,11 @@ export const ALL_FIXTURE_PRODUCTS: AldiProduct[] = [
   'search-q-milk-default.json',
 ].flatMap((f) => fixture<AldiSearchResponse>(f).data);
 
+/** Real Casey liquor incl. spirits (not in ALL_FIXTURE_PRODUCTS: those mirror the offline crawl). */
+export const LIQUOR_FIXTURE_PRODUCTS: AldiProduct[] = fixture<AldiSearchResponse>(
+  'liquor-spirits-casey.json',
+).data;
+
 /** Clone a real product with a new SKU (and optional category list). */
 export function productLike(
   base: AldiProduct,
@@ -36,6 +41,8 @@ export interface FakeAldiOptions {
   tree: AldiCategoryNode[];
   /** Products per top-level category key. */
   byCategory: Record<string, AldiProduct[]>;
+  /** Body `data` for GET /v2/service-points/<id> (404 when omitted). */
+  servicePoint?: { id: string; alcoholAvailability: string[] };
   /** Respond with this for request number N (1-based), instead of the normal response. */
   override?: (n: number, url: URL) => Response | undefined;
 }
@@ -63,6 +70,11 @@ export function fakeAldi(options: FakeAldiOptions) {
     const o = options.override?.(calls.length, url);
     if (o) return o;
     if (url.pathname === '/v2/product-category-tree') return json(200, { data: options.tree });
+    if (url.pathname.startsWith('/v2/service-points/')) {
+      return options.servicePoint
+        ? json(200, { data: options.servicePoint })
+        : json(404, { errors: [{ code: '3501', message: 'Merchant not found' }] });
+    }
     if (url.pathname === '/v3/product-search') {
       const limit = Number(url.searchParams.get('limit'));
       const offset = Number(url.searchParams.get('offset') ?? 0);

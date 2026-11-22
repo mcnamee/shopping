@@ -20,6 +20,7 @@ import {
   MAX_QUERY_LENGTH,
   paginate,
   searchProducts,
+  storeToday,
   buildSearchIndex,
   tokenise,
   type CatalogueProduct,
@@ -131,6 +132,7 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
       overridesFor(householdId),
     ]);
     const options = {
+      today: storeToday(),
       ...(category ? { groupId: category } : {}),
       ...(boostFn ? { boost: (p: Searchable) => boostFn(p.sku) } : {}),
     };

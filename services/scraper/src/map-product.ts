@@ -3,9 +3,12 @@
  * which persistence adds). Pure; no I/O.
  */
 import {
+  alcoholKind,
+  alcoholNotLicensed,
   displayPackSize,
   inferUnitType,
   resolveGroup,
+  type AlcoholKind,
   type CatalogueProduct,
   type SourceCategory,
 } from '@trolley/core';
@@ -57,7 +60,32 @@ function clean(text: string | null | undefined, max: number): string | null {
   return t ? t.slice(0, max) : null;
 }
 
-export function mapProduct(raw: AldiProduct, storeId: string | null): MappedProduct | null {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Special Buys carry `onSaleDate`; a date after `today` (YYYY-MM-DD, store time zone)
+ * means the product is announced but not on the shelves yet (D-080).
+ */
+export function notAtStoreFrom(
+  onSaleDate: string | null | undefined,
+  today: string | null,
+): boolean {
+  return !!today && !!onSaleDate && ISO_DATE.test(onSaleDate) && onSaleDate > today;
+}
+
+/** Store context for deciding `notAtStore` (both optional; unknown means keep the product). */
+export interface StoreContext {
+  /** Today, YYYY-MM-DD, store time zone. */
+  today?: string | null;
+  /** Kinds of alcohol the store's licence covers; null/undefined = unknown. */
+  alcohol?: ReadonlySet<AlcoholKind> | null;
+}
+
+export function mapProduct(
+  raw: AldiProduct,
+  storeId: string | null,
+  ctx: StoreContext = {},
+): MappedProduct | null {
   const sku = raw.sku?.trim();
   const name = clean(raw.name, 200);
   if (!sku || !/^\d{1,32}$/.test(sku) || !name) return null;
@@ -84,6 +112,10 @@ export function mapProduct(raw: AldiProduct, storeId: string | null): MappedProd
   const unitType = inferUnitType(hints);
   const group = resolveGroup(categories, undefined, name);
   const amount = price?.amountRelevant ?? price?.amount;
+  const kind = alcoholKind(categories, name, !!raw.ageRestriction);
+  const notAtStore =
+    notAtStoreFrom(raw.onSaleDate, ctx.today ?? null) ||
+    alcoholNotLicensed(kind, ctx.alcohol ?? null);
 
   return {
     sku,
@@ -98,5 +130,7 @@ export function mapProduct(raw: AldiProduct, storeId: string | null): MappedProd
     groupVia: group.via,
     categories,
     storeId,
+    notAtStore,
+    ...(raw.onSaleDate && ISO_DATE.test(raw.onSaleDate) ? { onSaleDate: raw.onSaleDate } : {}),
   };
 }

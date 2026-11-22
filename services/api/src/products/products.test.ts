@@ -101,6 +101,15 @@ const CATALOGUE = [
     packSize: 'per kg',
   }),
   product('100006', 'Old Milk 1L', 'dairy-eggs', { discontinued: true }),
+  product('100007', 'Blended Scotch Whisky 700ml', 'other', { notAtStore: true }),
+  product('100008', 'Christmas Cheese Board', 'other', {
+    notAtStore: true,
+    onSaleDate: '2999-01-01',
+  }),
+  product('100009', 'Past Special Buy Cheese Knife', 'other', {
+    notAtStore: true,
+    onSaleDate: '2020-01-01',
+  }),
   ...Array.from({ length: 30 }, (_, i) =>
     product(String(200000 + i), `Yoghurt Flavour ${i} 1kg`, 'dairy-eggs'),
   ),
@@ -155,6 +164,24 @@ describe('GET /api/products/search', () => {
       context,
     );
     expect(res.statusCode).toBe(401);
+  });
+
+  it('hides products flagged notAtStore, unless their on-sale date has arrived', async () => {
+    const { handler } = deps();
+    const search = async (q: string) =>
+      (
+        body(
+          await handler(event('GET /api/products/search', { query: { q } }), context),
+        ) as unknown as ProductSearchResponse
+      ).items.map((i) => i.name);
+    expect(await search('whisky')).toEqual([]);
+    expect(await search('cheese')).toEqual(['Past Special Buy Cheese Knife']);
+    // Never deleted: still readable by SKU.
+    const res = await handler(
+      event('GET /api/products/{sku}', { path: { sku: '100007' } }),
+      context,
+    );
+    expect(res.statusCode).toBe(200);
   });
 
   it('returns ranked summaries, excluding discontinued, including household custom products', async () => {

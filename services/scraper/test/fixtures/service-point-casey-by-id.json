@@ -1,0 +1,33 @@
+{
+  "data": {
+    "name": "15 Kingsland Parade",
+    "alcoholAvailability": ["Beer", "Wine"],
+    "publicPhoneNumber": null,
+    "facilities": [],
+    "address": {
+      "countryName": "Australia",
+      "countryIsoCode": "AU",
+      "regionName": "Australian Capital Territory",
+      "regionIsoCode": "ACT",
+      "address1": "15 Kingsland Parade",
+      "address2": null,
+      "address3": null,
+      "city": "Casey",
+      "zipCode": "2913",
+      "district": "Casey",
+      "latitude": "-35.17483810000000",
+      "longitude": "149.09534350000000"
+    },
+    "id": "G526",
+    "availableCustomerServiceTypes": ["pickup", "walk-in"],
+    "distance": null,
+    "geofencing": {
+      "enabled": false,
+      "geofences": {
+        "inner": 5,
+        "outer": 10
+      }
+    },
+    "isOpenNow": true
+  }
+}

@@ -1,0 +1,842 @@
+{
+  "meta": {
+    "pagination": {
+      "offset": 0,
+      "limit": 60,
+      "totalCount": 9
+    }
+  },
+  "data": [
+    {
+      "sku": "000000000000365322",
+      "name": "Blended Scotch Whisky 700ml",
+      "brandName": "HIGHLAND EARL",
+      "urlSlugText": "highland-earl-blended-scotch-whisky-700ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000365322A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 4299,
+        "amountRelevant": 4299,
+        "amountRelevantDisplay": "$42.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "1010000000",
+          "name": "Liquor",
+          "urlSlugText": "liquor"
+        },
+        {
+          "id": "1111111222",
+          "name": "Spirits",
+          "urlSlugText": "liquor/spirits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/0c076ed4-dc3e-48a8-a78d-dec7652d0a7f/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/302bf806-158f-4ced-9cd0-da920725103a/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/2dbf54c7-99ba-43cc-a230-e272b4381ce3/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000365450",
+      "name": "Gin 700ml",
+      "brandName": "GORDON'S",
+      "urlSlugText": "gordon-s-gin-700ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": "While Stocks Last",
+      "onSaleDate": "2026-11-04",
+      "isAbstract": false,
+      "abstractSku": "000000000000365450A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 4499,
+        "amountRelevant": 4499,
+        "amountRelevantDisplay": "$44.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/e661b5a6-d450-44b6-b5c1-a31a22896ab0/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/cd70e19b-b613-40e3-a5c1-6cfe072f1b6e/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/6e1401ec-0f24-4865-bced-76121e4c52f6/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000525291",
+      "name": "Jim Beam & Cola 10 Pack 375ml",
+      "brandName": "JIM BEAM",
+      "urlSlugText": "jim-beam-jim-beam-cola-10-pack-375ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "pac",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000525291A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 4499,
+        "amountRelevant": 4499,
+        "amountRelevantDisplay": "$44.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "1010000000",
+          "name": "Liquor",
+          "urlSlugText": "liquor"
+        },
+        {
+          "id": "1111111223",
+          "name": "Premixed",
+          "urlSlugText": "liquor/premixed"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/22cf6503-b843-43ac-8c40-177b0e615c77/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/c879a43d-d315-474a-82cb-085c26901f89/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/20466fab-6505-4871-880f-45982a0a9681/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR03",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/cee45a93-29ba-449d-aa4c-cf82e9fefe5c/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR04",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/2a9523d4-d5f6-4f61-80bf-0d07d90e0c19/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/1a61f27d-4833-4a1e-a2be-c7b9b5d2efc5/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "IN01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000283907",
+      "name": "Irish Country Cream 700ml",
+      "brandName": "O'DONNELLS",
+      "urlSlugText": "o-donnells-irish-country-cream-700ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": "14.5 %",
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "bt",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000283907A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 1499,
+        "amountRelevant": 1499,
+        "amountRelevantDisplay": "$14.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "1010000000",
+          "name": "Liquor",
+          "urlSlugText": "liquor"
+        },
+        {
+          "id": "1111111222",
+          "name": "Spirits",
+          "urlSlugText": "liquor/spirits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/e0bbfeb0-2a6a-4b7f-83e4-5dfd303f0787/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/d6c27a72-86b8-4634-a7af-0cefa01aa3d6/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/729b7418-b618-45b3-b91c-116e9a47394a/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000582287",
+      "name": "Ginger Beer 10x330ml",
+      "brandName": "BROOKVALE UNION",
+      "urlSlugText": "brookvale-union-ginger-beer-10x330ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "pac",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000582287A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 4199,
+        "amountRelevant": 4199,
+        "amountRelevantDisplay": "$41.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "1010000000",
+          "name": "Liquor",
+          "urlSlugText": "liquor"
+        },
+        {
+          "id": "1111111223",
+          "name": "Premixed",
+          "urlSlugText": "liquor/premixed"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/4e961d53-1102-4696-a811-df9d90a0db1e/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/7c4ed9fb-2b7d-4e50-a06c-0c78342cd181/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/1f94d420-5ab6-41ae-893a-f5502c3749c3/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR03",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/76a2fe88-d378-4591-81b9-dd9eb892ec1f/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/b6439b16-2e57-4bce-a3bd-7cc307025274/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000370693",
+      "name": "Premium Cuvee 750ml",
+      "brandName": "YVES",
+      "urlSlugText": "yves-premium-cuvee-750ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": "While Stocks Last",
+      "onSaleDate": "2026-11-04",
+      "isAbstract": false,
+      "abstractSku": "000000000000370693A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 1499,
+        "amountRelevant": 1499,
+        "amountRelevantDisplay": "$14.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/476ba578-a091-464e-b6af-f02658f63857/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/8a143bfb-a554-4325-a006-bda092194a69/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/3469dec9-744b-4bc4-976b-89480db9d257/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000558860",
+      "name": "Lager 6 Pack 375ml",
+      "brandName": "TOOHEYS",
+      "urlSlugText": "tooheys-lager-6-pack-375ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "pac",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": "While Stocks Last",
+      "onSaleDate": "2026-09-23",
+      "isAbstract": false,
+      "abstractSku": "000000000000558860A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 1599,
+        "amountRelevant": 1599,
+        "amountRelevantDisplay": "$15.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/ab5092fa-10b2-48ca-9e48-5a8923e05312/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/54bb1d63-aedd-4748-a983-bee6452d51ea/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/80d8d69f-4bb5-4bc1-9a51-88be129e9f85/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR03",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/77d377b5-2602-4927-8727-9ea49157a81d/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR04",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000365469",
+      "name": "The Player Barossa Shiraz 750ml",
+      "brandName": "BLACKSTONE PADDOCK",
+      "urlSlugText": "blackstone-paddock-the-player-barossa-shiraz-750ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000365469A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 1199,
+        "amountRelevant": 1199,
+        "amountRelevantDisplay": "$11.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "1010000000",
+          "name": "Liquor",
+          "urlSlugText": "liquor"
+        },
+        {
+          "id": "1111111219",
+          "name": "Red Wine",
+          "urlSlugText": "liquor/red-wine"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/b4e0247c-a3a6-4bcc-a2fa-1d006b09eb56/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/1435fd44-3d39-4ec6-92cf-3d8d50477026/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/43078f8b-9aed-46e4-bc46-d88737afcc20/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/de8c84f4-37a7-4287-9a83-96326f58439b/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "IN01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000655427",
+      "name": "Pacific Ale 12x330ml",
+      "brandName": "NORTH OF NOWHERE",
+      "urlSlugText": "north-of-nowhere-pacific-ale-12x330ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": 18,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "hlf",
+      "weightType": "0",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000655427A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": null,
+      "price": {
+        "amount": 2399,
+        "amountRelevant": 2399,
+        "amountRelevantDisplay": "$23.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": null,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "1010000000",
+          "name": "Liquor",
+          "urlSlugText": "liquor"
+        },
+        {
+          "id": "1111111216",
+          "name": "Beer",
+          "urlSlugText": "liquor/beer"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a766a2f3-e47e-4d1e-9751-49bc52dfccc8/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/9e6804c3-14a7-4f87-8437-757418d19959/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/df9086dc-2311-473b-90d0-6ae2ca29ffa9/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR03",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    }
+  ]
+}
