@@ -2,7 +2,7 @@
 
 Single source of truth. Screen specs reference tokens by name (e.g. `accent`, `space-4`). Stage 0.
 
-Principles: high contrast for bright store lighting (text >= 7:1 where possible, UI >= 4.5:1, WCAG AA minimum), tap targets >= 44px (primary actions 56px), thumb-zone placement (primary actions in the bottom half). Accent is a deep teal ("trolley teal"); it deliberately avoids ALDI's blue/orange/red palette and logo styling.
+Principles: high contrast for bright store lighting (text >= 7:1 where possible, UI >= 4.5:1, WCAG AA minimum), tap targets >= 44px (primary actions 56px), thumb-zone placement (primary actions in the bottom half). Accent is the brand royal blue (#1B36FF; dark mode a lighter periwinkle for AA). Brand coral #FE574F and yellow #FEC917 appear only in the logo/icon (coral 3.1:1 and yellow 1.6:1 on white fail text contrast); danger red stays #B3261E, distinct from coral. Contrast: accent on bg 7.0:1 / 7.3:1, accent on accent-soft 5.9:1 / 5.9:1.
 
 ## 1. Colour
 
@@ -15,10 +15,10 @@ Principles: high contrast for bright store lighting (text >= 7:1 where possible,
 | `border-subtle` | #D5DADD | #2E383E | dividers |
 | `text` | #0B1215 | #F3F6F7 | body (>= 17:1 / 16:1) |
 | `text-muted` | #44525A | #A9B5BB | secondary (7.5:1 / 8:1) |
-| `accent` | #0B6B63 | #3ADBC8 | primary buttons, active tab, links |
-| `accent-strong` | #084F49 | #7DEBDD | pressed state |
-| `on-accent` | #FFFFFF | #03201D | text/icon on accent (6.3:1 / 9:1) |
-| `accent-soft` | #D6F0EC | #12332F | active-tab pill, info banner bg |
+| `accent` | #1B36FF | #8C9BFF | primary buttons, active tab, links |
+| `accent-strong` | #1226C4 | #B5C0FF | pressed state |
+| `on-accent` | #FFFFFF | #0A1052 | text/icon on accent (7.0:1 / 6.8:1) |
+| `accent-soft` | #E8EBFF | #1A2257 | active-tab pill, info banner bg |
 | `danger` | #B3261E | #FF8A80 | errors, destructive (6.5:1 / 8:1) |
 | `danger-soft` | #FCE8E6 | #3A1715 | error banner bg |
 | `on-danger` | #FFFFFF | #2B0A08 | text on danger button |
@@ -26,7 +26,7 @@ Principles: high contrast for bright store lighting (text >= 7:1 where possible,
 | `success-soft` | #E1F4E5 | #14301B | success banner bg |
 | `warning-soft` | #FFF1CC | #3A2E0F | offline banner bg |
 | `warning-text` | #6B4A00 | #FFD36B | offline banner text |
-| `focus` | #0B6B63 | #3ADBC8 | focus ring (2px outline, 2px offset) |
+| `focus` | #1B36FF | #8C9BFF | focus ring (2px outline, 2px offset) |
 | `scrim` | rgba(0,0,0,.5) | rgba(0,0,0,.65) | dialog backdrop |
 
 Rules: never convey state by colour alone (pair with icon or text). Dark mode follows `prefers-color-scheme`; no manual toggle in Stage 0.
@@ -67,11 +67,11 @@ System stack: `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", A
   --bg:#FFFFFF; --surface:#F3F5F6; --surface-raised:#FFFFFF;
   --border:#8A949B; --border-subtle:#D5DADD;
   --text:#0B1215; --text-muted:#44525A;
-  --accent:#0B6B63; --accent-strong:#084F49; --on-accent:#FFFFFF; --accent-soft:#D6F0EC;
+  --accent:#1B36FF; --accent-strong:#1226C4; --on-accent:#FFFFFF; --accent-soft:#E8EBFF;
   --danger:#B3261E; --danger-soft:#FCE8E6; --on-danger:#FFFFFF;
   --success:#1B6B2F; --success-soft:#E1F4E5;
   --warning-soft:#FFF1CC; --warning-text:#6B4A00;
-  --focus:#0B6B63; --scrim:rgba(0,0,0,.5);
+  --focus:#1B36FF; --scrim:rgba(0,0,0,.5);
   --safe-top:env(safe-area-inset-top,0px); --safe-right:env(safe-area-inset-right,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px); --safe-left:env(safe-area-inset-left,0px);
   color-scheme: light dark;
@@ -81,11 +81,11 @@ System stack: `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", A
     --bg:#0F1416; --surface:#1A2125; --surface-raised:#222B30;
     --border:#5F6B73; --border-subtle:#2E383E;
     --text:#F3F6F7; --text-muted:#A9B5BB;
-    --accent:#3ADBC8; --accent-strong:#7DEBDD; --on-accent:#03201D; --accent-soft:#12332F;
+    --accent:#8C9BFF; --accent-strong:#B5C0FF; --on-accent:#0A1052; --accent-soft:#1A2257;
     --danger:#FF8A80; --danger-soft:#3A1715; --on-danger:#2B0A08;
     --success:#6FDB8A; --success-soft:#14301B;
     --warning-soft:#3A2E0F; --warning-text:#FFD36B;
-    --focus:#3ADBC8; --scrim:rgba(0,0,0,.65);
+    --focus:#8C9BFF; --scrim:rgba(0,0,0,.65);
   }
 }
 html { font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; background:var(--bg); color:var(--text); }

@@ -21,7 +21,7 @@ export function Splash() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-bg px-4 text-center">
-      <TrolleyGlyph size={72} className="text-accent" />
+      <TrolleyGlyph size={72} />
       <p className="text-2xl">Trolley</p>
       <div className="flex h-6 items-center">
         {showSpinner && (

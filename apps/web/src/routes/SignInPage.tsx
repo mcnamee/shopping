@@ -81,7 +81,7 @@ export function SignInPage() {
   return (
     <AuthLayout>
       <div className="mb-6 flex flex-col items-center text-center">
-        <TrolleyGlyph size={48} className="text-accent" />
+        <TrolleyGlyph size={48} />
         <h1 className="mt-2 text-2xl">Trolley</h1>
         <p className="text-base text-muted">Your household shopping list</p>
       </div>
