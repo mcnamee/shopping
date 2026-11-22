@@ -1,0 +1,20 @@
+{
+  "name": "@trolley/scraper",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ALDI AU catalogue scraper: library, Lambda handler and CLI",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "scrape": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1175.0",
+    "@aws-sdk/lib-dynamodb": "^3.1175.0",
+    "@trolley/core": "*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.164",
+    "tsx": "^4.23.15"
+  }
+}

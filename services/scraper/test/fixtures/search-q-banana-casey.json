@@ -1,0 +1,679 @@
+{
+  "meta": {
+    "spellingSuggestion": null,
+    "pinned": [],
+    "keywordRedirect": null,
+    "pagination": {
+      "offset": 0,
+      "limit": 30,
+      "totalCount": 16
+    },
+    "debug": null,
+    "sort": [
+      {
+        "parameterName": "sort",
+        "parameterValue": "relevance",
+        "localizedName": "Relevance",
+        "isActive": true
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_asc",
+        "localizedName": "Name (A to Z)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_desc",
+        "localizedName": "Name (Z to A)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_asc",
+        "localizedName": "Price (Low to High)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_desc",
+        "localizedName": "Price (High to Low)",
+        "isActive": false
+      }
+    ],
+    "facets": []
+  },
+  "data": [
+    {
+      "sku": "000000000757913002",
+      "name": "Bananas 160g",
+      "brandName": "DOMINION NATURALS",
+      "urlSlugText": "dominion-naturals-bananas-160g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "160 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000757913",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "g",
+      "price": {
+        "amount": 199,
+        "amountRelevant": 199,
+        "amountRelevantDisplay": "$1.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 124,
+        "comparisonDisplay": "$1.24 per 100 g",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "970000000",
+          "name": "Pantry",
+          "urlSlugText": "pantry"
+        },
+        {
+          "id": "1111111181",
+          "name": "Confectionery",
+          "urlSlugText": "pantry/confectionery"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/b17056dd-3f7d-4a5a-813f-ac64b51c3d95/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/f060162c-d856-407f-8eb7-5308e2534bcb/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000617436",
+      "name": "Frozen Banana 500g",
+      "brandName": "ORCHARD & VINE",
+      "urlSlugText": "orchard-vine-frozen-banana-500g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "500 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000617436A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 299,
+        "amountRelevant": 299,
+        "amountRelevantDisplay": "$2.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 598,
+        "comparisonDisplay": "$5.98 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "980000000",
+          "name": "Freezer",
+          "urlSlugText": "freezer"
+        },
+        {
+          "id": "1111111192",
+          "name": "Frozen Fruit & Vegetables",
+          "urlSlugText": "freezer/frozen-fruit-vegetables"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/7bebba98-756a-4fef-9beb-104601030f2e/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/ff0055d4-8c92-4afa-82c7-297278a45659/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000719069",
+      "name": "Banana Chips 300g",
+      "brandName": "SWEET VINE",
+      "urlSlugText": "sweet-vine-banana-chips-300g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "300 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000719069A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 299,
+        "amountRelevant": 299,
+        "amountRelevantDisplay": "$2.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 997,
+        "comparisonDisplay": "$9.97 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "970000000",
+          "name": "Pantry",
+          "urlSlugText": "pantry"
+        },
+        {
+          "id": "1111111186",
+          "name": "Dried Fruits, Nuts & Jerky",
+          "urlSlugText": "pantry/dried-fruits-nuts-jerky"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/08b0e020-67fb-4cfd-89bb-96a8753a1153/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/819a6eb9-043e-4214-8fea-1474dbebb5f2/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380234",
+      "name": "Cavendish Bananas per kg",
+      "brandName": null,
+      "urlSlugText": "no-brand-cavendish-bananas-per-kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 0.18,
+      "quantityMax": 99,
+      "quantityInterval": 0.18,
+      "quantityDefault": 0.18,
+      "quantityUnit": "kg",
+      "weightType": "3",
+      "sellingSize": null,
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380234A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 399,
+        "amountRelevant": 399,
+        "amountRelevantDisplay": "$3.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 399,
+        "comparisonDisplay": null,
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": 1,
+        "perUnitDisplay": "1 kg",
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111152",
+          "name": "Fresh Fruits",
+          "urlSlugText": "fruits-vegetables/fresh-fruits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/9494147d-0827-430b-8b66-92c1cefb4f52/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000513270",
+      "name": "Banana Protein Pudding 170g",
+      "brandName": "WICKED SISTER FINE FOODS",
+      "urlSlugText": "wicked-sister-fine-foods-banana-protein-pudding-170g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "170 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000513270A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "g",
+      "price": {
+        "amount": 269,
+        "amountRelevant": 269,
+        "amountRelevantDisplay": "$2.69",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 158,
+        "comparisonDisplay": "$1.58 per 100 g",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1588161408332096",
+          "name": "Desserts",
+          "urlSlugText": "dairy-eggs-fridge/desserts"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a756a1d3-900f-4a5c-bb98-6eb1404fc61d/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/29f5cfd6-8486-4ac9-8851-dda0b4d1c9db/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000590853",
+      "name": "Banana Bread Mix 400g",
+      "brandName": "WHITE MILL",
+      "urlSlugText": "white-mill-banana-bread-mix-400g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "400 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000590853A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "g",
+      "price": {
+        "amount": 249,
+        "amountRelevant": 249,
+        "amountRelevantDisplay": "$2.49",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 62,
+        "comparisonDisplay": "$0.62 per 100 g",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "970000000",
+          "name": "Pantry",
+          "urlSlugText": "pantry"
+        },
+        {
+          "id": "1588161407775080",
+          "name": "Baking",
+          "urlSlugText": "pantry/baking"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/4226b299-40f2-4f2f-8145-4616882d3a57/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/6bb9d2e4-5a01-4394-8b42-8305b297e01a/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000402775",
+      "name": "Kids Banana Yogurt Pouch 70g",
+      "brandName": "BROOKLEA",
+      "urlSlugText": "brooklea-kids-banana-yogurt-pouch-70g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "70 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000402775A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "g",
+      "price": {
+        "amount": 69,
+        "amountRelevant": 69,
+        "amountRelevantDisplay": "$0.69",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 99,
+        "comparisonDisplay": "$0.99 per 100 g",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111164",
+          "name": "Yogurt",
+          "urlSlugText": "dairy-eggs-fridge/yogurt"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/f38056b1-fd0e-4cf9-b63b-341cf16d55f3/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/12a06886-0558-442f-a2fc-2e266545deea/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399108",
+      "name": "Banana Bread Slices 5 Pack 500g",
+      "brandName": "THE CAKE STALL",
+      "urlSlugText": "the-cake-stall-banana-bread-slices-5-pack-500g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "500 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399108A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "g",
+      "price": {
+        "amount": 479,
+        "amountRelevant": 479,
+        "amountRelevantDisplay": "$4.79",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 96,
+        "comparisonDisplay": "$0.96 per 100 g",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "920000000",
+          "name": "Bakery",
+          "urlSlugText": "bakery"
+        },
+        {
+          "id": "1111111131",
+          "name": "Muffins, Cakes & Other",
+          "urlSlugText": "bakery/muffins-cakes-other"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/d6e8dbeb-1d94-4f83-9ef6-aadf3bd0924c/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/394d844e-5690-43a0-bbe7-288b274344ad/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    }
+  ]
+}

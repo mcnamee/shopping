@@ -1,0 +1,1728 @@
+{
+  "meta": {
+    "spellingSuggestion": null,
+    "pinned": [],
+    "keywordRedirect": null,
+    "pagination": {
+      "offset": 0,
+      "limit": 60,
+      "totalCount": 21
+    },
+    "debug": null,
+    "sort": [
+      {
+        "parameterName": "sort",
+        "parameterValue": "relevance",
+        "localizedName": "Relevance",
+        "isActive": true
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_asc",
+        "localizedName": "Name (A to Z)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_desc",
+        "localizedName": "Name (Z to A)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_asc",
+        "localizedName": "Price (Low to High)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_desc",
+        "localizedName": "Price (High to Low)",
+        "isActive": false
+      }
+    ],
+    "facets": []
+  },
+  "data": [
+    {
+      "sku": "000000000000398689",
+      "name": "Full Cream Milk 2L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-full-cream-milk-2l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398689A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 339,
+        "amountRelevant": 339,
+        "amountRelevantDisplay": "$3.39",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 170,
+        "comparisonDisplay": "$1.70 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a17bcc6d-7a5f-49b9-adeb-224d162553d4/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/40b5ffc9-08c6-4e8d-be57-90930eeb145f/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398691",
+      "name": "Light Milk 2L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-light-milk-2l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398691A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 339,
+        "amountRelevant": 339,
+        "amountRelevantDisplay": "$3.39",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 170,
+        "comparisonDisplay": "$1.70 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/93645b60-eb11-4046-b28e-2b441f8585a4/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/3179b931-650a-453c-a82b-3ac344442f53/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398894",
+      "name": "Full Cream Milk 3L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-full-cream-milk-3l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "3 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398894A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 495,
+        "amountRelevant": 495,
+        "amountRelevantDisplay": "$4.95",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 165,
+        "comparisonDisplay": "$1.65 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/0fc1211c-ed08-4a72-a234-56a9e132cac6/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/b36672bd-8c1f-4ab3-9ee3-2a78f8d7ce29/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398948",
+      "name": "A2 Light Milk 2L",
+      "brandName": "A2 THE A2 MILK COMPANY",
+      "urlSlugText": "a2-the-a2-milk-company-a2-light-milk-2l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398948A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 729,
+        "amountRelevant": 729,
+        "amountRelevantDisplay": "$7.29",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 365,
+        "comparisonDisplay": "$3.65 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/bb0fa606-4990-44ab-8019-226e5171ff06/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/f0f3524c-eda1-4e99-8a25-8b86e8989a48/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398949",
+      "name": "A2 Full Cream Milk 2L",
+      "brandName": "A2 THE A2 MILK COMPANY",
+      "urlSlugText": "a2-the-a2-milk-company-a2-full-cream-milk-2l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398949A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 729,
+        "amountRelevant": 729,
+        "amountRelevantDisplay": "$7.29",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 365,
+        "comparisonDisplay": "$3.65 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a652e235-3b47-4cad-b7d4-d153e48a87a4/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/e8a9f7c1-6fae-4d07-a0fd-3ed6f02259d6/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399228",
+      "name": "Chocolate Flavoured Milk 2L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-chocolate-flavoured-milk-2l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399228A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 499,
+        "amountRelevant": 499,
+        "amountRelevantDisplay": "$4.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 250,
+        "comparisonDisplay": "$2.50 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/c869cf21-319d-4148-a5ca-e1edb67abdfc/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/786b9539-57a0-4b2d-b893-cf44b7a616d7/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399309",
+      "name": "Oat Milk 1L",
+      "brandName": "INNER GOODNESS",
+      "urlSlugText": "inner-goodness-oat-milk-1l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399309A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 165,
+        "amountRelevant": 165,
+        "amountRelevantDisplay": "$1.65",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 165,
+        "comparisonDisplay": "$1.65 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/5e2db012-63cf-4f59-b31b-0b6f40f5a4d2/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/fddb65e5-1bb8-4959-ae78-4af51b739bf7/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399681",
+      "name": "Lactose Free Milk 1L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-lactose-free-milk-1l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399681A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 309,
+        "amountRelevant": 309,
+        "amountRelevantDisplay": "$3.09",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 309,
+        "comparisonDisplay": "$3.09 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/4859c49d-689f-4c84-8ca4-3b7f217f368f/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/b989c019-2e0d-4aea-99f9-7099a434ad02/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399905",
+      "name": "Soy Milk 1L",
+      "brandName": "BONSOY",
+      "urlSlugText": "bonsoy-soy-milk-1l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399905A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 449,
+        "amountRelevant": 449,
+        "amountRelevantDisplay": "$4.49",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 449,
+        "comparisonDisplay": "$4.49 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/42ff8a37-78b4-41b4-b723-40631f08d84a/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/ca6f2892-73a0-49a0-88c3-da2e806b7e1a/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000400040",
+      "name": "Iced Coffee Double Espresso 750ml",
+      "brandName": "DARE",
+      "urlSlugText": "dare-iced-coffee-double-espresso-750ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "750 ml",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000400040A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 469,
+        "amountRelevant": 469,
+        "amountRelevantDisplay": "$4.69",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 625,
+        "comparisonDisplay": "$6.25 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/3ea04305-ca6a-4394-b3d1-69472638c5f2/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/1705954d-871c-4b72-901a-2eda6785f56a/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000400137",
+      "name": "Lactose Free Full Cream Milk 2L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-lactose-free-full-cream-milk-2l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000400137A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 479,
+        "amountRelevant": 479,
+        "amountRelevantDisplay": "$4.79",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 240,
+        "comparisonDisplay": "$2.40 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/3a2081d7-7850-4703-9ba8-222e0eeb877a/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/4c71ae85-0d52-4e8e-bb14-2efd364722cd/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000400653",
+      "name": "Heart Active Milk 1L",
+      "brandName": "HEART ACTIVE",
+      "urlSlugText": "heart-active-heart-active-milk-1l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000400653A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 409,
+        "amountRelevant": 409,
+        "amountRelevantDisplay": "$4.09",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 409,
+        "comparisonDisplay": "$4.09 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a6f32eea-74d7-4e3d-b2e2-cc5d5c0c8abb/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/6aade204-e7ae-4a16-a397-11048891e881/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000400847",
+      "name": "Probiotic Milk Drink 5 Pack 65ml",
+      "brandName": "BIOCULT",
+      "urlSlugText": "biocult-probiotic-milk-drink-5-pack-65ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "325 ml",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000400847A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 329,
+        "amountRelevant": 329,
+        "amountRelevantDisplay": "$3.29",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 1012,
+        "comparisonDisplay": "$10.12 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/1355a94c-18e0-4f21-ac66-74d52dc7b2ea/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/ef0a9894-0ac3-47df-8e5d-9a0a9c1263cd/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000402118",
+      "name": "Full Cream Milk 2L",
+      "brandName": "RIVERINA FRESH",
+      "urlSlugText": "riverina-fresh-full-cream-milk-2l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000402118A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 515,
+        "amountRelevant": 515,
+        "amountRelevantDisplay": "$5.15",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 258,
+        "comparisonDisplay": "$2.58 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/105900ac-896b-4230-84b2-f01aa0044d64/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/d1597ec3-5969-4445-ae73-30a2aad46e13/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000405205",
+      "name": "Light Milk 3L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-light-milk-3l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "3 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000405205A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 495,
+        "amountRelevant": 495,
+        "amountRelevantDisplay": "$4.95",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 165,
+        "comparisonDisplay": "$1.65 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/d7ff50e4-77ea-44cb-80d8-46b52548f2b3/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/d0513bf4-38ff-466c-b80a-4690c314e6a6/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000405299",
+      "name": "Soy Light Milk 1L",
+      "brandName": "INNER GOODNESS",
+      "urlSlugText": "inner-goodness-soy-light-milk-1l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000405299A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 159,
+        "amountRelevant": 159,
+        "amountRelevantDisplay": "$1.59",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 159,
+        "comparisonDisplay": "$1.59 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a27d8d40-26f1-4bc4-b57f-f7fc13983a81/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/85e55e87-3ccd-425e-9e4e-12a6ab442ea2/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000508528",
+      "name": "Finest Dairy 1.5L",
+      "brandName": "NORCO",
+      "urlSlugText": "norco-finest-dairy-1-5l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1.5 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000508528A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 449,
+        "amountRelevant": 449,
+        "amountRelevantDisplay": "$4.49",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 299,
+        "comparisonDisplay": "$2.99 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a519d8ae-6108-44c7-9123-f886ebbcc06e/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/c2223835-8286-4208-b56f-708ec814d6ac/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000751648",
+      "name": "Chocolate Flavoured Milk 600ml",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-chocolate-flavoured-milk-600ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000751648A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 269,
+        "amountRelevant": 269,
+        "amountRelevantDisplay": "$2.69",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 269,
+        "comparisonDisplay": "$2.69 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/67d8bce3-9e3b-4c71-971b-43e205369976/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/cc78800e-6197-49e0-825c-7ba7cc533bb5/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000759184",
+      "name": "Full Cream Milk 1L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-full-cream-milk-1l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000759184A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 175,
+        "amountRelevant": 175,
+        "amountRelevantDisplay": "$1.75",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 175,
+        "comparisonDisplay": "$1.75 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/fc5607dd-87cd-4973-9a45-da09c97d13ad/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/c9921fc9-8f17-4277-9c92-3f43dd957069/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000759535",
+      "name": "Light Milk 1L",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-light-milk-1l",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 l",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000759535A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 175,
+        "amountRelevant": 175,
+        "amountRelevantDisplay": "$1.75",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 175,
+        "comparisonDisplay": "$1.75 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/3d740ad3-d2bc-4462-8e45-c0effd563880/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/0e70a38d-04f4-40fd-94ad-d841eea313e6/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000769290",
+      "name": "Cultured Butter Milk 500ml",
+      "brandName": "FARMDALE",
+      "urlSlugText": "farmdale-cultured-butter-milk-500ml",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "500 ml",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000769290A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "l",
+      "price": {
+        "amount": 199,
+        "amountRelevant": 199,
+        "amountRelevantDisplay": "$1.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 398,
+        "comparisonDisplay": "$3.98 per 1 L",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "960000000",
+          "name": "Dairy, Eggs & Fridge",
+          "urlSlugText": "dairy-eggs-fridge"
+        },
+        {
+          "id": "1111111160",
+          "name": "Milk",
+          "urlSlugText": "dairy-eggs-fridge/milk"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/e470b588-6834-4fc2-ad01-2bfb2c13c272/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/5b624998-afbd-425d-b1d0-327dcf72becf/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    }
+  ]
+}

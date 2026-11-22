@@ -1,0 +1,776 @@
+{
+  "meta": {
+    "spellingSuggestion": null,
+    "pinned": [],
+    "keywordRedirect": null,
+    "pagination": {
+      "offset": 0,
+      "limit": 60,
+      "totalCount": 184
+    },
+    "debug": null,
+    "sort": [
+      {
+        "parameterName": "sort",
+        "parameterValue": "relevance",
+        "localizedName": "Relevance",
+        "isActive": true
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_asc",
+        "localizedName": "Name (A to Z)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_desc",
+        "localizedName": "Name (Z to A)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_asc",
+        "localizedName": "Price (Low to High)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_desc",
+        "localizedName": "Price (High to Low)",
+        "isActive": false
+      }
+    ],
+    "facets": []
+  },
+  "data": [
+    {
+      "sku": "000000000000380130",
+      "name": "Lime Each",
+      "brandName": null,
+      "urlSlugText": "no-brand-lime-each",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 each",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380130A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "ea",
+      "price": {
+        "amount": 129,
+        "amountRelevant": 129,
+        "amountRelevantDisplay": "$1.29",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 129,
+        "comparisonDisplay": "$1.29 per 1 each",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111152",
+          "name": "Fresh Fruits",
+          "urlSlugText": "fruits-vegetables/fresh-fruits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/1331a9b0-f9df-4c6e-b529-4c239da83804/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380180",
+      "name": "Baby Cos Lettuce 2 Pack",
+      "brandName": null,
+      "urlSlugText": "no-brand-baby-cos-lettuce-2-pack",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 each",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380180A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "ea",
+      "price": {
+        "amount": 299,
+        "amountRelevant": 299,
+        "amountRelevantDisplay": "$2.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 150,
+        "comparisonDisplay": "$1.50 per 1 each",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111153",
+          "name": "Fresh Vegetables",
+          "urlSlugText": "fruits-vegetables/fresh-vegetables"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/4b03604a-6027-4ab1-9c67-a9f2f858c9f7/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/17c5b6be-603d-4f2b-a111-f58abfbfb21e/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1501,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380135",
+      "name": "Mandarins 1kg",
+      "brandName": null,
+      "urlSlugText": "no-brand-mandarins-1kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 kg",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380135A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 299,
+        "amountRelevant": 299,
+        "amountRelevantDisplay": "$2.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 299,
+        "comparisonDisplay": "$2.99 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111152",
+          "name": "Fresh Fruits",
+          "urlSlugText": "fruits-vegetables/fresh-fruits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/ef347f32-d8b2-47a7-a75b-1edf1cbfa855/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380154",
+      "name": "Navel Oranges 1.5kg",
+      "brandName": null,
+      "urlSlugText": "no-brand-navel-oranges-1-5kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1.5 kg",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380154A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 499,
+        "amountRelevant": 499,
+        "amountRelevantDisplay": "$4.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 333,
+        "comparisonDisplay": "$3.33 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111152",
+          "name": "Fresh Fruits",
+          "urlSlugText": "fruits-vegetables/fresh-fruits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/262436ee-8167-41d6-b594-2c592cc0dea6/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1501,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380188",
+      "name": "Baby Spinach 280g",
+      "brandName": null,
+      "urlSlugText": "no-brand-baby-spinach-280g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "280 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380188A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 399,
+        "amountRelevant": 399,
+        "amountRelevantDisplay": "$3.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 1425,
+        "comparisonDisplay": "$14.25 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111154",
+          "name": "Salads",
+          "urlSlugText": "fruits-vegetables/salads"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/24a76b51-5091-4f22-9ec2-a66aaf514100/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380198",
+      "name": "Birdseye Chillies 20g",
+      "brandName": null,
+      "urlSlugText": "no-brand-birdseye-chillies-20g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "20 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380198A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "g",
+      "price": {
+        "amount": 349,
+        "amountRelevant": 349,
+        "amountRelevantDisplay": "$3.49",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 175,
+        "comparisonDisplay": "$1.75 per 10 g",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111153",
+          "name": "Fresh Vegetables",
+          "urlSlugText": "fruits-vegetables/fresh-vegetables"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/f6541d24-b458-4be4-a904-8ec8c63d7958/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/fdf81620-86df-473c-afab-aa66ad5542b3/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380128",
+      "name": "Lemons 5 Pack",
+      "brandName": null,
+      "urlSlugText": "no-brand-lemons-5-pack",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "5 each",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380128A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "ea",
+      "price": {
+        "amount": 549,
+        "amountRelevant": 549,
+        "amountRelevantDisplay": "$5.49",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 110,
+        "comparisonDisplay": "$1.10 per 1 each",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111152",
+          "name": "Fresh Fruits",
+          "urlSlugText": "fruits-vegetables/fresh-fruits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/42f70063-7a53-45af-b10c-0271178432dd/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1501,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380071",
+      "name": "Garlic 3 Pack",
+      "brandName": null,
+      "urlSlugText": "no-brand-garlic-3-pack",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "3 each",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380071A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "ea",
+      "price": {
+        "amount": 299,
+        "amountRelevant": 299,
+        "amountRelevantDisplay": "$2.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 100,
+        "comparisonDisplay": "$1.00 per 1 each",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111156",
+          "name": "Fresh Herbs",
+          "urlSlugText": "fruits-vegetables/fresh-herbs"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/9ebfaab5-0f3d-492e-a81b-418a6c81b731/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000364045",
+      "name": "Strawberries 250g",
+      "brandName": null,
+      "urlSlugText": "no-brand-strawberries-250g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "250 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000364045A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 299,
+        "amountRelevant": 299,
+        "amountRelevantDisplay": "$2.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 1196,
+        "comparisonDisplay": "$11.96 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111152",
+          "name": "Fresh Fruits",
+          "urlSlugText": "fruits-vegetables/fresh-fruits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/181f9f09-9d24-49d5-918e-785caaf7f7dc/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000380092",
+      "name": "Hass Avocado Each",
+      "brandName": null,
+      "urlSlugText": "no-brand-hass-avocado-each",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "1 each",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000380092A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "ea",
+      "price": {
+        "amount": 299,
+        "amountRelevant": 299,
+        "amountRelevantDisplay": "$2.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 299,
+        "comparisonDisplay": "$2.99 per 1 each",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "950000000",
+          "name": "Fruits & Vegetables",
+          "urlSlugText": "fruits-vegetables"
+        },
+        {
+          "id": "1111111152",
+          "name": "Fresh Fruits",
+          "urlSlugText": "fruits-vegetables/fresh-fruits"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a371202a-83f3-4617-a4ef-e8b0c37cac9e/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    }
+  ]
+}
