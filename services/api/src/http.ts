@@ -20,5 +20,7 @@ export const errors = {
     json(403, { code: 'NO_HOUSEHOLD', message: 'This account is not linked to a household' }),
   forbidden: () => json(403, { code: 'FORBIDDEN', message: 'Forbidden' }),
   notFound: () => json(404, { code: 'NOT_FOUND', message: 'Not found' }),
+  validation: (message: string, field?: string) =>
+    json(400, { code: 'VALIDATION', message, ...(field ? { field } : {}) }),
   internal: () => json(500, { code: 'INTERNAL', message: 'Internal server error' }),
 };
