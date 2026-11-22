@@ -77,9 +77,9 @@ export function summariseBulk(results: readonly BulkAddItemResult[]): BulkSummar
   };
 }
 
-/** Toast copy after a bulk add: "Added 12 items (2 combined)" or "Added 10 of 12 - 2 couldn't be added. Try again". */
+/** Toast copy after a bulk add: "Added 12 items (2 combined)" or "Added 10 of 12 - 2 couldn't be added. Add them from Search". */
 export function addedMessage(total: number, added: number, combined: number): string {
   if (added < total)
-    return `Added ${added} of ${total} - ${total - added} couldn't be added. Try again`;
+    return `Added ${added} of ${total} - ${total - added} couldn't be added. Add them from Search`;
   return `Added ${countItems(added)}${combined > 0 ? ` (${combined} combined)` : ''}`;
 }

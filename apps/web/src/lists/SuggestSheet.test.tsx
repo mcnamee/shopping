@@ -209,7 +209,7 @@ describe('Suggest items sheet', () => {
     await waitFor(() => expect(spy.bulkResponse).not.toBeNull());
     const total = spy.bulkResponse?.results.length ?? 0;
     expect(await toast()).toHaveTextContent(
-      `Added ${total - 1} of ${total} - 1 couldn't be added. Try again`,
+      `Added ${total - 1} of ${total} - 1 couldn't be added. Add them from Search`,
     );
   });
 
