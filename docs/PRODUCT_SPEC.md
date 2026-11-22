@@ -62,10 +62,12 @@ Each product has a `unitType` that drives the quantity modal:
 - Inputs: the household's purchase history (archived lists), the `weekly` template(s), current list contents, today's date.
 - Process:
   1. **Deterministic pass (no AI):** compute per-product stats - purchase count, average qty, median interval between purchases, days since last purchase. Items "due" (days since last >= ~0.8 x median interval) become candidates. Add all `weekly` template items.
-  2. **LLM pass:** send compact stats + candidates to Claude (via Amazon Bedrock) to rank, sanity-check quantities and give a one-line reason ("usually every ~4 weeks, last bought 27 days ago").
+  2. **LLM pass:** send compact stats + candidates to a cheap Bedrock model (Amazon Nova Micro, configurable; D-061) to rank, sanity-check quantities and give a one-line reason ("usually every ~4 weeks, last bought 27 days ago").
   3. Remove anything already on the list.
 - Output is shown as a **review sheet** (pre-ticked suggestions with reason + qty) -> user confirms -> added. Never silently writes.
 - Cold start (< 3 archived lists): template items only + note explaining suggestions improve over time.
+- Works without AI: if Bedrock fails or takes > 8 s, the deterministic result is shown (D-062). LLM sees product names and stats only, output is validated against the candidates (D-065). Max 20 runs/household/day (D-066).
+- Also on the New list sheet: "Start with suggestions" (D-064). Acceptance criteria: `docs/stages/stage-3.md`.
 
 ### 3.6 Settings
 - Aisle order: drag-and-drop list of categories (defaults seeded from a typical ALDI layout).
@@ -86,7 +88,7 @@ Each product has a `unitType` that drives the quantity modal:
 |---|---|---|
 | Serverless AWS stack | **High** | All services below are GA and have permanent free allowances that cover 2 users. |
 | ALDI product data | **Medium** | aldi.com.au renders its range from a JSON product-search API used by the site; several third-party scrapers rely on it. Not a public/official API: format can change and bot protection may block cloud IPs. ALDI's terms should be checked - this is personal, low-volume (once a month, throttled) use. **Mitigations:** custom products always available; scraper isolated behind an adapter; fallback to running it from a GitHub Actions scheduled job; failures alert by email and never wipe existing data. |
-| AI suggestions | **High** | Mostly deterministic maths; LLM only ranks/explains. Bedrock Claude Haiku-class model costs cents per month. Requires one-time Bedrock model access approval in the AWS console (Sydney region or cross-region inference). |
+| AI suggestions | **High** | Mostly deterministic maths; LLM only ranks/explains. Amazon Nova Micro on Bedrock (APAC cross-region profile) costs cents per month; no Anthropic use-case form (D-061). |
 | MCP + auth for Claude & ChatGPT | **Medium-High** | Both clients support remote MCP with OAuth. Claude supports Dynamic Client Registration (DCR) and a manual client ID/secret; ChatGPT relies on DCR or predefined clients. Cognito does **not** support DCR, so we build a small OAuth authorisation-server shim (DCR + PKCE) in Lambda that delegates the actual login to Cognito. This is the most complex piece - Senior Engineer owns it. |
 | Two-phone sync | **High** | Polling is sufficient at this scale. |
 | PWA "add to home screen" | **High** | Works on iOS Safari and Android Chrome. |
@@ -97,7 +99,7 @@ Each product has a `unitType` that drives the quantity modal:
  Phone (PWA)  ──HTTPS──▶ CloudFront ──▶ S3 (React static build + /config.json)
                             │ /api/*, /mcp, /oauth/* (same origin, no CORS)
                             └─JWT──▶ API Gateway (HTTP API, Cognito JWT authoriser) ──▶ Lambda (api) ──▶ DynamoDB (single table)
-                                                                     └──────────▶ Bedrock (Claude) [suggest]
+                                                                     └──────────▶ Bedrock (Nova Micro) [suggest]
  Claude / ChatGPT ──OAuth──▶ API Gateway /oauth/* ──▶ Lambda (oauth shim) ──▶ Cognito Hosted UI (login)
                   ──Bearer─▶ API Gateway /mcp     ──▶ Lambda (mcp)        ──▶ DynamoDB
  EventBridge Scheduler (monthly) ──▶ Lambda (scraper) ──▶ ALDI site ─▶ DynamoDB
@@ -111,7 +113,7 @@ Each product has a `unitType` that drives the quantity modal:
 | Auth | Amazon Cognito user pool (Lite tier, 10k MAU free), email username, self sign-up off; in-app login form via `aws-amplify/auth` (no Hosted UI redirect, D-012) | Managed, no servers; reliable in iOS home-screen PWA |
 | API | API Gateway HTTP API + Lambda (Node 22, TypeScript) | 1M Lambda requests/month free; HTTP API is pennies |
 | Database | DynamoDB on-demand, single table | 25 GB always free; no patching |
-| AI | Amazon Bedrock (Claude Haiku-class) | IAM auth, no API key to manage, pay-per-token |
+| AI | Amazon Bedrock (Amazon Nova Micro, model id via CDK context, D-061) | IAM auth, no API key to manage, pay-per-token |
 | Scheduling | EventBridge Scheduler | 14M invocations/month free |
 | Secrets | SSM Parameter Store (standard, SecureString) | Free (vs Secrets Manager $0.40/secret) |
 | IaC | AWS CDK (TypeScript) | One language across stack |
@@ -148,7 +150,7 @@ infra             CDK app
 | Item | Estimate |
 |---|---|
 | Lambda, API Gateway, DynamoDB, Cognito, CloudFront, S3, Scheduler | $0 - $0.50 |
-| Bedrock (approx. 10 suggestion runs x ~15k tokens) | < $0.20 |
+| Bedrock Nova Micro (approx. 30 runs x ~4k tokens; hard cap 20 runs/day) | < $0.10 |
 | Custom domain trolley.mcn.am (external DNS, ACM cert free) | $0 |
 | **Total** | **~$0-1/month** |
 

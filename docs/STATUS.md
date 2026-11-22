@@ -12,10 +12,10 @@
 - `trolley.mcn.am` CNAME not resolving yet - user's DNS provider side (`trolley` -> CloudFront domain).
 - Low priority: possible orphaned RETAIN'd resources (user pool, table, bucket) from the first failed deploy; check the console and delete if unused.
 
-## Next: Stage 3 (AI suggestions)
-- Start with PM acceptance criteria in `docs/stages/stage-3.md`; inputs are the Stage 2 purchase rows (`PURCHASE#`).
-- Model choice is open: the user is happy with non-Claude models, e.g. cheap Bedrock models such as Amazon Nova Micro or Meta Llama. Pick on cost (~$0-3/month budget) and quality; record it in DECISIONS.
-- Bedrock model access: the one-time Bedrock playground step is only needed if an Anthropic model is chosen.
+## Stage 3 (AI suggestions) - in progress
+- PM acceptance criteria written: `docs/stages/stage-3.md` (decisions D-061 to D-068). Next: UX spec for the review sheet, then build, QA, PM sign-off.
+- Model: Amazon Nova Micro on Bedrock via the APAC cross-region inference profile, id in CDK context (D-061); no Anthropic use-case form needed. Deterministic engine works without AI (D-062).
+- Inputs: Stage 2 purchase rows (`PURCHASE#`, D-054) and weekly templates.
 - Re-check `npm audit` at stage start (D-044).
 - Feed in anything the user notes from the first real shop.
 
