@@ -49,3 +49,6 @@ Format: ID - date - decision. Why. (Supersedes / status.)
 
 ## D-041 - GitHub OIDC trust accepts the immutable subject claim
 GitHub repos created after 15 Jul 2026 send `sub` as `repo:owner@ownerId/name@repoId:ref:...`. The first deploy failed with "Not authorized to perform sts:AssumeRoleWithWebIdentity" because the deploy role trusted only the legacy `repo:mcnamee/shopping:ref:refs/heads/main`. The trust policy now lists both exact subjects (StringEquals, no wildcards): `repo:mcnamee@1809236/shopping@1467089057:ref:refs/heads/main` and the legacy form. IDs are context-overridable (`githubOwnerId`, `githubRepoId`).
+
+## D-042 - Monthly scrape runs from GitHub, not AWS
+ALDI's Akamai bot protection returns 403 to requests from AWS (first live "Scrape now", 22 Nov 2026). The GitHub runner fallback (D-037) works and seeded the catalogue. The AWS EventBridge schedule and its error alarm are now opt-in (`awsScrapeSchedule` context / `AWS_SCRAPE_SCHEDULE=true`), default off, so the blocked job stops failing and emailing monthly. The scraper Lambda stays deployed. Monthly scraping = `scrape-fallback.yml` with `SCRAPE_FALLBACK_ENABLED=true`. Further fallback: run the CLI from home (README).
