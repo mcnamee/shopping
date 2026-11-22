@@ -29,7 +29,7 @@ describe('SignInPage', () => {
     expect(field('Password')).toHaveAttribute('autocomplete', 'current-password');
     expect(screen.getByRole('link', { name: 'Forgot password?' })).toBeInTheDocument();
     expect(screen.queryByText(/sign up|create account/i)).not.toBeInTheDocument();
-    expect(field('Email')).toHaveFocus();
+    await waitFor(() => expect(field('Email')).toHaveFocus());
   });
 
   it('validates on submit and focuses the first invalid field', async () => {
@@ -37,7 +37,7 @@ describe('SignInPage', () => {
     await screen.findByLabelText('Email');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(screen.getByText('Enter your email address.')).toBeInTheDocument();
-    expect(field('Email')).toHaveFocus();
+    await waitFor(() => expect(field('Email')).toHaveFocus());
     expect(field('Email')).toHaveAttribute('aria-invalid', 'true');
 
     await user.type(field('Email'), 'not-an-email');

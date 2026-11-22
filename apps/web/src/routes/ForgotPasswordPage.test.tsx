@@ -27,7 +27,7 @@ describe('ForgotPasswordPage', () => {
   it('step 1 validates the email', async () => {
     const { user } = renderApp('/forgot-password');
     await screen.findByLabelText('Email');
-    expect(field('Email')).toHaveFocus();
+    await waitFor(() => expect(field('Email')).toHaveFocus());
     await user.click(screen.getByRole('button', { name: 'Send code' }));
     expect(screen.getByText('Enter your email address.')).toBeInTheDocument();
     await user.type(field('Email'), 'bad');
@@ -40,7 +40,7 @@ describe('ForgotPasswordPage', () => {
     await user.type(await screen.findByLabelText('Email'), 'a@example.com');
     await user.click(screen.getByRole('link', { name: 'Forgot password?' }));
     expect(field('Email')).toHaveValue('a@example.com');
-    expect(screen.getByRole('button', { name: 'Send code' })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send code' })).toHaveFocus());
   });
 
   it('completes the two-step flow and returns to sign in with a success message', async () => {
