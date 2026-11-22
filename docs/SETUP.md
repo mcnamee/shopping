@@ -29,7 +29,7 @@ Time needed: about 30-45 minutes, most of it waiting.
    aws sts get-caller-identity --query Account --output text
    ```
 
-5. Check Node.js is version 20 or newer:
+5. Check Node.js is version 22:
 
    ```bash
    node -v

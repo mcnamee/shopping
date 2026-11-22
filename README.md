@@ -27,6 +27,7 @@ npm ci
 npm run lint        # ESLint + Prettier check
 npm run typecheck
 npm test            # Vitest in every workspace (incl. CDK assertion tests)
+PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e2e -w @trolley/web  # Playwright E2E (mock auth); PW_CHROMIUM_PATH optional
 npm run build       # web build -> apps/web/dist
 npm run synth       # cdk synth (needs the web build first)
 npm run format      # Prettier write

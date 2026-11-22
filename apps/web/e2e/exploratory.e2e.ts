@@ -73,8 +73,7 @@ test.describe('edge cases', () => {
     await page.getByLabel('Code').fill('');
     await page.keyboard.insertText('123 456');
     // Spec: "Strip non-digits on paste" - a pasted "123 456" should become 123456.
-    // Known defect DEF-QA-001: maxlength truncates before stripping, giving "12345".
-    test.fail();
+    // DEF-QA-001 (fixed): no maxlength, so input is stripped then capped at 6 in onChange.
     await expect(page.getByLabel('Code')).toHaveValue('123456');
   });
 

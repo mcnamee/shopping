@@ -194,7 +194,6 @@ export function ForgotPasswordPage() {
           inputMode="numeric"
           autoComplete="one-time-code"
           pattern="[0-9]*"
-          maxLength={6}
           enterKeyHint="next"
           value={code}
           readOnly={busy}
@@ -202,13 +201,6 @@ export function ForgotPasswordPage() {
           inputClassName="text-center text-xl tracking-[0.2em]"
           onChange={(e) => {
             setCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-            setCodeError(null);
-          }}
-          // maxLength would truncate "123 456" before non-digits are stripped, so paste
-          // is cleaned here first.
-          onPaste={(e) => {
-            e.preventDefault();
-            setCode(e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6));
             setCodeError(null);
           }}
         />
