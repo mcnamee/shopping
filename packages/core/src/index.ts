@@ -8,3 +8,4 @@ export * from './catalogue-items';
 export type * from './api-types';
 export * from './quantity';
 export * from './lists';
+export * from './suggestions';

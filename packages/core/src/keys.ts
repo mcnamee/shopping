@@ -69,6 +69,11 @@ export const keys = {
   /** Pointer to the "this week" list (D-056): one item, so flagging is one atomic write. */
   thisWeekSk: 'THISWEEK',
   purchaseSkPrefix: 'PURCHASE#',
+  /** Daily suggestion-run counter (D-066): one row per household-local day, TTL'd. */
+  suggestRunsSk(day: string): string {
+    assertSegment('day', day);
+    return `SUGGESTRUNS#${day}`;
+  },
   /** GSI2 partition of a household's lists by status (D-057). */
   listsGsi2Pk(householdId: string, status: 'active' | 'archived'): string {
     assertHousehold(householdId);
