@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 import { EMAIL, expectNoHorizontalScroll, signInToShell } from './helpers';
 
 const TABS = [
-  { label: 'Lists', path: '/', heading: 'Lists are coming soon' },
-  { label: 'Templates', path: '/templates', heading: 'Templates are coming soon' },
+  { label: 'Lists', path: '/', link: /Week of/ },
+  { label: 'Templates', path: '/templates', link: /Weekly basics/ },
 ] as const;
 
 test.describe('signed-in shell', () => {
@@ -22,14 +22,14 @@ test.describe('signed-in shell', () => {
     }
   });
 
-  test('placeholder tabs show their empty states', async ({ page }) => {
-    for (const { label, path, heading } of TABS) {
+  test('Lists and Templates tabs show the seeded mock data', async ({ page }) => {
+    for (const { label, path, link } of TABS) {
       await page
         .getByRole('navigation', { name: 'Main' })
         .getByRole('link', { name: label })
         .click();
       await expect(page).toHaveURL(path);
-      await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+      await expect(page.getByRole('link', { name: link }).first()).toBeVisible();
     }
   });
 
