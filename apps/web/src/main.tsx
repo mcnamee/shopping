@@ -5,6 +5,7 @@ import { App } from './App';
 import { AuthProvider, initAuth } from './auth';
 import { loadConfig } from './config';
 import { MOCK_AUTH } from './env';
+import { ConfigErrorScreen } from './routes/ConfigErrorScreen';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -36,12 +37,7 @@ async function start() {
     );
   } catch (err) {
     console.error(err);
-    root.render(
-      <main role="alert" className="p-6">
-        <h1 className="text-lg font-semibold">Trolley couldn&apos;t start</h1>
-        <p>Please check your connection and try again.</p>
-      </main>,
-    );
+    root.render(<ConfigErrorScreen />);
   }
 }
 

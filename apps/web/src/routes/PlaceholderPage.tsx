@@ -1,25 +1,35 @@
-import { useQuery } from '@tanstack/react-query';
-import { getMe } from '../api';
-import { useAuth } from '../auth';
+import { LayoutTemplate, ListChecks, Search, type LucideIcon } from 'lucide-react';
 
-/** Temporary page that proves auth + API plumbing end to end. Replace per docs/ux. */
-export function PlaceholderPage({ title }: { title: string }) {
-  const { signOut } = useAuth();
-  const me = useQuery({ queryKey: ['me'], queryFn: getMe });
+const PAGES = {
+  lists: {
+    Icon: ListChecks,
+    heading: 'Lists are coming soon',
+    body: "Soon you'll build your weekly shop here and tick items off as you go.",
+  },
+  search: {
+    Icon: Search,
+    heading: 'Search is coming soon',
+    body: "You'll be able to find ALDI products and add them to your list in a couple of taps.",
+  },
+  templates: {
+    Icon: LayoutTemplate,
+    heading: 'Templates are coming soon',
+    body: 'Save your regular shops, like the weekly basics, and reuse them in one tap.',
+  },
+} satisfies Record<string, { Icon: LucideIcon; heading: string; body: string }>;
 
+export type PlaceholderKind = keyof typeof PAGES;
+
+/** Shared empty state for tabs that are built in later stages (docs/ux/app-shell.md section 2). */
+export function PlaceholderPage({ kind }: { kind: PlaceholderKind }) {
+  const { Icon, heading, body } = PAGES[kind];
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      <p data-testid="me">
-        {me.isPending
-          ? 'Loading…'
-          : me.isError
-            ? `Couldn't load your account (${me.error.message})`
-            : `Signed in as ${me.data.email} (household ${me.data.householdId})`}
-      </p>
-      <button type="button" className="min-h-11 rounded border px-4" onClick={() => void signOut()}>
-        Sign out
-      </button>
-    </section>
+    <div className="flex min-h-[calc(100dvh-var(--safe-top)-56px-var(--nav-height)-48px)] flex-col items-center justify-center text-center">
+      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-accent-soft text-accent">
+        <Icon aria-hidden size={48} />
+      </div>
+      <h2 className="mt-5 text-xl">{heading}</h2>
+      <p className="mt-2 max-w-[280px] text-base text-muted">{body}</p>
+    </div>
   );
 }
