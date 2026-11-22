@@ -22,7 +22,7 @@ Catalogue, scraper, search results, quantity modal, lists, templates, settings c
 - B3 [S] Assertion: CloudFront default behaviour -> S3; `/api/*` behaviour -> HTTP API with caching disabled and Authorization header forwarded; viewer protocol redirects to HTTPS; SPA fallback serves `index.html` for unknown non-API paths.
 - B4 [S] Assertion: with `CERTIFICATE_ARN` set, distribution has alias `trolley.mcn.am` and that certificate; without it, no alias and no certificate. No Route 53 resources.
 - B5 [S] Assertion: Cognito user pool has self sign-up disabled, email as username, Lite feature plan; app client has no secret and enables SRP auth.
-- B6 [S] Assertion: DynamoDB table is PAY_PER_REQUEST, PITR enabled, has PK/SK and GSI1 (GSI1PK/GSI1SK).
+- B6 [S] Assertion: DynamoDB table is PAY_PER_REQUEST, PITR enabled, has pk/sk and GSI1 (gsi1pk/gsi1sk).
 - B7 [S] Assertion: Lambda runtime Node 22; log groups have 7-day retention.
 - B8 [S] Assertion: `BucketDeployment` publishes web build plus `/config.json` (region, userPoolId, userPoolClientId) and invalidates CloudFront.
 - B9 [S] Stack outputs include the CloudFront domain name and URL.
@@ -68,7 +68,7 @@ Catalogue, scraper, search results, quantity modal, lists, templates, settings c
 ## H. Cost and security
 - H1 [S] Assertion: AWS Budget of USD 5/month with email notification to `ALERT_EMAIL` taken from config; synth fails with a clear message if `ALERT_EMAIL` is missing in deploy.
 - H2 [S] No secrets, account IDs or emails hardcoded in the repo (grep check / secret scan clean).
-- H3 [S] Assertion: each Lambda role is least-privilege (api Lambda: read on the table/household mapping only; no `*` actions or resources except where AWS requires).
+- H3 [S] Assertion: each Lambda role is least-privilege (api Lambda: read/write on this table and its indexes only (later stages write data); no `*` actions or resources except where AWS requires).
 - H4 [S] Deploy role in the OIDC stack is scoped to assuming CDK bootstrap roles (no AdministratorAccess attached directly); trust condition pins `repo:<owner>/<repo>:ref:refs/heads/main`.
 - H5 [S] No resource costs a fixed monthly fee (no NAT, no Route 53 zone, no Secrets Manager, no provisioned capacity).
 - H6 [U] Budget alert email subscription confirmed; AWS Cost Explorer shows ~$0 after a week.
