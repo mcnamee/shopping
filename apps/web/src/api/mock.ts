@@ -63,10 +63,31 @@ const validation = (message: string, field?: string) =>
 
 /**
  * Magic queries for QA/E2E in mock mode:
- *   "__error" -> 500 (error state), "__slow" -> 3 s delay (loading skeletons).
+ *   "__error" -> 500 (error state), "__slow" -> 3 s delay (loading skeletons),
+ *   "__expired" -> 401 (session expiry mid-use),
+ *   "__many" -> 60 synthetic products (infinite scroll, last page has a short tail),
+ *   "__manyfail" -> as "__many" but each page after the first fails twice (the UI retries once) (load-more error).
  */
 export const MOCK_ERROR_QUERY = '__error';
 export const MOCK_SLOW_QUERY = '__slow';
+export const MOCK_EXPIRED_QUERY = '__expired';
+export const MOCK_MANY_QUERY = '__many';
+export const MOCK_MANY_FAIL_QUERY = '__manyfail';
+const MANY_COUNT = 60;
+const failedOffsets = new Map<number, number>();
+
+const manyCatalogue: ProductSummary[] = Array.from({ length: MANY_COUNT }, (_, i) => ({
+  sku: `9000000000${String(i).padStart(8, '0')}`,
+  name: `Synthetic Item ${String(i + 1).padStart(2, '0')}`,
+  brand: 'Test Brand',
+  imageUrl: null,
+  price: 100 + i,
+  unitPrice: null,
+  packSize: '1 each',
+  unitType: 'each',
+  groupId: 'pantry',
+  custom: false,
+}));
 
 type MockSearchable = ProductSummary & { discontinued?: boolean };
 
@@ -155,6 +176,25 @@ const productRoutes: Record<string, MockRoute> = {
           code: 'INTERNAL',
           message: 'Internal server error',
         } satisfies ErrorResponse);
+      }
+      if (q === MOCK_EXPIRED_QUERY) {
+        return json(401, { code: 'UNAUTHORISED', message: 'Unauthorised' } satisfies ErrorResponse);
+      }
+      if (q === MOCK_MANY_QUERY || q === MOCK_MANY_FAIL_QUERY) {
+        const lim = Number(url.searchParams.get('limit') ?? 20);
+        const cur = url.searchParams.get('cursor');
+        const off = cur ? (decodeCursor(cur) ?? 0) : 0;
+        if (q === MOCK_MANY_FAIL_QUERY && off > 0 && (failedOffsets.get(off) ?? 0) < 2) {
+          // Twice, because the UI retries a 5xx once before surfacing the error.
+          failedOffsets.set(off, (failedOffsets.get(off) ?? 0) + 1);
+          return json(500, { code: 'INTERNAL', message: 'Internal server error' });
+        }
+        const pg = paginate(manyCatalogue, off, lim);
+        return json(200, {
+          items: pg.items,
+          total: manyCatalogue.length,
+          nextCursor: pg.nextCursor,
+        } satisfies ProductSearchResponse);
       }
       if (q.length > MAX_QUERY_LENGTH) return validation('q too long', 'q');
       if (category !== undefined && !isDefaultGroupId(category))
