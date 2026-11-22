@@ -2,7 +2,7 @@
 
 ## Where things are
 - **Stage 0**: built, QA'd, PM signed off. `main` = 94b9671 (Stage 0 + Stage 1 docs). Not yet live.
-- **Stage 1** (catalogue, scraper, search UI): built on `claude/elegant-ride-dzzdob`. QA was **interrupted** mid-run - partial QA test work committed as WIP (search paging E2E + mock `__many` seam). No `docs/stages/stage-1-qa.md` yet. PM sign-off pending.
+- **Stage 1** (catalogue, scraper, search UI): merged to `main` (6279e46) at the user's request BEFORE QA finished and PM sign-off - complete those retrospectively. QA was **interrupted** mid-run - partial QA test work committed as WIP (search paging E2E + mock `__many` seam). No `docs/stages/stage-1-qa.md` yet. PM sign-off pending.
 - User AWS setup done: CDK bootstrap, TrolleyGithubOidcStack (from branch at 0eaf17f, includes D-041 trust fix + scrape-now invoke permission), repo variables, default branch = main. `AWS_SCRAPE_ROLE_ARN` not needed yet (fallback role not created - TrolleyStack table didn't exist).
 
 ## First deploy - current blocker
