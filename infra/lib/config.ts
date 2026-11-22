@@ -39,3 +39,35 @@ export function assertServicePoint(value: string): string {
   }
   return value;
 }
+
+/**
+ * Suggestions model (D-061): a Bedrock model or inference profile id such as
+ * "apac.amazon.nova-micro-v1:0", or "none" for rules-only suggestions (no Bedrock access).
+ */
+export const DEFAULT_SUGGEST_MODEL_ID = 'apac.amazon.nova-micro-v1:0';
+
+export function assertModelId(value: string): string {
+  if (value !== 'none' && !/^(?:[a-z]{2,6}\.)?[a-z0-9-]+\.[a-z0-9.-]+(?::\d+)?$/.test(value)) {
+    throw new Error(
+      'suggestModelId must be a Bedrock model or inference profile id like "apac.amazon.nova-micro-v1:0", or "none"',
+    );
+  }
+  return value;
+}
+
+/** Geographic cross-region inference profile prefixes (the id is then `<geo>.<model id>`). */
+const PROFILE_PREFIXES = ['us', 'eu', 'apac', 'au', 'jp', 'ca', 'us-gov', 'global'];
+
+/**
+ * Split an id into its inference profile (if any) and the underlying foundation model id:
+ * "apac.amazon.nova-micro-v1:0" -> profile "apac.amazon.nova-micro-v1:0", model
+ * "amazon.nova-micro-v1:0"; "amazon.nova-micro-v1:0" -> no profile.
+ */
+export function parseModelId(id: string): { profileId: string | null; foundationModelId: string } {
+  const dot = id.indexOf('.');
+  const prefix = dot > 0 ? id.slice(0, dot) : '';
+  if (PROFILE_PREFIXES.includes(prefix)) {
+    return { profileId: id, foundationModelId: id.slice(dot + 1) };
+  }
+  return { profileId: null, foundationModelId: id };
+}

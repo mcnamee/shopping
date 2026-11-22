@@ -6,6 +6,7 @@ import {
   REGION,
   assertCertificateArn,
   assertEmail,
+  assertModelId,
   assertServicePoint,
   setting,
 } from '../lib/config';
@@ -31,6 +32,8 @@ if (!alertEmail && app.node.tryGetContext('requireAlertEmail') === 'true') {
 }
 const certificateArn = setting(app, 'certificateArn', 'CERTIFICATE_ARN');
 const aldiServicePoint = setting(app, 'aldiServicePoint', 'ALDI_SERVICE_POINT');
+// Suggestions model (D-061); default Amazon Nova Micro via the APAC inference profile.
+const suggestModelId = setting(app, 'suggestModelId', 'SUGGEST_MODEL_ID');
 
 new TrolleyStack(app, 'TrolleyStack', {
   env,
@@ -41,6 +44,7 @@ new TrolleyStack(app, 'TrolleyStack', {
   ...(certificateArn ? { certificateArn: assertCertificateArn(certificateArn) } : {}),
   ...(aldiServicePoint ? { aldiServicePoint: assertServicePoint(aldiServicePoint) } : {}),
   awsScrapeSchedule: setting(app, 'awsScrapeSchedule', 'AWS_SCRAPE_SCHEDULE') === 'true',
+  ...(suggestModelId ? { suggestModelId: assertModelId(suggestModelId) } : {}),
 });
 
 const existingProviderArn = setting(app, 'existingOidcProviderArn', 'EXISTING_OIDC_PROVIDER_ARN');

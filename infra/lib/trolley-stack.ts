@@ -32,6 +32,7 @@ import * as schedulerTargets from 'aws-cdk-lib/aws-scheduler-targets';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubs from 'aws-cdk-lib/aws-sns-subscriptions';
 import type { Construct } from 'constructs';
+import { DEFAULT_SUGGEST_MODEL_ID, parseModelId } from './config';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
@@ -69,11 +70,17 @@ export interface TrolleyStackProps extends StackProps {
    * (D-042). The Lambda stays deployed for "Scrape now" experiments.
    */
   awsScrapeSchedule?: boolean;
+  /**
+   * Bedrock model or inference profile id for suggestions (D-061), default
+   * "apac.amazon.nova-micro-v1:0"; "none" = rules only and no Bedrock permission.
+   */
+  suggestModelId?: string;
 }
 
 export class TrolleyStack extends Stack {
   constructor(scope: Construct, id: string, props: TrolleyStackProps) {
     super(scope, id, props);
+    const suggestModelId = props.suggestModelId ?? DEFAULT_SUGGEST_MODEL_ID;
 
     // ---------------------------------------------------------------- Data
     const table = new dynamodb.Table(this, 'Table', {
@@ -160,7 +167,8 @@ export class TrolleyStack extends Stack {
     // Explicit role (no AWSLambdaBasicExecutionRole managed policy, which allows logs:* on *).
     const apiRole = new iam.Role(this, 'ApiFunctionRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-      description: 'Trolley API Lambda: write own logs, read/write the Trolley table',
+      description:
+        'Trolley API Lambda: write own logs, read/write the Trolley table, invoke the suggestions model',
     });
     apiRole.addToPolicy(
       new iam.PolicyStatement({
@@ -177,16 +185,55 @@ export class TrolleyStack extends Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
       memorySize: 256,
-      timeout: Duration.seconds(10),
+      // Suggestions allow 8 s for Bedrock before falling back (D-062); API Gateway's
+      // integration limit is 30 s.
+      timeout: Duration.seconds(20),
       role: apiRole,
       logGroup: apiLogGroup,
       environment: {
         TABLE_NAME: table.tableName,
+        SUGGEST_MODEL_ID: suggestModelId,
         NODE_OPTIONS: '--enable-source-maps',
       },
       bundling: LAMBDA_BUNDLING,
     });
     table.grantReadWriteData(apiFunction);
+
+    // Bedrock for suggestions (D-061, D-073): InvokeModel (used by Converse) on the
+    // configured inference profile, and on its foundation model only when called through
+    // that profile. A cross-region profile routes to any of its destination regions, so the
+    // foundation-model ARN has a region wildcard, pinned by the InferenceProfileArn condition.
+    if (suggestModelId !== 'none') {
+      const { profileId, foundationModelId } = parseModelId(suggestModelId);
+      if (profileId) {
+        const profileArn = `arn:${this.partition}:bedrock:${this.region}:${this.account}:inference-profile/${profileId}`;
+        apiRole.addToPolicy(
+          new iam.PolicyStatement({
+            sid: 'SuggestInferenceProfile',
+            actions: ['bedrock:InvokeModel'],
+            resources: [profileArn],
+          }),
+        );
+        apiRole.addToPolicy(
+          new iam.PolicyStatement({
+            sid: 'SuggestFoundationModelViaProfile',
+            actions: ['bedrock:InvokeModel'],
+            resources: [`arn:${this.partition}:bedrock:*::foundation-model/${foundationModelId}`],
+            conditions: { StringEquals: { 'bedrock:InferenceProfileArn': profileArn } },
+          }),
+        );
+      } else {
+        apiRole.addToPolicy(
+          new iam.PolicyStatement({
+            sid: 'SuggestFoundationModel',
+            actions: ['bedrock:InvokeModel'],
+            resources: [
+              `arn:${this.partition}:bedrock:${this.region}::foundation-model/${foundationModelId}`,
+            ],
+          }),
+        );
+      }
+    }
 
     const jwtAuthorizer = new HttpJwtAuthorizer(
       'CognitoJwt',
@@ -251,6 +298,10 @@ export class TrolleyStack extends Stack {
       ['/api/settings/unit-overrides', GET],
       ['/api/settings/unit-overrides/{productId}', PUT],
       ['/api/settings/unit-overrides/{productId}', DELETE],
+      // Stage 3 (docs/api.md). Must match services/api/src/suggestions/routes.ts.
+      ['/api/lists/{listId}/suggestions', POST],
+      ['/api/suggestions', POST],
+      ['/api/lists/{listId}/items/bulk', POST],
     ];
     for (const [routePath, method] of authedRoutes) {
       httpApi.addRoutes({
