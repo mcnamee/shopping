@@ -198,7 +198,7 @@ Each stage is sized to fit one working session and ends deployable. Each stage f
 ## 8. Open questions for you
 1. ~~App name / custom domain~~ - Trolley at trolley.mcn.am (D-001, D-004).
 2. ~~Region~~ - ap-southeast-2 (D-002).
-3. Your ALDI store/state (prices and ranges can vary by state) - needed before Stage 1.
+3. Your ALDI store/state (prices and ranges can vary by state) - **still open, blocks Stage 1** (D-005).
 4. ~~Bedrock OK?~~ - yes (D-003).
 
 ## 9. Sources consulted

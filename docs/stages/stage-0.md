@@ -1,7 +1,8 @@
 # Stage 0 - Foundations: acceptance criteria
 
 Goal: both users can sign in on their phones at https://trolley.mcn.am (or the CloudFront URL) and see the app shell.
-Decisions: see docs/DECISIONS.md (D-001 to D-021).
+Decisions: see docs/DECISIONS.md (D-001 to D-024).
+Wording of E7, G3 and H6 amended at sign-off (DEF-QA-003, INFO-2); intent unchanged.
 
 **Verification tags**
 - **[S]** in session: lint, typecheck, unit tests, `cdk synth` + CDK template assertion tests, Playwright (mobile viewport, e.g. iPhone 13) against local dev with mocked auth.
@@ -48,7 +49,7 @@ Catalogue, scraper, search results, quantity modal, lists, templates, settings c
 - E4 [S] Signed-in shell: fixed bottom nav with Lists, Search, Templates, Settings; active tab highlighted; each tab routes to a placeholder page with its title; deep link refresh works.
 - E5 [S] Settings shows signed-in email and a "Sign out" button; sign-out returns to login and protected routes then redirect to login.
 - E6 [S] Unauthenticated access to any app route redirects to login.
-- E7 [S] Playwright at 390x844: no horizontal scroll; tap targets >= 44 px; text contrast passes axe (no serious/critical violations) on login and shell pages.
+- E7 [S] Playwright at a 390 px wide phone viewport (iPhone 13 profile; height is not material): no horizontal scroll; tap targets >= 44 px; text contrast passes axe (no serious/critical violations) on login and shell pages.
 - E8 [S] UI copy reviewed for Australian English (e.g. "authorise", "colour"); app title "Trolley".
 - E9 [S] App reads `/config.json` at start-up; shows a friendly error if it fails to load.
 - E10 [U] Shell looks and works correctly on both users' phones, including safe-area insets (notch/home bar).
@@ -62,7 +63,7 @@ Catalogue, scraper, search results, quantity modal, lists, templates, settings c
 ## G. Docs and one-off setup
 - G1 [S] `docs/SETUP.md` gives copy-paste CloudShell steps: `cdk bootstrap`, deploy OIDC provider + deploy-role stack (trust limited to this repo's `main` branch), set GitHub variables `AWS_ACCOUNT_ID`, `AWS_DEPLOY_ROLE_ARN`, `ALERT_EMAIL`, optional `CERTIFICATE_ARN`.
 - G2 [S] SETUP.md covers custom domain: request ACM cert in us-east-1, add validation CNAME at the external DNS provider, set `CERTIFICATE_ARN`, add CNAME `trolley -> <distribution>.cloudfront.net`.
-- G3 [S] SETUP.md covers creating both users with `create-user.sh`, confirming the budget alert email subscription, and requesting Bedrock model access.
+- G3 [S] SETUP.md covers creating both users with `create-user.sh`, where budget alert emails go (AWS Budgets emails `ALERT_EMAIL` directly; no subscription to confirm), and requesting Bedrock model access.
 - G4 [S] README has local dev instructions (install, test, run web with mocked auth).
 
 ## H. Cost and security
@@ -71,7 +72,7 @@ Catalogue, scraper, search results, quantity modal, lists, templates, settings c
 - H3 [S] Assertion: each Lambda role is least-privilege (api Lambda: read/write on this table and its indexes only (later stages write data); no `*` actions or resources except where AWS requires).
 - H4 [S] Deploy role in the OIDC stack is scoped to assuming CDK bootstrap roles (no AdministratorAccess attached directly); trust condition pins `repo:<owner>/<repo>:ref:refs/heads/main`.
 - H5 [S] No resource costs a fixed monthly fee (no NAT, no Route 53 zone, no Secrets Manager, no provisioned capacity).
-- H6 [U] Budget alert email subscription confirmed; AWS Cost Explorer shows ~$0 after a week.
+- H6 [U] Budget `trolley-monthly` exists in the AWS console with `ALERT_EMAIL` as the recipient; AWS Cost Explorer shows ~$0 after a week.
 
 ## Done when
 All [S] criteria pass in QA's report, and the user confirms C3, C4, F4 and E10: both of you can sign in on your phones at https://trolley.mcn.am (or the CloudFront URL if the certificate is not yet set up).

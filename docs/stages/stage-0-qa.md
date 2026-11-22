@@ -127,15 +127,47 @@ Totals: 47 criteria. **Pass 40, Fail 0, Deferred 7** (C3, C4, C5, D4, E10, F4, H
 
 | ID | Severity | Summary | Repro |
 |---|---|---|---|
-| DEF-QA-001 | Low | Forgot-password Code field: `maxlength=6` truncates pasted text before non-digits are stripped, so pasting `123 456` gives `12345` (UX spec says strip non-digits on paste) | Mock dev: `/forgot-password`, send code, paste `123 456` into Code. Expected `123456`, got `12345`. Covered by the `test.fail()` case in `e2e/exploratory.e2e.ts`; remove `test.fail()` once fixed. Suggested fix: drop `maxLength`, strip then `slice(0, 6)` in `onChange` |
-| DEF-QA-002 | Low | `scripts/create-user.sh` usage text is cut off mid-sentence (`sed -n '2,9p'` should cover the whole header comment, about lines 2-12) | Run `scripts/create-user.sh` with no arguments: output ends at "that is what" |
-| DEF-QA-003 | Low | Playwright's iPhone 13 profile viewport is 390x664, while E7 says 390x844. Width is what matters and passes; PM may want to reword E7 | n/a |
-| INFO-1 | Info | `npm audit`: 3 moderate advisories (`minimatch` via `workbox-build`, build-time only). Not exploitable in the shipped app | `npm audit` |
-| INFO-2 | Info | Criteria G3/H6 mention "confirming the budget email subscription", but AWS Budgets email notifications need no confirmation and SETUP.md says so. SETUP is correct; reword the criterion | Read SETUP step 3 vs `stage-0.md` G3/H6 |
-| INFO-3 | Info | The CDK-generated BucketDeployment helper role uses the `AWSLambdaBasicExecutionRole` managed policy and `cloudfront:CreateInvalidation` on `*` (AWS requires it). H3 is scoped to our API Lambda, which is clean. Also SETUP Step 0 says Node 20+ is enough while `engines` is `>=22 <23` (npm only warns) | Inspect the synthesised IAM policies |
+| DEF-QA-001 | Low - **Fixed** (92f541d) | Forgot-password Code field: `maxlength=6` truncates pasted text before non-digits are stripped, so pasting `123 456` gives `12345` (UX spec says strip non-digits on paste) | Mock dev: `/forgot-password`, send code, paste `123 456` into Code. Expected `123456`, got `12345`. Covered by the `test.fail()` case in `e2e/exploratory.e2e.ts`; remove `test.fail()` once fixed. Suggested fix: drop `maxLength`, strip then `slice(0, 6)` in `onChange` |
+| DEF-QA-002 | Low - **Fixed** (92f541d) | `scripts/create-user.sh` usage text is cut off mid-sentence (`sed -n '2,9p'` should cover the whole header comment, about lines 2-12) | Run `scripts/create-user.sh` with no arguments: output ends at "that is what" |
+| DEF-QA-003 | Low - **Closed** (E7 reworded) | Playwright's iPhone 13 profile viewport is 390x664, while E7 says 390x844. Width is what matters and passes; PM may want to reword E7 | n/a |
+| INFO-1 | Info - **Accepted** (D-022) | `npm audit`: 3 moderate advisories (`minimatch` via `workbox-build`, build-time only). Not exploitable in the shipped app | `npm audit` |
+| INFO-2 | Info - **Closed** (G3/H6 reworded) | Criteria G3/H6 mention "confirming the budget email subscription", but AWS Budgets email notifications need no confirmation and SETUP.md says so. SETUP is correct; reword the criterion | Read SETUP step 3 vs `stage-0.md` G3/H6 |
+| INFO-3 | Info - **Accepted** (D-023); Node note fixed | The CDK-generated BucketDeployment helper role uses the `AWSLambdaBasicExecutionRole` managed policy and `cloudfront:CreateInvalidation` on `*` (AWS requires it). H3 is scoped to our API Lambda, which is clean. Also SETUP Step 0 says Node 20+ is enough while `engines` is `>=22 <23` (npm only warns) | Inspect the synthesised IAM policies |
 
 No product code was changed. Files added or changed by QA: `apps/web/e2e/*`, `apps/web/playwright.config.ts`, `apps/web/package.json` (`e2e` script, devDependencies, typecheck covers `e2e/`), `package-lock.json`, `.github/workflows/ci.yml`, this report.
 
 ## 4. Recommendation
 
 Stage 0 meets every [S] criterion. Fix DEF-QA-001 and DEF-QA-002 when convenient (neither blocks the stage), then proceed to deployment so the user can verify C3, C4, C5, D4, E10, F4 and H6.
+
+## 5. Sign-off (product-manager, 2026-11-22)
+
+**Verdict: Stage 0 [S] criteria signed off.** 40/40 [S] pass, 0 fail. Stage 0 is complete once the user confirms the [U] checklist below after the first deploy (C3, C4, F4 and E10 are required by "Done when"; C5, D4 and H6 are expected but not stage-blocking unless they fail).
+
+Re-verified after QA, at commit 92f541d: lint, typecheck, 126/126 unit tests, 53/53 E2E (DEF-QA-001 case now passes normally, no `test.fail()`).
+
+**Resolved since QA**
+- DEF-QA-001 fixed (code field no longer truncates on paste/autofill).
+- DEF-QA-002 fixed (`create-user.sh` prints the full usage text).
+- DEF-QA-003 closed: E7 reworded to a 390 px wide viewport.
+- INFO-2 closed: G3 and H6 reworded (AWS Budgets needs no email confirmation).
+- README documents `npm run e2e`; SETUP.md says Node 22 (INFO-3 note).
+
+**Accepted risks** (docs/DECISIONS.md)
+- INFO-1: 3 moderate `npm audit` advisories via `workbox-build` (build-time only) - D-022.
+- INFO-3: CDK-generated BucketDeployment helper role (managed basic-execution policy, `cloudfront:CreateInvalidation` on `*`) - D-023.
+
+**Deferred UX gaps** (docs/BACKLOG.md, not blocking): no splash "Try again" on network-only session-restore failure; no distinct "same as temporary password" message; return-to-page after sign-in excludes `/settings`.
+
+### User verification checklist (after the first merge to `main`)
+Tick each, on both phones where noted. Report any failure and it becomes a Stage 0 fix before Stage 1.
+
+- [ ] **F4** GitHub Actions "deploy" run on `main` is green; the `AppUrl` output (CloudFront URL) loads the Trolley sign-in screen.
+- [ ] **C3** (both users) Invite email arrives; sign in with email + temporary password; you are made to choose a new password; you land on Lists.
+- [ ] **C4** (one user is enough) Sign out, tap "Forgot password?", code arrives by email, reset works, sign in with the new password.
+- [ ] **E10** (both phones) Add to home screen; open it. Header and bottom nav clear the notch and home bar; all four tabs work; nothing scrolls sideways.
+- [ ] **C5** (both phones) Close the home-screen app fully, reopen it later: still signed in (iOS Safari and Android Chrome).
+- [ ] **D4** Open `<AppUrl>/api/me` in a browser (no token): you see a 401 / "Unauthorized" response, not data.
+- [ ] **H6** AWS console -> Billing and Cost Management -> Budgets: `trolley-monthly` exists with your alert email. After about a week, Cost Explorer shows ~USD 0.
+- [ ] Custom domain (optional, if `CERTIFICATE_ARN` set): https://trolley.mcn.am loads with a valid padlock.
+- [ ] Before Stage 1: tell us your ALDI state (D-005).

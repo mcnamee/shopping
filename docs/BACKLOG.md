@@ -1,0 +1,9 @@
+# Backlog
+
+Small items deferred from signed-off stages. Highest priority first. Pull into a stage when it touches the same area.
+
+| # | Priority | Item | Origin | Why deferred |
+|---|---|---|---|---|
+| B-001 | Medium | Splash shows "Try again" when session restore fails only because of the network (today it falls back to sign-in, so an offline cold start looks like being signed out). | Stage 0 engineer gap | Tokens are kept; signing in again works. Do with Stage 5 offline/shop mode, or earlier if users hit it in store. |
+| B-002 | Low | Return to the deep-linked page after sign-in should include `/settings` (currently excluded, lands on Lists). | Stage 0 engineer gap | One extra tap; rare path. |
+| B-003 | Low | Set-new-password: distinct message when the new password equals the temporary password (today a generic error). | Stage 0 engineer gap | Happens once per user, at first sign-in. |

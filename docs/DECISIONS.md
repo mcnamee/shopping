@@ -7,7 +7,7 @@ Format: ID - date - decision. Why. (Supersedes / status.)
 - **D-002** AWS region **ap-southeast-2 (Sydney)** for all resources, except the ACM certificate for CloudFront (must be us-east-1).
 - **D-003** AI suggestions use **Amazon Bedrock** (no separate Anthropic API key). Model access requested by the user as a one-off manual step.
 - **D-004** Custom domain **https://trolley.mcn.am**. DNS for mcn.am is held at an external provider (not Route 53), so no hosted zone is created; the user adds records manually.
-- **D-005** ALDI store/state: still open (needed before Stage 1).
+- **D-005** ALDI store/state: **OPEN - blocks Stage 1.** Ask the user which state they shop in (prices and ranges vary by state); the scraper and price display depend on it.
 
 ## Stage 0 technical decisions (2026-11-22, lead engineer, accepted by PM)
 - **D-010 Same-origin hosting.** CloudFront serves the SPA from S3 (Origin Access Control, bucket private) and routes `/api/*` to the API Gateway HTTP API. No CORS. `/mcp` and `/oauth/*` will be routed the same way in Stage 4.
@@ -22,3 +22,8 @@ Format: ID - date - decision. Why. (Supersedes / status.)
 - **D-019 Budget alarm** at USD 5/month, emailing `ALERT_EMAIL` (from GitHub variable, never hardcoded).
 - **D-020 Tooling:** npm workspaces monorepo, TypeScript, Node 22, Vitest, ESLint + Prettier; layout per spec section 5.
 - **D-021 Single environment** (`prod`) for now. Revisit if a breaking change needs a staging stack.
+
+## Stage 0 sign-off (2026-11-22, PM)
+- **D-022 Accepted risk: build-time npm audit advisories.** 3 moderate advisories (`minimatch` via `workbox-build`) are in the PWA build toolchain only and never ship to the browser or Lambda. Accepted; re-check `npm audit` at each stage start and upgrade when `vite-plugin-pwa`/`workbox-build` publish a fix. No `npm audit fix --force`.
+- **D-023 Accepted risk: CDK BucketDeployment helper role.** The CDK-generated helper Lambda uses `AWSLambdaBasicExecutionRole` and `cloudfront:CreateInvalidation` on `*` (CloudFront invalidation does not support narrower scoping in the CDK construct). It runs only at deploy time. H3 least-privilege applies to our own Lambdas, which are clean. Revisit only if CDK offers scoped invalidation.
+- **D-024 Stage 0 criteria wording.** E7 is measured at 390 px width (iPhone 13 Playwright profile); G3/H6 no longer require confirming a budget email subscription (AWS Budgets needs none). Intent unchanged.
