@@ -1,11 +1,26 @@
 // @vitest-environment jsdom
 import { screen, waitFor, within } from '@testing-library/react';
-import type { ProductSearchResponse, ProductSummary } from '@trolley/core';
+import type {
+  ListItem,
+  ListSummary,
+  ProductSearchResponse,
+  ProductSummary,
+  TemplateSummary,
+} from '@trolley/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const api = vi.hoisted(() => ({
   searchProducts: vi.fn(),
   createCustomProduct: vi.fn(),
+  getLists: vi.fn(),
+  getTemplates: vi.fn(),
+  addThisWeekItem: vi.fn(),
+  addListItem: vi.fn(),
+  addTemplateItem: vi.fn(),
+  deleteListItem: vi.fn(),
+  updateListItem: vi.fn(),
+  deleteTemplateItem: vi.fn(),
+  saveUnitOverride: vi.fn(),
 }));
 
 vi.mock('../api', async (importOriginal) => {
@@ -19,11 +34,71 @@ vi.mock('../api', async (importOriginal) => {
     getGroups: vi.fn().mockResolvedValue({ groups: DEFAULT_GROUPS }),
     searchProducts: api.searchProducts,
     createCustomProduct: api.createCustomProduct,
+    getLists: api.getLists,
+    getTemplates: api.getTemplates,
+    addThisWeekItem: api.addThisWeekItem,
+    addListItem: api.addListItem,
+    addTemplateItem: api.addTemplateItem,
+    deleteListItem: api.deleteListItem,
+    updateListItem: api.updateListItem,
+    deleteTemplateItem: api.deleteTemplateItem,
+    saveUnitOverride: api.saveUnitOverride,
   };
 });
 
 import { ApiError } from '../api';
+import { clearListOverlay } from '../lists/data';
+import { sessionTargets } from '../search/target';
 import { makeAuth, renderApp } from '../test/render';
+
+const listSummary = (over: Partial<ListSummary> = {}): ListSummary => ({
+  id: 'list-week',
+  name: 'Week of 23 Nov',
+  status: 'active',
+  thisWeek: true,
+  itemCount: 12,
+  tickedCount: 3,
+  createdAt: '2026-11-20T00:00:00.000Z',
+  updatedAt: '2026-11-20T00:00:00.000Z',
+  completedAt: null,
+  finishedBy: null,
+  version: 1,
+  ...over,
+});
+const templateSummary = (over: Partial<TemplateSummary> = {}): TemplateSummary => ({
+  id: 'tpl-tacos',
+  name: 'Tacos',
+  type: 'meal',
+  itemCount: 5,
+  preview: [],
+  version: 1,
+  createdAt: '2026-11-20T00:00:00.000Z',
+  updatedAt: '2026-11-20T00:00:00.000Z',
+  ...over,
+});
+const listItem = (over: Partial<ListItem> = {}): ListItem => ({
+  id: '100001~kg',
+  listId: 'list-week',
+  product: {
+    productId: '100001',
+    name: 'Potatoes',
+    brand: null,
+    imageUrl: null,
+    packSize: 'per kg',
+    groupId: 'fruit-veg',
+    unitType: 'kg',
+  },
+  qty: 1.5,
+  unit: 'kg',
+  note: null,
+  ticked: false,
+  tickedAt: null,
+  version: 1,
+  createdAt: '2026-11-20T00:00:00.000Z',
+  updatedAt: '2026-11-20T00:00:00.000Z',
+  updatedBy: 'u1',
+  ...over,
+});
 
 const product = (n: number, over: Partial<ProductSummary> = {}): ProductSummary => ({
   sku: String(100000 + n),
@@ -71,8 +146,37 @@ const callsFor = (q: string) =>
   api.searchProducts.mock.calls.filter(([params]) => (params as { q: string }).q === q);
 
 beforeEach(() => {
-  api.searchProducts.mockReset();
-  api.createCustomProduct.mockReset();
+  for (const fn of Object.values(api)) fn.mockReset();
+  api.getLists.mockResolvedValue({ lists: [listSummary()] });
+  api.getTemplates.mockResolvedValue({
+    templates: [
+      templateSummary(),
+      templateSummary({ id: 'tpl-basics', name: 'Weekly basics', type: 'weekly', itemCount: 10 }),
+    ],
+  });
+  api.addThisWeekItem.mockResolvedValue({
+    item: listItem(),
+    list: listSummary(),
+    merged: false,
+    addedQty: 1.5,
+    listCreated: false,
+  });
+  api.addListItem.mockResolvedValue({
+    item: listItem(),
+    list: listSummary(),
+    merged: false,
+    addedQty: 1.5,
+  });
+  api.addTemplateItem.mockResolvedValue({
+    template: { ...templateSummary(), items: [] },
+    item: listItem(),
+    merged: false,
+  });
+  api.deleteListItem.mockResolvedValue({ list: listSummary() });
+  api.updateListItem.mockResolvedValue({ item: listItem(), list: listSummary(), archived: false });
+  api.saveUnitOverride.mockResolvedValue({ override: null });
+  sessionTargets.reset();
+  clearListOverlay();
   FakeObserver.all = [];
 });
 
@@ -320,11 +424,10 @@ describe('Search tab: no results and custom products', () => {
     expect(screen.queryByRole('dialog', { name: 'Add a custom item' })).not.toBeInTheDocument();
     expect(within(modal).getByText('Custom item')).toBeInTheDocument();
     await user.click(within(modal).getByRole('button', { name: '1.5 kg' }));
-    await user.click(within(modal).getByRole('button', { name: 'Add to list' }));
+    await user.click(within(modal).getByRole('button', { name: /^Add to/ }));
 
-    expect(
-      await screen.findByText('Added 1.5 kg Lamb mince - lists are coming soon'),
-    ).toBeVisible();
+    expect(await screen.findByText('Added 1.5 kg Lamb mince to Week of 23 Nov')).toBeVisible();
+    expect(api.addThisWeekItem.mock.calls[0]?.[0]).toMatchObject({ qty: 1.5, unit: 'kg' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -446,23 +549,91 @@ describe('Search tab: adding and toasts', () => {
     groupId: 'fruit-veg',
   });
 
-  it('Add opens the quantity modal; confirm toasts the amount, saves nothing and shows Added', async () => {
+  async function openPotatoes(path = '/search?q=potato') {
     api.searchProducts.mockResolvedValue(page([potatoes], 1));
-    const { user } = await searchTab('/search?q=potato');
+    const app = await searchTab(path);
     const addButton = await screen.findByRole('button', { name: 'Add Potatoes to list' });
-    await user.click(addButton);
-
+    await app.user.click(addButton);
     const dialog = await screen.findByRole('dialog', { name: 'Potatoes' });
-    await user.click(within(dialog).getByRole('button', { name: '1.5 kg' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Add to list' }));
+    return { ...app, addButton, dialog };
+  }
 
-    expect(await screen.findByText('Added 1.5 kg Potatoes - lists are coming soon')).toBeVisible();
+  it('Add defaults to this week: toast with Undo, Added state, focus back on the button', async () => {
+    const { user, dialog, addButton } = await openPotatoes();
+    expect(
+      await within(dialog).findByRole('button', { name: 'Add to Week of 23 Nov' }),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: '1.5 kg' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add to Week of 23 Nov' }));
+
+    expect(await screen.findByText('Added 1.5 kg Potatoes to Week of 23 Nov')).toBeVisible();
+    expect(api.addThisWeekItem).toHaveBeenCalledWith({
+      productId: '100001',
+      qty: 1.5,
+      unit: 'kg',
+      note: null,
+    });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(api.createCustomProduct).not.toHaveBeenCalled();
-    // Focus returns to the Add button, which reads "Added" for a moment.
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeVisible();
     const button = screen.getByRole('button', { name: 'Add Potatoes to list' });
     expect(button).toHaveFocus();
     expect(button).toHaveTextContent('Added');
+    expect(addButton).toBeDefined();
+  });
+
+  it('Undo of a new row deletes it; Undo of a merge takes the added quantity off', async () => {
+    const first = await openPotatoes();
+    await first.user.click(
+      await within(first.dialog).findByRole('button', { name: 'Add to Week of 23 Nov' }),
+    );
+    await first.user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(api.deleteListItem).toHaveBeenCalledWith('list-week', '100001~kg'));
+
+    api.addThisWeekItem.mockResolvedValue({
+      item: listItem({ qty: 3, version: 4 }),
+      list: listSummary(),
+      merged: true,
+      addedQty: 1,
+      listCreated: false,
+    });
+    api.addListItem.mockResolvedValue({
+      item: listItem({ qty: 3, version: 4 }),
+      list: listSummary(),
+      merged: true,
+      addedQty: 1,
+    });
+    await first.user.click(await screen.findByRole('button', { name: 'Add Potatoes to list' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Potatoes' });
+    await first.user.click(await within(dialog).findByRole('button', { name: /^Add to Week/ }));
+    expect(await screen.findByText('Updated Potatoes: now 3 kg in Week of 23 Nov')).toBeVisible();
+    await first.user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(api.updateListItem).toHaveBeenCalledWith('list-week', '100001~kg', {
+        qty: 2,
+        version: 4,
+      }),
+    );
+  });
+
+  it('creating the this-week list says so in the toast', async () => {
+    api.getLists.mockResolvedValue({ lists: [] });
+    api.addThisWeekItem.mockResolvedValue({
+      item: listItem(),
+      list: listSummary(),
+      merged: false,
+      addedQty: 1,
+      listCreated: true,
+    });
+    const { user, dialog } = await openPotatoes();
+    expect(
+      await within(dialog).findByRole('button', {
+        name: 'Adding to New list: Week of 23 Nov. Change',
+      }),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: /^Add to/ }));
+    expect(
+      await screen.findByText('Added 1 kg Potatoes to a new list, Week of 23 Nov'),
+    ).toBeVisible();
   });
 
   it('counted items read "2 x Name"', async () => {
@@ -473,30 +644,173 @@ describe('Search tab: adding and toasts', () => {
     await user.click(await screen.findByRole('button', { name: 'Add Bananas to list' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Increase quantity' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Add to list' }));
-    expect(await screen.findByText('Added 2 x Bananas - lists are coming soon')).toBeVisible();
+    await user.click(await within(dialog).findByRole('button', { name: /^Add to Week/ }));
+    expect(await screen.findByText('Added 2 x Bananas to Week of 23 Nov')).toBeVisible();
   });
 
   it('cancelling shows no toast and returns focus to Add', async () => {
-    api.searchProducts.mockResolvedValue(page([potatoes], 1));
-    const { user } = await searchTab('/search?q=potato');
-    const addButton = await screen.findByRole('button', { name: 'Add Potatoes to list' });
-    await user.click(addButton);
-    await screen.findByRole('dialog');
+    const { user, addButton } = await openPotatoes();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toast')).not.toBeInTheDocument();
     expect(addButton).toHaveFocus();
+    expect(api.addThisWeekItem).not.toHaveBeenCalled();
   });
 
-  it('the template icon shows "Templates are coming soon"', async () => {
+  it('a full list shows the banner in the sheet and keeps it open', async () => {
+    api.addThisWeekItem.mockRejectedValue(
+      new ApiError(409, 'CONFLICT', 'full', { code: 'CONFLICT', reason: 'LIMIT' }),
+    );
+    const { user, dialog } = await openPotatoes();
+    await user.click(await within(dialog).findByRole('button', { name: /^Add to Week/ }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'This list is full (200 items). Remove something first.',
+    );
+    expect(screen.getByRole('dialog', { name: 'Potatoes' })).toBeInTheDocument();
+  });
+
+  it('any other failure shows the generic banner and keeps the values', async () => {
+    api.addThisWeekItem.mockRejectedValue(new ApiError(500, 'INTERNAL', 'boom', null));
+    const { user, dialog } = await openPotatoes();
+    await user.click(within(dialog).getByRole('button', { name: '2 kg' }));
+    await user.click(await within(dialog).findByRole('button', { name: /^Add to Week/ }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      "Couldn't add that item. Please try again.",
+    );
+    expect(within(dialog).getByRole('textbox', { name: /Quantity/ })).toHaveValue('2');
+  });
+
+  it('ticking Remember saves the unit override after the item is added', async () => {
+    const { user, dialog } = await openPotatoes();
+    await user.click(within(dialog).getByRole('radio', { name: 'g' }));
+    await user.click(within(dialog).getByRole('button', { name: /^Add to Week/ }));
+    await waitFor(() => expect(api.saveUnitOverride).toHaveBeenCalledWith('100001', 'g'));
+  });
+
+  it('a failed override save still keeps the added item and says so', async () => {
+    api.saveUnitOverride.mockRejectedValue(new ApiError(500, 'INTERNAL', 'boom', null));
+    const { user, dialog } = await openPotatoes();
+    await user.click(within(dialog).getByRole('radio', { name: 'g' }));
+    await user.click(within(dialog).getByRole('button', { name: /^Add to Week/ }));
+    expect(await screen.findByText("Added, but couldn't remember the unit.")).toBeVisible();
+  });
+});
+
+describe('Search tab: target picker and context', () => {
+  const potatoes = product(1, { name: 'Potatoes', unitType: 'kg', groupId: 'fruit-veg' });
+
+  async function open(path: string, button = 'Add Potatoes to list') {
     api.searchProducts.mockResolvedValue(page([potatoes], 1));
-    const { user } = await searchTab('/search?q=potato');
-    await user.click(await screen.findByRole('button', { name: 'Add Potatoes to a template' }));
-    const toast = await screen.findByTestId('toast');
-    expect(toast).toHaveTextContent('Templates are coming soon');
-    expect(screen.getByRole('status', { name: '' })).toContainElement(toast);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    api.getLists.mockResolvedValue({
+      lists: [
+        listSummary(),
+        listSummary({
+          id: 'list-bbq',
+          name: 'Birthday BBQ',
+          thisWeek: false,
+          itemCount: 14,
+          tickedCount: 3,
+        }),
+      ],
+    });
+    const app = await searchTab(path);
+    await app.user.click(await screen.findByRole('button', { name: button }));
+    const dialog = await screen.findByRole('dialog', { name: /Potatoes|Choose where to add/ });
+    return { ...app, dialog };
+  }
+
+  it('lists the lists then the templates, selects on tap and updates the button', async () => {
+    const { user, dialog } = await open('/search?q=potato');
+    await user.click(
+      await within(dialog).findByRole('button', { name: /^Adding to Week of 23 Nov/ }),
+    );
+    const picker = await screen.findByRole('dialog', { name: 'Choose where to add' });
+    expect(screen.getByRole('heading', { name: 'Choose where to add' })).toHaveFocus();
+    const radios = within(picker)
+      .getAllByRole('radio')
+      .map((r) => r.textContent);
+    expect(radios[0]).toContain('Week of 23 Nov');
+    expect(radios[1]).toContain('Birthday BBQ');
+    expect(radios[2]).toContain('Weekly basics');
+    expect(radios[3]).toContain('Tacos');
+    expect(within(picker).getByRole('radio', { name: /Week of 23 Nov/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+
+    await user.click(within(picker).getByRole('radio', { name: /Tacos/ }));
+    const form = await screen.findByRole('dialog', { name: 'Potatoes' });
+    expect(within(form).getByText('Adding to template')).toBeVisible();
+    await user.click(within(form).getByRole('button', { name: 'Add to Tacos' }));
+    expect(await screen.findByText('Added 1 kg Potatoes to Tacos')).toBeVisible();
+    expect(api.addTemplateItem).toHaveBeenCalledWith('tpl-tacos', {
+      productId: '100001',
+      qty: 1,
+      unit: 'kg',
+      note: null,
+    });
+  });
+
+  it('remembers the last target for the rest of the session', async () => {
+    const first = await open('/search?q=potato');
+    await first.user.click(await within(first.dialog).findByRole('button', { name: /^Adding to/ }));
+    const picker = await screen.findByRole('dialog', { name: 'Choose where to add' });
+    await first.user.click(within(picker).getByRole('radio', { name: /Birthday BBQ/ }));
+    await first.user.click(await screen.findByRole('button', { name: 'Add to Birthday BBQ' }));
+    await screen.findByText('Added 1 kg Potatoes to Birthday BBQ');
+    expect(api.addListItem).toHaveBeenCalledWith('list-bbq', expect.objectContaining({ qty: 1 }));
+    await first.user.click(screen.getByRole('button', { name: 'Add Potatoes to list' }));
+    expect(await screen.findByRole('button', { name: 'Add to Birthday BBQ' })).toBeInTheDocument();
+  });
+
+  it('?list= shows the context bar, preselects that list and Done goes back to it', async () => {
+    const { dialog } = await open('/search?q=potato&list=list-bbq');
+    expect(screen.getByTestId('search-context')).toHaveTextContent('Adding to Birthday BBQ');
+    expect(
+      await within(dialog).findByRole('button', { name: 'Add to Birthday BBQ' }),
+    ).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Done' })).toHaveAttribute('href', '/lists/list-bbq');
+  });
+
+  it('?template= preselects the template and Done returns to it', async () => {
+    const { dialog } = await open('/search?q=potato&template=tpl-tacos');
+    expect(screen.getByTestId('search-context')).toHaveTextContent('Adding to template Tacos');
+    expect(await within(dialog).findByRole('button', { name: 'Add to Tacos' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Done' })).toHaveAttribute(
+      'href',
+      '/templates/tpl-tacos',
+    );
+  });
+
+  it('the ListPlus icon opens straight on the picker when no template is remembered', async () => {
+    const { user, dialog } = await open('/search?q=potato', 'Add Potatoes to a template');
+    expect(dialog).toHaveAccessibleName('Choose where to add');
+    expect(screen.getByRole('heading', { name: 'Choose where to add' })).toHaveFocus();
+    // Templates lead on this path.
+    const radios = within(dialog)
+      .getAllByRole('radio')
+      .map((r) => r.textContent);
+    expect(radios[0]).toContain('Weekly basics');
+    await user.click(within(dialog).getByRole('radio', { name: /Weekly basics/ }));
+    expect(await screen.findByRole('button', { name: 'Add to Weekly basics' })).toBeVisible();
+  });
+
+  it('the ListPlus icon preselects the only template', async () => {
+    api.getTemplates.mockResolvedValue({ templates: [templateSummary()] });
+    const { dialog } = await open('/search?q=potato', 'Add Potatoes to a template');
+    expect(dialog).toHaveAccessibleName('Potatoes');
+    expect(await within(dialog).findByRole('button', { name: 'Add to Tacos' })).toBeVisible();
+  });
+
+  it('with no templates the New template form starts expanded, defaulting to Meal', async () => {
+    api.getTemplates.mockResolvedValue({ templates: [] });
+    const { dialog } = await open('/search?q=potato', 'Add Potatoes to a template');
+    await within(dialog).findByText("You don't have any templates yet.");
+    expect(within(dialog).getByLabelText('Template name')).toBeVisible();
+    expect(within(dialog).getByRole('radio', { name: 'Meal' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
   });
 });
 

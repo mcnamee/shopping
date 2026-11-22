@@ -16,7 +16,7 @@ interface BottomSheetProps {
   /** Scrolling middle. */
   children: ReactNode;
   /** Pinned footer (buttons). */
-  footer: ReactNode;
+  footer?: ReactNode;
   onClose: () => void;
   /** Element to focus on open (default: the first element with `data-sheet-initial`). */
   initialFocusRef?: RefObject<HTMLElement | null>;
@@ -230,9 +230,11 @@ export function BottomSheet({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[max(16px,var(--safe-left))] pb-3 pt-1">
           {children}
         </div>
-        <div className="shrink-0 space-y-3 border-t border-border-subtle px-[max(16px,var(--safe-left))] pb-[max(var(--safe-bottom),16px)] pt-3">
-          {footer}
-        </div>
+        {footer && (
+          <div className="shrink-0 space-y-3 border-t border-border-subtle px-[max(16px,var(--safe-left))] pb-[max(var(--safe-bottom),16px)] pt-3">
+            {footer}
+          </div>
+        )}
       </div>
     </div>,
     container,

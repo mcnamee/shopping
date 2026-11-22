@@ -9,7 +9,7 @@ interface ProductCardProps {
   /** Shows "Added" briefly after the quantity modal confirms. */
   added: boolean;
   onAdd: (product: ProductSummary, button: HTMLButtonElement) => void;
-  onTemplate: (product: ProductSummary) => void;
+  onTemplate: (product: ProductSummary, button: HTMLButtonElement) => void;
 }
 
 /** Search result card (docs/ux/search.md 2.3). Not itself tappable: two buttons only. */
@@ -28,7 +28,7 @@ export const ProductCard = forwardRef<HTMLLIElement, ProductCardProps>(function 
         <button
           type="button"
           aria-label={`Add ${name} to a template`}
-          onClick={() => onTemplate(product)}
+          onClick={(e) => onTemplate(product, e.currentTarget)}
           className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full border border-border-subtle bg-surface-raised/90 text-text">
