@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   checks:
-    name: Lint, typecheck, test, build, synth
+    name: Lint, typecheck, test, build, synth, e2e
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -33,3 +33,9 @@ jobs:
       - run: npm run build
       # Synth without AWS credentials: proves the CDK app and Lambda bundling work.
       - run: npm run synth
+
+      # Playwright E2E at iPhone 13 viewport against `vite dev` with mocked auth (no AWS).
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run e2e -w @trolley/web
