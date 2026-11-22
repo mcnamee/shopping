@@ -22,3 +22,9 @@
 ## Housekeeping
 - Actions warn Node 20 is deprecated for actions/checkout@v4, setup-node@v4, configure-aws-credentials@v4 - bump to current majors.
 - Backlog: `docs/BACKLOG.md` (B-001..B-013).
+
+
+## Session end (Stage 3 in progress)
+- Stage 3 done so far (branch only, NOT on main): PM criteria (docs/stages/stage-3.md), UX (docs/ux/suggestions.md), backend + suggestion engine + Bedrock Nova Micro (`apac.amazon.nova-micro-v1:0`, configurable via SUGGEST_MODEL_ID; unverified id/IAM condition - wrong = silent rules fallback, check logs for `suggestions_ai_fallback`).
+- Stopped: software-engineer building the suggestions review UI (any partial commits listed above this note in git log). Next: finish UI per the backend handoff in docs/api.md + D-069..D-074 -> QA -> PM sign-off -> merge to main.
+- Production = Stage 2 (main 7ef192e).
