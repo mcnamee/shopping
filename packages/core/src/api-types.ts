@@ -17,7 +17,6 @@ export type ErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'VALIDATION'
-  | 'CONFLICT'
   | 'INTERNAL';
 
 export interface ErrorResponse {
@@ -57,14 +56,17 @@ export interface ProductSummary {
 
 /**
  * GET /api/products/search?q=&category=&cursor=&limit=
- * - q: free text (type-ahead; prefix matching). Optional when `category` is given.
- * - category: group id filter (e.g. "dairy-eggs").
- * - limit: 1-48, default 24.
+ * - q: free text (type-ahead; word-prefix matching, case/accent-insensitive).
+ *   Optional when `category` is given (then: browse the group A to Z).
+ * - category: group id filter (see GET /api/groups), e.g. "dairy-eggs".
+ * - limit: 1-48, default 20.
  * - cursor: opaque `nextCursor` from the previous page.
- * Discontinued catalogue products are excluded.
+ * Discontinued catalogue products are excluded. Household custom products are included.
  */
 export interface ProductSearchResponse {
   items: ProductSummary[];
+  /** Total matches across all pages (for "24 results" / "Dairy & Eggs, 86 products"). */
+  total: number;
   /** Pass back as `cursor` for the next page; null when there are no more results. */
   nextCursor: string | null;
 }
@@ -75,20 +77,32 @@ export interface ProductDetailResponse extends ProductSummary {
   discontinued: boolean;
 }
 
-/** POST /api/products/custom */
+/**
+ * POST /api/products/custom. Duplicate names are allowed (the UI offers "Use existing").
+ * 400 VALIDATION with `field` for: name (required, 1-80 chars), brand (<= 40), packSize
+ * (<= 30), unitType (one of UNIT_TYPES), groupId (a group id).
+ */
 export interface CreateCustomProductRequest {
-  /** 1-80 characters after trimming. */
   name: string;
-  unitType: UnitType;
-  /** One of DEFAULT_GROUPS ids. */
-  groupId: string;
+  /** Default "each". */
+  unitType?: UnitType;
+  /** Default "other". */
+  groupId?: string;
+  brand?: string;
+  packSize?: string;
 }
 
-/** 201 Created: the new product. */
+/** 201 Created: the new product (custom: true). */
 export type CreateCustomProductResponse = ProductSummary;
 
-/** 409 CONFLICT: a custom product with the same name already exists (returned in `item`). */
-export interface CustomProductConflictResponse extends ErrorResponse {
-  code: 'CONFLICT';
-  item: ProductSummary;
+export interface GroupSummary {
+  id: string;
+  name: string;
+  /** Chip label. */
+  shortName: string;
+}
+
+/** GET /api/groups: the household's groups in aisle order (defaults until Stage 2). */
+export interface GroupsResponse {
+  groups: GroupSummary[];
 }

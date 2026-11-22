@@ -11,7 +11,6 @@ import {
   itemToCustomProduct,
   keys,
   type CustomProduct,
-  type UnitType,
 } from '@trolley/core';
 import type { DocSender } from './doc';
 
@@ -67,11 +66,13 @@ export class CustomProductRepo {
 
   async create(
     householdId: string,
-    input: { name: string; unitType: UnitType; groupId: string; createdBy: string },
+    input: Omit<CustomProduct, 'sku' | 'createdAt'>,
   ): Promise<CustomProduct> {
     const product: CustomProduct = {
       sku: `${CUSTOM_SKU_PREFIX}${randomUUID()}`,
       name: input.name,
+      brand: input.brand,
+      packSize: input.packSize,
       unitType: input.unitType,
       groupId: input.groupId,
       createdAt: new Date(this.now()).toISOString(),

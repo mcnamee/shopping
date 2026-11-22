@@ -8,6 +8,8 @@ import type { SourceCategory } from './product';
 export interface Group {
   id: string;
   name: string;
+  /** Chip label (docs/ux/search.md). */
+  shortName: string;
 }
 
 /**
@@ -16,21 +18,21 @@ export interface Group {
  * freezers and liquor towards the checkouts. `Other` is always last.
  */
 export const DEFAULT_GROUPS = [
-  { id: 'fruit-veg', name: 'Fruit & Veg' },
-  { id: 'bakery', name: 'Bakery' },
-  { id: 'meat-seafood', name: 'Meat & Seafood' },
-  { id: 'deli', name: 'Deli' },
-  { id: 'dairy-eggs', name: 'Dairy & Eggs' },
-  { id: 'pantry', name: 'Pantry' },
-  { id: 'snacks', name: 'Snacks & Confectionery' },
-  { id: 'drinks', name: 'Drinks' },
-  { id: 'health-beauty', name: 'Health & Beauty' },
-  { id: 'baby', name: 'Baby' },
-  { id: 'household', name: 'Household & Cleaning' },
-  { id: 'pet', name: 'Pet' },
-  { id: 'frozen', name: 'Frozen' },
-  { id: 'liquor', name: 'Liquor' },
-  { id: 'other', name: 'Other' },
+  { id: 'fruit-veg', name: 'Fruit & Veg', shortName: 'Fruit & Veg' },
+  { id: 'bakery', name: 'Bakery', shortName: 'Bakery' },
+  { id: 'meat-seafood', name: 'Meat & Seafood', shortName: 'Meat & Seafood' },
+  { id: 'deli', name: 'Deli', shortName: 'Deli' },
+  { id: 'dairy-eggs', name: 'Dairy & Eggs', shortName: 'Dairy & Eggs' },
+  { id: 'pantry', name: 'Pantry', shortName: 'Pantry' },
+  { id: 'snacks', name: 'Snacks & Confectionery', shortName: 'Snacks' },
+  { id: 'drinks', name: 'Drinks', shortName: 'Drinks' },
+  { id: 'health-beauty', name: 'Health & Beauty', shortName: 'Health & Beauty' },
+  { id: 'baby', name: 'Baby', shortName: 'Baby' },
+  { id: 'household', name: 'Household & Cleaning', shortName: 'Household' },
+  { id: 'pet', name: 'Pet', shortName: 'Pet' },
+  { id: 'frozen', name: 'Frozen', shortName: 'Frozen' },
+  { id: 'liquor', name: 'Liquor', shortName: 'Liquor' },
+  { id: 'other', name: 'Other', shortName: 'Other' },
 ] as const satisfies readonly Group[];
 
 export type DefaultGroupId = (typeof DEFAULT_GROUPS)[number]['id'];

@@ -99,6 +99,14 @@ export class GithubOidcStack extends Stack {
       );
       fallback.addToPolicy(
         new iam.PolicyStatement({
+          sid: 'ReadScrapeRuns',
+          actions: ['dynamodb:Query'],
+          resources: [tableArn],
+          conditions: { 'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] } },
+        }),
+      );
+      fallback.addToPolicy(
+        new iam.PolicyStatement({
           sid: 'WriteCatalogueItemsOnly',
           actions: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem'],
           resources: [tableArn],

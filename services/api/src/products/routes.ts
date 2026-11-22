@@ -3,6 +3,7 @@
  *   GET  /api/products/search?q=&category=&cursor=&limit=
  *   GET  /api/products/{sku}
  *   POST /api/products/custom
+ *   GET  /api/groups
  * All authed; household comes only from verified claims.
  */
 import {
@@ -20,9 +21,9 @@ import {
   buildSearchIndex,
   tokenise,
   type CatalogueProduct,
-  type CreateCustomProductRequest,
   type CustomProduct,
-  type CustomProductConflictResponse,
+  DEFAULT_GROUPS,
+  type GroupsResponse,
   type ProductDetailResponse,
   type ProductSearchResponse,
   type ProductSummary,
@@ -39,12 +40,7 @@ export interface ProductDeps {
     get(householdId: string, sku: string): Promise<CustomProduct | null>;
     create(
       householdId: string,
-      input: {
-        name: string;
-        unitType: CreateCustomProductRequest['unitType'];
-        groupId: string;
-        createdBy: string;
-      },
+      input: Omit<CustomProduct, 'sku' | 'createdAt'>,
     ): Promise<CustomProduct>;
   };
   /**
@@ -54,13 +50,14 @@ export interface ProductDeps {
   historyBoost?: (householdId: string) => Promise<(sku: string) => number>;
 }
 
-export const DEFAULT_PAGE_SIZE = 24;
+export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 48;
 export const MAX_NAME_LENGTH = 80;
+export const MAX_BRAND_LENGTH = 40;
+export const MAX_PACK_SIZE_LENGTH = 30;
 const MAX_BODY_BYTES = 2048;
 
-type Searchable =
-  (CatalogueProduct & { custom?: false }) | (CustomProduct & { brand: null; custom: true });
+type Searchable = (CatalogueProduct & { custom?: false }) | (CustomProduct & { custom: true });
 
 function toSummary(item: Searchable): ProductSummary {
   return item.custom ? customSummary(item) : catalogueSummary(item);
@@ -123,7 +120,7 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
       ...(boostFn ? { boost: (p: Searchable) => boostFn(p.sku) } : {}),
     };
     const customIndex = buildSearchIndex<Searchable>(
-      customs.map((c) => ({ ...c, brand: null, custom: true as const })),
+      customs.map((c) => ({ ...c, custom: true as const })),
     );
     const ranked = mergeRanked<Searchable>(
       searchProducts<Searchable>(snapshot.index, q, options),
@@ -132,6 +129,7 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
     const page = paginate(ranked, offset, limit);
     return json(200, {
       items: page.items.map((r) => toSummary(r.item)),
+      total: ranked.length,
       nextCursor: page.nextCursor,
     } satisfies ProductSearchResponse);
   }
@@ -165,20 +163,33 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
     if (name.length < 1 || name.length > MAX_NAME_LENGTH) {
       return errors.validation(`Name must be 1-${MAX_NAME_LENGTH} characters`, 'name');
     }
-    if (!isUnitType(body.unitType)) return errors.validation('Unknown unit type', 'unitType');
-    if (!isDefaultGroupId(body.groupId)) return errors.validation('Unknown category', 'groupId');
+    const optionalText = (field: 'brand' | 'packSize', max: number) => {
+      const v = body[field];
+      if (v === undefined || v === null) return { ok: true as const, value: null };
+      if (typeof v !== 'string') return { ok: false as const };
+      const cleaned = cleanName(v);
+      return cleaned.length > max
+        ? { ok: false as const }
+        : { ok: true as const, value: cleaned || null };
+    };
+    const brand = optionalText('brand', MAX_BRAND_LENGTH);
+    if (!brand.ok)
+      return errors.validation(`Brand must be at most ${MAX_BRAND_LENGTH} characters`, 'brand');
+    const packSize = optionalText('packSize', MAX_PACK_SIZE_LENGTH);
+    if (!packSize.ok) {
+      return errors.validation(
+        `Pack size must be at most ${MAX_PACK_SIZE_LENGTH} characters`,
+        'packSize',
+      );
+    }
+    const unitType = body.unitType ?? 'each';
+    if (!isUnitType(unitType)) return errors.validation('Choose how you buy it', 'unitType');
+    const groupId = body.groupId ?? 'other';
+    if (!isDefaultGroupId(groupId)) return errors.validation('Choose a group', 'groupId');
 
+    // Duplicate names are allowed (docs/ux/search.md: the UI offers "Use existing").
     const householdId = req.household.householdId;
     const existing = await deps.custom.list(householdId);
-    const key = tokenise(name).join(' ');
-    const duplicate = existing.find((p) => tokenise(p.name).join(' ') === key);
-    if (duplicate) {
-      return json(409, {
-        code: 'CONFLICT',
-        message: 'You already have a product with this name',
-        item: customSummary(duplicate),
-      } satisfies CustomProductConflictResponse);
-    }
     if (existing.length >= MAX_CUSTOM_PRODUCTS) {
       return errors.validation(
         `A household can have at most ${MAX_CUSTOM_PRODUCTS} custom products`,
@@ -186,8 +197,10 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
     }
     const created = await deps.custom.create(householdId, {
       name,
-      unitType: body.unitType,
-      groupId: body.groupId,
+      brand: brand.value,
+      packSize: packSize.value,
+      unitType,
+      groupId,
       createdBy: req.household.userId,
     });
     return json(201, customSummary(created));
@@ -197,5 +210,13 @@ export function createProductRoutes(deps: ProductDeps): RouteTable {
     'GET /api/products/search': { auth: true, handler: search },
     'GET /api/products/{sku}': { auth: true, handler: detail },
     'POST /api/products/custom': { auth: true, handler: createCustom },
+    // Household aisle order is editable in Stage 2; until then everyone gets the defaults.
+    'GET /api/groups': {
+      auth: true,
+      handler: () =>
+        json(200, {
+          groups: DEFAULT_GROUPS.map(({ id, name, shortName }) => ({ id, name, shortName })),
+        } satisfies GroupsResponse),
+    },
   };
 }

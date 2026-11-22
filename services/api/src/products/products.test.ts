@@ -4,6 +4,7 @@ import {
   buildSearchIndex,
   type CatalogueProduct,
   type CustomProduct,
+  type GroupsResponse,
   type ProductSearchResponse,
 } from '@trolley/core';
 import { describe, expect, it, vi } from 'vitest';
@@ -142,6 +143,8 @@ const FARM_MILK: CustomProduct = {
   groupId: 'dairy-eggs',
   createdAt: 'x',
   createdBy: 'user-2',
+  brand: null,
+  packSize: null,
 };
 
 describe('GET /api/products/search', () => {
@@ -347,26 +350,58 @@ describe('POST /api/products/custom', () => {
     expect(store.get('home-2')).toBeUndefined();
   });
 
-  it('409s with the existing product for a duplicate name', async () => {
-    const { handler } = deps([FARM_MILK]);
+  it('defaults unitType to each and group to other, and keeps optional brand/pack size', async () => {
+    const { handler } = deps();
     const res = await handler(
       event('POST /api/products/custom', {
-        body: { name: 'farm gate MILK', unitType: 'L', groupId: 'dairy-eggs' },
+        body: { name: 'Lamb mince', brand: '  Local Butcher ', packSize: '500 g' },
       }),
       context,
     );
-    expect(res.statusCode).toBe(409);
-    expect(body(res)).toMatchObject({ code: 'CONFLICT', item: { sku: FARM_MILK.sku } });
+    expect(res.statusCode).toBe(201);
+    expect(body(res)).toMatchObject({
+      name: 'Lamb mince',
+      brand: 'Local Butcher',
+      packSize: '500 g',
+      unitType: 'each',
+      groupId: 'other',
+      custom: true,
+    });
+  });
+
+  it('allows duplicate names (the UI offers "Use existing")', async () => {
+    const { handler, store } = deps([FARM_MILK]);
+    const res = await handler(
+      event('POST /api/products/custom', { body: { name: 'Farm gate milk' } }),
+      context,
+    );
+    expect(res.statusCode).toBe(201);
+    expect(store.get('home-1')).toHaveLength(2);
+  });
+
+  it('strips control characters from names', async () => {
+    const { handler } = deps();
+    const res = await handler(
+      event('POST /api/products/custom', { body: { name: 'Eggs\u0000\u0007 dozen' } }),
+      context,
+    );
+    expect(body(res).name).toBe('Eggs dozen');
   });
 
   it.each([
     [undefined, undefined],
     ['not json', undefined],
+    ['[]', undefined],
+    [{ unitType: 'each' }, 'name'],
     [{ name: '', unitType: 'each', groupId: 'pantry' }, 'name'],
+    [{ name: '   ' }, 'name'],
     [{ name: 'x'.repeat(81), unitType: 'each', groupId: 'pantry' }, 'name'],
     [{ name: 'Thing', unitType: 'dozen', groupId: 'pantry' }, 'unitType'],
     [{ name: 'Thing', unitType: 'each', groupId: 'garden' }, 'groupId'],
-    [{ name: 'Thing', unitType: 'each', groupId: 'pantry', pad: 'x'.repeat(3000) }, undefined],
+    [{ name: 'Thing', brand: 'x'.repeat(41) }, 'brand'],
+    [{ name: 'Thing', brand: 5 }, 'brand'],
+    [{ name: 'Thing', packSize: 'x'.repeat(31) }, 'packSize'],
+    [{ name: 'Thing', pad: 'x'.repeat(3000) }, undefined],
   ])('rejects %j', async (b, field) => {
     const { handler } = deps();
     const res = await handler(
@@ -375,7 +410,27 @@ describe('POST /api/products/custom', () => {
     );
     expect(res.statusCode).toBe(400);
     expect(body(res).code).toBe('VALIDATION');
+    expect(typeof body(res).message).toBe('string');
     if (field) expect(body(res).field).toBe(field);
+  });
+});
+
+describe('GET /api/groups', () => {
+  it('returns the default groups in aisle order', async () => {
+    const { handler } = deps();
+    const res = await handler(event('GET /api/groups'), context);
+    expect(res.statusCode).toBe(200);
+    const groups = (body(res) as unknown as GroupsResponse).groups;
+    expect(groups[0]).toEqual({ id: 'fruit-veg', name: 'Fruit & Veg', shortName: 'Fruit & Veg' });
+    expect(groups.find((g) => g.id === 'snacks')!.shortName).toBe('Snacks');
+    expect(groups.at(-1)!.id).toBe('other');
+  });
+
+  it('requires auth', async () => {
+    const { handler } = deps();
+    expect((await handler(event('GET /api/groups', { claims: null }), context)).statusCode).toBe(
+      401,
+    );
   });
 });
 
@@ -471,6 +526,8 @@ describe('CustomProductRepo', () => {
     const repo = new CustomProductRepo(doc, 'T');
     await repo.list('home-1');
     const created = await repo.create('home-1', {
+      brand: null,
+      packSize: null,
       name: 'Sausages',
       unitType: 'kg',
       groupId: 'meat-seafood',

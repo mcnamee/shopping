@@ -75,6 +75,27 @@ describe('inferUnitType (real ALDI strings)', () => {
   });
 });
 
+/** Stage 1 criterion B1: inferUnitType from pack-size text alone. */
+describe('inferUnitType (B1 pack-size text)', () => {
+  it.each<[string, UnitType]>([
+    ['per kg', 'kg'],
+    ['kg', 'kg'],
+    ['per 100g', 'g'],
+    ['2L', 'pack'],
+    ['500mL', 'pack'],
+    ['6 pack', 'pack'],
+    ['x 12', 'pack'],
+    ['12 x', 'pack'],
+    ['each', 'each'],
+    ['', 'each'],
+    ['assorted', 'each'],
+    ['per litre', 'L'],
+    ['litre', 'L'],
+  ])('%j -> %s', (packSize, expected) => {
+    expect(inferUnitType({ name: 'Product', packSize })).toBe(expected);
+  });
+});
+
 describe('inferUnitType (text-only rules)', () => {
   it.each<[UnitHints, UnitType]>([
     [{ name: 'Sweet Potatoes per kg' }, 'kg'],

@@ -232,6 +232,7 @@ describe('TrolleyStack', () => {
       'GET /api/products/search',
       'GET /api/products/{sku}',
       'POST /api/products/custom',
+      'GET /api/groups',
     ]) {
       template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
         RouteKey: routeKey,
@@ -268,14 +269,18 @@ describe('TrolleyStack', () => {
     const role = template.findResources('AWS::IAM::Role')[roleId] as Resource;
     expect(role.Properties.ManagedPolicyArns).toBeUndefined();
     const statements = statementsFor(template, roleId);
-    expect(statements).toHaveLength(3);
+    expect(statements).toHaveLength(4);
     for (const st of statements) expect(JSON.stringify(st.Resource)).not.toContain('"*"');
 
     const byAction = (a: string) =>
       statements.find((st) => ([] as string[]).concat(st.Action as string).includes(a))!;
     expect(JSON.stringify(byAction('logs:PutLogEvents').Resource)).toMatch(/ScraperFunctionLogs/);
-    expect(JSON.stringify(byAction('dynamodb:Query').Resource)).toContain('/index/GSI1');
-    expect(byAction('dynamodb:Query').Action).toBe('dynamodb:Query');
+    const queries = statements.filter((st) => st.Action === 'dynamodb:Query');
+    expect(queries).toHaveLength(2);
+    expect(JSON.stringify(queries[0]!.Resource)).toContain('/index/GSI1');
+    expect(queries[1]!.Condition).toEqual({
+      'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] },
+    });
     const write = byAction('dynamodb:BatchWriteItem');
     expect(write.Action).toEqual(['dynamodb:BatchWriteItem', 'dynamodb:PutItem']);
     expect(write.Condition).toEqual({

@@ -2,6 +2,7 @@
  * Local / GitHub-runner CLI.
  *
  *   npm run scrape -w @trolley/scraper -- --dry-run --out products.json
+ *   npm run scrape -w @trolley/scraper -- --dry-run --fixtures   (offline, recorded data)
  *   npm run scrape -w @trolley/scraper -- --dry-run --max-per-category 12 --out sample.json
  *   TABLE_NAME=... npm run scrape -w @trolley/scraper -- --trigger github-fallback
  *
@@ -14,10 +15,11 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { AldiClient, pageSizeFor } from './aldi-client';
 import { loadConfig, servicePointFrom } from './config';
+import { fixtureFetch } from './fixture-fetch';
 import { runScrape, ScrapeFailedError } from './run';
 import { DynamoCatalogueStore } from './store';
 
-const HELP = `Usage: scrape [--dry-run] [--out file.json] [--service-point G526|none]
+const HELP = `Usage: scrape [--dry-run [--fixtures]] [--out file.json] [--service-point G526|none]
               [--categories key,key] [--max-per-category N] [--max-products N]
               [--interval-ms N] [--trigger name]`;
 
@@ -25,6 +27,7 @@ async function main(): Promise<number> {
   const { values } = parseArgs({
     options: {
       'dry-run': { type: 'boolean', default: false },
+      fixtures: { type: 'boolean', default: false },
       out: { type: 'string' },
       'service-point': { type: 'string' },
       categories: { type: 'string' },
@@ -56,15 +59,17 @@ async function main(): Promise<number> {
   }
 
   const dryRun = values['dry-run'];
+  if (values.fixtures && !dryRun) throw new Error('--fixtures is only allowed with --dry-run');
   const tableName = process.env.TABLE_NAME;
   if (!dryRun && !tableName) throw new Error('TABLE_NAME is required unless --dry-run is given');
 
   const log = (e: Record<string, unknown>) => console.error(JSON.stringify(e));
   const client = new AldiClient({
     servicePoint,
-    minIntervalMs: config.minIntervalMs,
+    minIntervalMs: values.fixtures ? 0 : config.minIntervalMs,
     maxRequests: config.maxRequests,
     log,
+    ...(values.fixtures ? { fetchImpl: fixtureFetch() } : {}),
   });
   const store =
     !dryRun && tableName

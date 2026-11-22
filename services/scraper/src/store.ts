@@ -11,26 +11,33 @@ import {
   type CatalogueProduct,
 } from '@trolley/core';
 
+/** SCRAPE#RUN / <startedAt> (Stage 1 A7). */
 export interface ScrapeRunRecord {
   startedAt: string;
   finishedAt: string;
-  status: 'success' | 'partial' | 'failed';
+  status: 'succeeded' | 'failed' | 'aborted';
   trigger: string;
-  servicePoint: string | null;
+  /** ALDI service point (store), e.g. "G526"; null = none. */
+  store: string | null;
   durationMs: number;
   requests: number;
+  /** Unfiltered catalogue size ALDI reported (coverage check). */
   expectedTotal: number | null;
+  /** Count the 50% abort check compared against (previous successful run). */
+  baseline: number | null;
   fetched: number;
-  previousActive: number;
-  created: number;
+  new: number;
   updated: number;
+  unchanged: number;
   reactivated: number;
   missed: number;
   discontinued: number;
+  /** Number of errors (details in errorMessages, max 20). */
+  errors: number;
   discontinueStep: 'applied' | 'skipped';
   unmappedCategories: Record<string, number>;
   unitTypes: Record<string, number>;
-  errors: string[];
+  errorMessages: string[];
   message?: string;
 }
 
@@ -38,6 +45,8 @@ export interface CatalogueStore {
   loadProducts(): Promise<CatalogueProduct[]>;
   writeProducts(products: readonly CatalogueProduct[], updatedAt: string): Promise<void>;
   putRun(run: ScrapeRunRecord): Promise<void>;
+  /** Most recent run with status "succeeded", or null. */
+  lastSuccessfulRun(): Promise<ScrapeRunRecord | null>;
 }
 
 /** The one DocumentClient method we use (lets tests pass a plain fake). */
@@ -116,6 +125,30 @@ export class DynamoCatalogueStore implements CatalogueStore {
         requests = res.UnprocessedItems?.[table] ?? [];
       }
     }
+  }
+
+  async lastSuccessfulRun(): Promise<ScrapeRunRecord | null> {
+    let startKey: Record<string, unknown> | undefined;
+    // Newest first; failed/aborted runs are skipped by the filter. Bounded scan.
+    for (let page = 0; page < 20; page++) {
+      const res = (await this.doc.send(
+        new QueryCommand({
+          TableName: this.options.tableName,
+          KeyConditionExpression: 'pk = :pk',
+          FilterExpression: '#status = :ok',
+          ExpressionAttributeNames: { '#status': 'status' },
+          ExpressionAttributeValues: { ':pk': keys.scrapeRunPk, ':ok': 'succeeded' },
+          ScanIndexForward: false,
+          Limit: 25,
+          ExclusiveStartKey: startKey,
+        }),
+      )) as { Items?: Record<string, unknown>[]; LastEvaluatedKey?: Record<string, unknown> };
+      const item = res.Items?.[0];
+      if (item) return item as unknown as ScrapeRunRecord;
+      startKey = res.LastEvaluatedKey;
+      if (!startKey) return null;
+    }
+    return null;
   }
 
   async putRun(run: ScrapeRunRecord): Promise<void> {

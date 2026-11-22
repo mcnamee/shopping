@@ -2,10 +2,7 @@
   "data": [
     {
       "name": "15 Kingsland Parade",
-      "alcoholAvailability": [
-        "Beer",
-        "Wine"
-      ],
+      "alcoholAvailability": ["Beer", "Wine"],
       "publicPhoneNumber": null,
       "facilities": [],
       "address": {
@@ -23,10 +20,7 @@
         "longitude": "149.09534350000000"
       },
       "id": "G526",
-      "availableCustomerServiceTypes": [
-        "pickup",
-        "walk-in"
-      ],
+      "availableCustomerServiceTypes": ["pickup", "walk-in"],
       "distance": null,
       "geofencing": {
         "enabled": false,

@@ -202,6 +202,7 @@ export class TrolleyStack extends Stack {
       ['/api/products/search', apigw.HttpMethod.GET],
       ['/api/products/{sku}', apigw.HttpMethod.GET],
       ['/api/products/custom', apigw.HttpMethod.POST],
+      ['/api/groups', apigw.HttpMethod.GET],
     ];
     for (const [routePath, method] of authedRoutes) {
       httpApi.addRoutes({
@@ -233,6 +234,14 @@ export class TrolleyStack extends Stack {
         sid: 'ReadCatalogueIndex',
         actions: ['dynamodb:Query'],
         resources: [`${table.tableArn}/index/GSI1`],
+      }),
+    );
+    scraperRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'ReadScrapeRuns',
+        actions: ['dynamodb:Query'],
+        resources: [table.tableArn],
+        conditions: { 'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] } },
       }),
     );
     scraperRole.addToPolicy(

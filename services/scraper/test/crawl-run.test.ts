@@ -155,7 +155,10 @@ class MemoryStore implements CatalogueStore {
     for (const p of products) this.products.set(p.sku, structuredClone(p));
   }
   async putRun(run: ScrapeRunRecord) {
-    this.runs.push(run);
+    this.runs.push(structuredClone(run));
+  }
+  async lastSuccessfulRun() {
+    return [...this.runs].reverse().find((r) => r.status === 'succeeded') ?? null;
   }
 }
 
@@ -176,7 +179,13 @@ describe('runScrape', () => {
     return runScrape({ client, store, servicePoint: 'G526', now: at(), trigger: 'test' });
   }
 
-  it('upserts, counts missed runs, discontinues after 2 complete misses, reactivates, never deletes', async () => {
+  const failure = async (p: Promise<unknown>) => {
+    const err = await p.catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ScrapeFailedError);
+    return (err as ScrapeFailedError).run;
+  };
+
+  it('upserts, counts missed runs, discontinues after 2 successful misses, reactivates, never deletes', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 20);
@@ -184,10 +193,13 @@ describe('runScrape', () => {
 
     const r1 = await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
     expect(r1.run).toMatchObject({
-      status: 'success',
-      created: 40,
+      status: 'succeeded',
+      new: 40,
       updated: 0,
+      unchanged: 0,
       fetched: 40,
+      baseline: null,
+      store: 'G526',
       discontinueStep: 'applied',
     });
     expect(store.products.size).toBe(40);
@@ -199,20 +211,24 @@ describe('runScrape', () => {
       storeId: 'G526',
     });
 
-    // Run 2: one product missing
-    const r2 = await scrape(store, { [DAIRY.key]: dairy.slice(1), [PANTRY.key]: pantry });
+    // Run 2: one product missing, one price change
+    const changed = dairy.slice(1).map((p, i) => (i === 0 ? { ...p, price: { amount: 999 } } : p));
+    const r2 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
     expect(r2.run).toMatchObject({
-      status: 'success',
-      created: 0,
-      updated: 39,
+      status: 'succeeded',
+      new: 0,
+      updated: 1,
+      unchanged: 38,
       missed: 1,
       discontinued: 0,
+      baseline: 40,
     });
     expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 1, discontinued: false });
     expect(store.products.get(dairy[1]!.sku)!.firstSeenAt).toBe(first.firstSeenAt);
+    expect(store.products.get(dairy[1]!.sku)!.price).toBe(999);
 
     // Run 3: still missing -> discontinued (kept)
-    const r3 = await scrape(store, { [DAIRY.key]: dairy.slice(1), [PANTRY.key]: pantry });
+    const r3 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
     expect(r3.run).toMatchObject({ missed: 1, discontinued: 1 });
     const gone = store.products.get(dairy[0]!.sku)!;
     expect(gone).toMatchObject({ missedRuns: 2, discontinued: true });
@@ -221,48 +237,55 @@ describe('runScrape', () => {
 
     // Run 4: already discontinued products are not rewritten
     const writesBefore = store.writes;
-    const r4 = await scrape(store, { [DAIRY.key]: dairy.slice(1), [PANTRY.key]: pantry });
+    const r4 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
     expect(r4.run).toMatchObject({ missed: 0, discontinued: 0 });
     expect(store.writes - writesBefore).toBe(39);
 
-    // Run 5: it comes back
+    // Run 5: it comes back -> flag and missed count reset
     const r5 = await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
     expect(r5.run.reactivated).toBe(1);
     expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 0, discontinued: false });
     expect(store.runs.map((r) => r.status)).toEqual([
-      'success',
-      'success',
-      'success',
-      'success',
-      'success',
+      'succeeded',
+      'succeeded',
+      'succeeded',
+      'succeeded',
+      'succeeded',
     ]);
   });
 
-  it('fails loudly and skips the discontinue step when < 50% of the previous count is fetched', async () => {
+  it('aborts with no writes when < 50% of the previous successful run is fetched', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 50);
     const pantry = make('2', 50);
     await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
+    const before = structuredClone([...store.products.values()]);
+    const writes = store.writes;
 
-    const err = await scrape(store, { [DAIRY.key]: dairy.slice(0, 49), [PANTRY.key]: [] }).catch(
-      (e: unknown) => e,
-    );
-    expect(err).toBeInstanceOf(ScrapeFailedError);
-    const run = (err as ScrapeFailedError).run;
+    const changed = dairy.slice(0, 49).map((p) => ({ ...p, price: { amount: 1 } }));
+    const run = await failure(scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: [] }));
     expect(run).toMatchObject({
-      status: 'failed',
+      status: 'aborted',
       fetched: 49,
-      previousActive: 100,
+      baseline: 100,
       discontinueStep: 'skipped',
       missed: 0,
     });
     expect(run.message).toMatch(/below 50%/);
-    expect(store.runs.at(-1)!.status).toBe('failed');
-    // Nothing was marked missed or discontinued
-    expect([...store.products.values()].every((p) => p.missedRuns === 0 && !p.discontinued)).toBe(
-      true,
-    );
+    expect(store.runs.at(-1)!.status).toBe('aborted');
+    expect(store.writes).toBe(writes);
+    expect([...store.products.values()]).toEqual(before);
+  });
+
+  it('compares against the last successful run, not an aborted one', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    await scrape(store, { [DAIRY.key]: make('1', 100) });
+    await failure(scrape(store, { [DAIRY.key]: make('1', 10) }));
+    // 49 is still < 50% of 100 (the last success), not of the aborted 10
+    const run = await failure(scrape(store, { [DAIRY.key]: make('1', 49) }));
+    expect(run).toMatchObject({ status: 'aborted', baseline: 100 });
   });
 
   it('accepts a drop to exactly 50%', async () => {
@@ -270,27 +293,38 @@ describe('runScrape', () => {
     const store = new MemoryStore();
     await scrape(store, { [DAIRY.key]: make('1', 50), [PANTRY.key]: make('2', 50) });
     const r = await scrape(store, { [DAIRY.key]: make('1', 50), [PANTRY.key]: [] });
-    expect(r.run).toMatchObject({ status: 'success', missed: 50 });
+    expect(r.run).toMatchObject({ status: 'succeeded', missed: 50 });
   });
 
-  it('skips the discontinue step and fails when the crawl is incomplete (bot block)', async () => {
+  it('falls back to the active product count when there are no run records', async () => {
     day = 1;
     const store = new MemoryStore();
-    const dairy = make('1', 10);
+    await scrape(store, { [DAIRY.key]: make('1', 100) });
+    store.runs = [];
+    const run = await failure(scrape(store, { [DAIRY.key]: make('1', 10) }));
+    expect(run).toMatchObject({ status: 'aborted', baseline: 100 });
+  });
+
+  it('fails, updates seen products and skips the discontinue step on an incomplete crawl (bot block)', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const dairy = make('1', 30);
     const pantry = make('2', 10);
     await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
     const html = fixtureText('akamai-access-denied.html');
-    const err = await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry }, (_n, url) =>
-      url.searchParams.get('categoryKey') === PANTRY.key
-        ? new Response(html, { status: 403 })
-        : undefined,
-    ).catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(ScrapeFailedError);
-    expect((err as ScrapeFailedError).run).toMatchObject({
-      status: 'partial',
+    const run = await failure(
+      scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry }, (_n, url) =>
+        url.searchParams.get('categoryKey') === PANTRY.key
+          ? new Response(html, { status: 403 })
+          : undefined,
+      ),
+    );
+    expect(run).toMatchObject({
+      status: 'failed',
       discontinueStep: 'skipped',
-      updated: 10,
+      unchanged: 30,
       missed: 0,
+      errors: 1,
     });
     expect([...store.products.values()].every((p) => p.missedRuns === 0)).toBe(true);
   });
@@ -298,20 +332,17 @@ describe('runScrape', () => {
   it('records a failed run when blocked before any data', async () => {
     day = 1;
     const store = new MemoryStore();
-    const err = await scrape(store, {}, () => new Response('denied', { status: 403 })).catch(
-      (e: unknown) => e,
-    );
-    expect(err).toBeInstanceOf(ScrapeFailedError);
-    expect(store.runs[0]).toMatchObject({ status: 'failed', fetched: 0 });
+    const run = await failure(scrape(store, {}, () => new Response('denied', { status: 403 })));
+    expect(run).toMatchObject({ status: 'failed', fetched: 0, errors: 1 });
+    expect(store.runs[0]!.status).toBe('failed');
     expect(store.products.size).toBe(0);
   });
 
   it('fails when nothing is fetched on a first run', async () => {
     day = 1;
     const store = new MemoryStore();
-    await expect(scrape(store, { [DAIRY.key]: [], [PANTRY.key]: [] })).rejects.toThrow(
-      /No products fetched/,
-    );
+    const run = await failure(scrape(store, { [DAIRY.key]: [], [PANTRY.key]: [] }));
+    expect(run.message).toMatch(/No products fetched/);
   });
 
   it('dry run writes nothing and reports distributions', async () => {

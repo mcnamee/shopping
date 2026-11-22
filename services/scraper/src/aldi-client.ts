@@ -54,7 +54,7 @@ export interface AldiClientOptions {
   userAgent?: string;
   /** Minimum gap between request starts (default 1000 ms). */
   minIntervalMs?: number;
-  /** Retries after the first attempt for 429/5xx/network errors (default 4). */
+  /** Retries after the first attempt for 429/5xx/timeouts/network errors (default 2 = max 3 attempts). */
   maxRetries?: number;
   /** First backoff delay; doubles each retry, plus up to 50% jitter (default 2000 ms). */
   backoffBaseMs?: number;
@@ -120,7 +120,7 @@ export class AldiClient {
     }
     this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
     this.minIntervalMs = options.minIntervalMs ?? 1000;
-    this.maxRetries = options.maxRetries ?? 4;
+    this.maxRetries = options.maxRetries ?? 2;
     this.backoffBaseMs = options.backoffBaseMs ?? 2000;
     this.timeoutMs = options.timeoutMs ?? 20_000;
     this.maxRequests = options.maxRequests ?? 500;

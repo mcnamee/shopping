@@ -59,6 +59,8 @@ export interface CustomProduct {
   /** Always starts with CUSTOM_SKU_PREFIX so it can never collide with a store SKU. */
   sku: string;
   name: string;
+  brand: string | null;
+  packSize: string | null;
   unitType: UnitType;
   groupId: string;
   createdAt: string;

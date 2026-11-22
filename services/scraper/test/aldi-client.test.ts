@@ -112,6 +112,17 @@ describe('AldiClient', () => {
     expect(c.requestCount).toBe(3);
   });
 
+  it('makes at most 3 attempts per request by default (timeouts included)', async () => {
+    const { c } = client(
+      async () => {
+        throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      },
+      { minIntervalMs: 0 },
+    );
+    await expect(c.searchPage({ offset: 0, limit: 12 })).rejects.toThrow(/timeout/);
+    expect(c.requestCount).toBe(3);
+  });
+
   it('treats a 403 (Akamai) as blocked and does not retry', async () => {
     const html = fixtureText('akamai-access-denied.html');
     const { c } = client(

@@ -1,16 +1,17 @@
 /**
  * One scrape run: crawl -> map -> (unless dry run) upsert, discontinue, record.
  *
- * Safety rules (spec 3.1, 4):
+ * Safety rules (spec 3.1/4, Stage 1 A5-A8, D-028):
  *   - products are never deleted;
  *   - a product is marked discontinued only after it is missing from 2 consecutive
- *     COMPLETE runs (missedRuns >= 2);
- *   - if the crawl is incomplete (cap, deadline, error, bot block) the discontinue step
- *     is skipped and the run fails loudly;
- *   - if a run fetches < 50% of the previously active product count, the discontinue
- *     step is skipped and the run fails loudly (protects against bot-blocking or an API
- *     change silently wiping the catalogue).
- * Seen products are still upserted in the failure cases: they are real, fresh data.
+ *     successful runs (missedRuns >= 2); seeing it again resets the count and the flag;
+ *   - ABORTED: if a run fetches < 50% of the previous successful run's product count
+ *     (bot block, API change), it writes NO product changes, marks nothing discontinued,
+ *     records status `aborted` and throws (-> Lambda error -> alarm email). The first
+ *     run is exempt;
+ *   - FAILED: if the crawl is incomplete (bot block mid-way, error, deadline, cap) or
+ *     returns nothing, freshly seen products are upserted but the discontinue step is
+ *     skipped; status `failed` and it throws.
  */
 import type { CatalogueProduct } from '@trolley/core';
 import type { AldiClient } from './aldi-client';
@@ -45,7 +46,7 @@ export interface RunOptions {
 
 export interface RunResult {
   run: ScrapeRunRecord;
-  /** Mapped products (always returned; the CLI writes them for dry runs). */
+  /** Mapped products (the CLI writes them out for dry runs). */
   products: MappedProduct[];
   crawl: Omit<CrawlResult, 'products'>;
 }
@@ -56,6 +57,22 @@ function countBy<T>(items: readonly T[], key: (t: T) => string): Record<string, 
   return out;
 }
 
+/** Fields whose change makes a product "updated" rather than "unchanged". */
+function sameContent(a: CatalogueProduct, b: Omit<MappedProduct, 'groupVia'>): boolean {
+  return (
+    a.name === b.name &&
+    a.brand === b.brand &&
+    a.packSize === b.packSize &&
+    a.unitType === b.unitType &&
+    a.price === b.price &&
+    a.unitPrice === b.unitPrice &&
+    a.imageUrl === b.imageUrl &&
+    a.groupId === b.groupId &&
+    a.storeId === b.storeId &&
+    JSON.stringify(a.categories) === JSON.stringify(b.categories)
+  );
+}
+
 export async function runScrape(options: RunOptions): Promise<RunResult> {
   const now = options.now ?? (() => new Date());
   const log = options.log ?? (() => undefined);
@@ -63,72 +80,81 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
   const startedAt = started.toISOString();
   const safetyRatio = options.safetyRatio ?? DEFAULT_SAFETY_RATIO;
 
-  const baseRun = (): ScrapeRunRecord => ({
+  const run: ScrapeRunRecord = {
     startedAt,
-    finishedAt: now().toISOString(),
+    finishedAt: startedAt,
     status: 'failed',
     trigger: options.trigger ?? 'unknown',
-    servicePoint: options.servicePoint,
-    durationMs: now().getTime() - started.getTime(),
-    requests: options.client.requestCount,
+    store: options.servicePoint,
+    durationMs: 0,
+    requests: 0,
     expectedTotal: null,
+    baseline: null,
     fetched: 0,
-    previousActive: 0,
-    created: 0,
+    new: 0,
     updated: 0,
+    unchanged: 0,
     reactivated: 0,
     missed: 0,
     discontinued: 0,
+    errors: 0,
     discontinueStep: 'skipped',
     unmappedCategories: {},
     unitTypes: {},
-    errors: [],
-  });
+    errorMessages: [],
+  };
+  const finish = async (status: ScrapeRunRecord['status'], message?: string) => {
+    run.status = status;
+    if (message) run.message = message;
+    run.finishedAt = now().toISOString();
+    run.durationMs = now().getTime() - started.getTime();
+    run.requests = options.client.requestCount;
+    run.errors = run.errorMessages.length;
+    if (options.store) await options.store.putRun(run);
+  };
 
   let crawl: CrawlResult;
   try {
     crawl = await crawlCatalogue(options.client, { ...options.crawl, log });
   } catch (err) {
-    const run = {
-      ...baseRun(),
-      errors: [String(err)],
-      message: 'Crawl failed before any data was fetched',
-    };
-    if (options.store) await options.store.putRun(run);
+    run.errorMessages.push(String(err));
+    await finish('failed', 'Crawl failed before any data was fetched');
     throw new ScrapeFailedError(`${run.message}: ${String(err)}`, run);
   }
 
   const mapped = crawl.products
     .map((p) => mapProduct(p, options.servicePoint))
     .filter((p): p is MappedProduct => p !== null);
-  const unmapped = countBy(
+  const { products: _raw, ...crawlInfo } = crawl;
+  run.expectedTotal = crawl.expectedTotal;
+  run.fetched = mapped.length;
+  run.unmappedCategories = countBy(
     mapped.filter((p) => p.groupVia === 'unmapped'),
     (p) => p.categories.map((c) => c.name).join(' > ') || '(no category)',
   );
-  const { products: _raw, ...crawlInfo } = crawl;
-
-  const run: ScrapeRunRecord = {
-    ...baseRun(),
-    expectedTotal: crawl.expectedTotal,
-    fetched: mapped.length,
-    unmappedCategories: unmapped,
-    unitTypes: countBy(mapped, (p) => p.unitType),
-    errors: crawl.errors.slice(0, 20),
-  };
+  run.unitTypes = countBy(mapped, (p) => p.unitType);
+  run.errorMessages = crawl.errors.slice(0, 20);
 
   if (!options.store) {
-    run.status = crawl.complete ? 'success' : 'partial';
-    run.message = 'Dry run: nothing written';
-    return {
-      run: { ...run, finishedAt: now().toISOString(), requests: options.client.requestCount },
-      products: mapped,
-      crawl: crawlInfo,
-    };
+    await finish(crawl.complete ? 'succeeded' : 'failed', 'Dry run: nothing written');
+    return { run, products: mapped, crawl: crawlInfo };
   }
-
   const store = options.store;
+
   const existing = new Map((await store.loadProducts()).map((p) => [p.sku, p]));
-  run.previousActive = [...existing.values()].filter((p) => !p.discontinued).length;
+  const lastSuccess = await store.lastSuccessfulRun();
+  // Baseline: the previous successful run's count; if run records were lost, the number
+  // of active products. Null (first run) disables the check.
+  const activeCount = [...existing.values()].filter((p) => !p.discontinued).length;
+  run.baseline = lastSuccess?.fetched ?? (activeCount > 0 ? activeCount : null);
+
+  if (run.baseline && mapped.length < run.baseline * safetyRatio) {
+    const message =
+      `Aborted: fetched ${mapped.length} products, below ${Math.round(safetyRatio * 100)}% ` +
+      `of the previous ${run.baseline}. Nothing was written or discontinued.`;
+    await finish('aborted', message);
+    throw new ScrapeFailedError(message, run);
+  }
 
   const ts = startedAt;
   const toWrite: CatalogueProduct[] = [];
@@ -137,9 +163,10 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
     const { groupVia: _via, ...fields } = m;
     const prev = existing.get(m.sku);
     seen.add(m.sku);
-    if (!prev) run.created++;
+    if (!prev) run.new++;
+    else if (prev.discontinued) run.reactivated++;
+    else if (sameContent(prev, fields) && prev.missedRuns === 0) run.unchanged++;
     else run.updated++;
-    if (prev?.discontinued) run.reactivated++;
     toWrite.push({
       ...fields,
       firstSeenAt: prev?.firstSeenAt || ts,
@@ -151,11 +178,6 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
 
   const failures: string[] = [];
   if (mapped.length === 0) failures.push('No products fetched');
-  if (run.previousActive > 0 && mapped.length < run.previousActive * safetyRatio) {
-    failures.push(
-      `Fetched ${mapped.length} products, below ${Math.round(safetyRatio * 100)}% of the ${run.previousActive} previously active`,
-    );
-  }
   if (!crawl.complete) failures.push(`Incomplete crawl (${crawl.stoppedReason ?? 'unknown'})`);
 
   if (failures.length === 0) {
@@ -178,13 +200,11 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
   log({ level: 'info', msg: 'writing products', count: toWrite.length });
   await store.writeProducts(toWrite, ts);
 
-  run.status = failures.length === 0 ? 'success' : crawl.complete ? 'failed' : 'partial';
-  if (failures.length) run.message = `${failures.join('; ')}. Discontinue step skipped.`;
-  run.finishedAt = now().toISOString();
-  run.durationMs = now().getTime() - started.getTime();
-  run.requests = options.client.requestCount;
-  await store.putRun(run);
-
-  if (failures.length) throw new ScrapeFailedError(run.message ?? 'Scrape failed', run);
+  if (failures.length) {
+    const message = `${failures.join('; ')}. Seen products updated; discontinue step skipped.`;
+    await finish('failed', message);
+    throw new ScrapeFailedError(message, run);
+  }
+  await finish('succeeded');
   return { run, products: mapped, crawl: crawlInfo };
 }

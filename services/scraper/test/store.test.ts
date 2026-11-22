@@ -108,6 +108,27 @@ describe('DynamoCatalogueStore', () => {
     expect(queries[0]!.ExpressionAttributeValues).toEqual({ ':pk': 'CATALOGUE#PRODUCT' });
   });
 
+  it('finds the newest succeeded run, paging past filtered-out pages', async () => {
+    const { doc, of } = fakeDoc([
+      { Items: [], LastEvaluatedKey: { pk: 'SCRAPE#RUN', sk: 'b' } },
+      { Items: [{ status: 'succeeded', fetched: 3000 }] },
+    ]);
+    const run = await new DynamoCatalogueStore(doc, { tableName: 'T' }).lastSuccessfulRun();
+    expect(run).toMatchObject({ fetched: 3000 });
+    const q = of(QueryCommand);
+    expect(q[0]).toMatchObject({
+      KeyConditionExpression: 'pk = :pk',
+      ScanIndexForward: false,
+      ExpressionAttributeValues: { ':pk': 'SCRAPE#RUN', ':ok': 'succeeded' },
+    });
+    expect(q[1]!.ExclusiveStartKey).toEqual({ pk: 'SCRAPE#RUN', sk: 'b' });
+  });
+
+  it('returns null when there is no successful run', async () => {
+    const { doc } = fakeDoc([{ Items: [] }]);
+    expect(await new DynamoCatalogueStore(doc, { tableName: 'T' }).lastSuccessfulRun()).toBeNull();
+  });
+
   it('puts run records under SCRAPE#RUN', async () => {
     const { doc, of } = fakeDoc();
     await new DynamoCatalogueStore(doc, { tableName: 'T' }).putRun({

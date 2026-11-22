@@ -81,6 +81,8 @@ export function itemToCustomProduct(item: DbItem): CustomProduct | null {
   return {
     sku,
     name,
+    brand: str(item.brand),
+    packSize: str(item.packSize),
     unitType: isUnitType(item.unitType) ? item.unitType : 'each',
     groupId: str(item.groupId) ?? 'other',
     createdAt: str(item.createdAt) ?? '',
@@ -107,11 +109,11 @@ export function customSummary(p: CustomProduct): ProductSummary {
   return {
     sku: p.sku,
     name: p.name,
-    brand: null,
+    brand: p.brand,
     imageUrl: null,
     price: null,
     unitPrice: null,
-    packSize: null,
+    packSize: p.packSize,
     unitType: p.unitType,
     groupId: p.groupId,
     custom: true,

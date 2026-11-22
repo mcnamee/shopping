@@ -68,6 +68,21 @@ const PER_100G_RE = /\bper\s*100\s*g\b/i;
 const PER_LITRE_RE = /\bper\s*(?:1\s*)?(?:l|litre|liter)\b/i;
 const APPROX_PACK_RE = /\bapprox\.?\b|\bper\s+(?:package|pack|pk)\b/i;
 const EACH_WORD_RE = /\beach\b|\bea\b/i;
+/** "x 12", "12 x", "6 pack", "6pk": a count of items. */
+const COUNT_RE = /(?:^|\s)x\s*(\d+)\b|\b(\d+)\s*x(?:\s|$)|\b(\d+)\s*(?:packs?|pk)\b/i;
+/** Pack text that is only a pricing unit, i.e. sold loose: "kg", "/kg", "litre". */
+const BARE_UNIT: Record<string, UnitType> = {
+  kg: 'kg',
+  '/kg': 'kg',
+  loose: 'kg',
+  g: 'g',
+  '100g': 'g',
+  l: 'L',
+  litre: 'L',
+  liter: 'L',
+  '/l': 'L',
+  ml: 'mL',
+};
 
 function toNumber(raw: string): number {
   return Number(raw.replace(',', '.'));
@@ -134,7 +149,9 @@ export function inferUnitType(hints: UnitHints): UnitType {
     return 'kg';
   }
 
-  // Pack text that is a pricing basis ("per kg", "per 100g"), not a size.
+  // Pack text that is a pricing basis ("per kg", "per 100g", "kg"), not a size.
+  const bare = BARE_UNIT[pack.trim().toLowerCase()];
+  if (bare) return bare;
   if (PER_KG_RE.test(pack)) return 'kg';
   if (PER_100G_RE.test(pack)) return 'g';
   if (PER_LITRE_RE.test(pack)) return 'L';
@@ -153,6 +170,9 @@ export function inferUnitType(hints: UnitHints): UnitType {
     if (size.unit === 'each') return size.quantity > 1 || (size.count ?? 1) > 1 ? 'pack' : 'each';
     return 'pack';
   }
+
+  const count = COUNT_RE.exec(pack);
+  if (count) return Number(count[1] ?? count[2] ?? count[3]) > 1 ? 'pack' : 'each';
 
   // Fall back to the name.
   const nPack = N_PACK_RE.exec(name);

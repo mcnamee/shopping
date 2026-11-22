@@ -98,6 +98,10 @@ describe('GithubOidcStack', () => {
     expect(statements).toEqual([
       expect.objectContaining({ Action: 'dynamodb:Query', Resource: expect.anything() }),
       expect.objectContaining({
+        Action: 'dynamodb:Query',
+        Condition: { 'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] } },
+      }),
+      expect.objectContaining({
         Action: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem'],
         Condition: {
           'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['PRODUCT#*', 'SCRAPE#*'] },
