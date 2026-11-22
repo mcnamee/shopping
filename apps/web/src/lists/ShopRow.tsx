@@ -18,9 +18,19 @@ interface ShopRowProps {
   onSwipeChange?: (active: boolean) => void;
 }
 
+const squash = (s: string) => s.toLowerCase().replace(/\s+/g, '');
+
+/** Pack size, unless the name already ends with it ("Garlic per kg", "Milk 2L") - QA-1. */
+export function shownPackSize(name: string, packSize?: string | null): string | undefined {
+  if (!packSize) return undefined;
+  return squash(name).endsWith(squash(packSize)) ? undefined : packSize;
+}
+
 /** "2 L . Get lactose free" meta line: pack size then note (docs/ux/lists.md 3.4). */
 function metaLine(item: ListItem) {
-  return [item.product.packSize, item.note].filter(Boolean) as string[];
+  return [shownPackSize(item.product.name, item.product.packSize), item.note].filter(
+    Boolean,
+  ) as string[];
 }
 
 /**
@@ -113,7 +123,7 @@ export function ShopRow({
         <span className="block truncate text-sm font-normal text-muted">
           {readOnly && <span className="sr-only">{ticked ? 'Bought. ' : 'Not bought. '}</span>}
           {readOnly && !ticked && <span aria-hidden>Not bought{meta.length ? ' · ' : ''}</span>}
-          {!product.packSize && item.note && (
+          {!shownPackSize(product.name, product.packSize) && item.note && (
             <MessageSquare aria-hidden className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
           )}
           {meta.join(' · ')}
