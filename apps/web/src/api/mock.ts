@@ -4,10 +4,11 @@
  * endpoints are built, mirroring services/api behaviour (incl. 401/403 rules).
  */
 import {
+  applyUnitOverride,
   buildSearchIndex,
   customSummary,
   decodeCursor,
-  DEFAULT_GROUPS,
+  groupsInOrder,
   isDefaultGroupId,
   isUnitType,
   MAX_QUERY_LENGTH,
@@ -25,6 +26,12 @@ import {
   type ProductSummary,
 } from '@trolley/core';
 import { MOCK_CATALOGUE } from './fixtures/products';
+import {
+  createStage2MockRoutes,
+  mockAisleOrder,
+  mockUnitOverrides,
+  resetMockStage2,
+} from './mock-stage2';
 
 type Claims = Record<string, string>;
 type MockHandler = (ctx: {
@@ -149,6 +156,19 @@ export function resetMockCustomProducts(): void {
   customSeq = 0;
 }
 
+/** Test helper: forget everything (custom products and Stage 2 lists/templates/settings). */
+export function resetMockApi(): void {
+  resetMockCustomProducts();
+  resetMockStage2();
+}
+
+/** Resolve a product id as the API does: catalogue SKU or this household's custom product. */
+function findProduct(householdId: string, sku: string): ProductSummary | null {
+  const custom = customsFor(householdId).find((c) => c.sku === sku);
+  if (custom) return customSummary(custom);
+  return MOCK_CATALOGUE.find((p) => p.sku === sku) ?? null;
+}
+
 function noHousehold() {
   return json(403, {
     code: 'NO_HOUSEHOLD',
@@ -218,10 +238,11 @@ const productRoutes: Record<string, MockRoute> = {
         searchProducts(buildSearchIndex<MockSearchable>(customs), searchText, options),
       );
       const page = paginate(ranked, offset, limit);
+      const overrides = mockUnitOverrides(householdId);
       return json(200, {
         items: page.items.map((r) => {
           const { discontinued: _d, ...item } = r.item;
-          return item;
+          return applyUnitOverride(item, overrides);
         }),
         total: ranked.length,
         nextCursor: page.nextCursor,
@@ -238,7 +259,10 @@ const productRoutes: Record<string, MockRoute> = {
       const item = custom ? customSummary(custom) : MOCK_CATALOGUE.find((p) => p.sku === sku);
       if (!item)
         return json(404, { code: 'NOT_FOUND', message: 'Not found' } satisfies ErrorResponse);
-      return json(200, { ...item, discontinued: false } satisfies ProductDetailResponse);
+      return json(200, {
+        ...applyUnitOverride(item, mockUnitOverrides(householdId)),
+        discontinued: false,
+      } satisfies ProductDetailResponse);
     },
   },
   'POST /api/products/custom': {
@@ -291,10 +315,13 @@ const productRoutes: Record<string, MockRoute> = {
   },
   'GET /api/groups': {
     auth: true,
-    handler: () =>
-      json(200, {
-        groups: DEFAULT_GROUPS.map(({ id, name, shortName }) => ({ id, name, shortName })),
-      } satisfies GroupsResponse),
+    handler: ({ claims }) => {
+      const householdId = claims?.['custom:householdId'];
+      if (!householdId) return noHousehold();
+      return json(200, {
+        groups: groupsInOrder(mockAisleOrder(householdId)),
+      } satisfies GroupsResponse);
+    },
   },
 };
 
@@ -322,7 +349,25 @@ export const mockRoutes: Record<string, MockRoute> = {
     },
   },
   ...productRoutes,
+  ...createStage2MockRoutes({
+    find: findProduct,
+    customs: (hh) => customsFor(hh).map(customSummary),
+  }),
 };
+
+const PATTERNS = Object.keys(mockRoutes)
+  .filter((k) => k.includes('{'))
+  .map((key) => {
+    const [method, path = ''] = key.split(' ');
+    const names: string[] = [];
+    const re = new RegExp(
+      `^${path.replace(/\{(\w+)\}/g, (_m, name: string) => {
+        names.push(name);
+        return '([^/]+)';
+      })}$`,
+    );
+    return { key, method, re, names };
+  });
 
 /** Resolve "METHOD /path" to a route key, including path parameters like {sku}. */
 function matchRoute(
@@ -331,11 +376,45 @@ function matchRoute(
 ): { key: string; params: Record<string, string> } | null {
   const exact = `${method} ${pathname}`;
   if (mockRoutes[exact]) return { key: exact, params: {} };
-  const m = /^\/api\/products\/([^/]+)$/.exec(pathname);
-  if (method === 'GET' && m?.[1]) {
-    return { key: 'GET /api/products/{sku}', params: { sku: decodeURIComponent(m[1]) } };
+  for (const p of PATTERNS) {
+    if (p.method !== method) continue;
+    const m = p.re.exec(pathname);
+    if (!m) continue;
+    const params: Record<string, string> = {};
+    p.names.forEach((name, i) => {
+      params[name] = decodeURIComponent(m[i + 1] ?? '');
+    });
+    return { key: p.key, params };
   }
   return null;
+}
+
+/**
+ * Test seam for error states (I1): set `window.__mockApiFail = { match: 'PATCH /api/lists/',
+ * status: 500, times: 1 }` and the next matching request(s) (method + path prefix) fail.
+ * `times` defaults to 1; -1 fails until the seam is cleared.
+ */
+interface MockFailSeam {
+  match: string;
+  status?: number;
+  times?: number;
+}
+
+function takeFailure(method: string, pathname: string): Response | null {
+  const g = globalThis as { __mockApiFail?: MockFailSeam | null };
+  const seam = g.__mockApiFail;
+  if (!seam || !`${method} ${pathname}`.startsWith(seam.match)) return null;
+  const times = seam.times ?? 1;
+  if (times !== -1) {
+    if (times <= 1) g.__mockApiFail = null;
+    else seam.times = times - 1;
+  }
+  const status = seam.status ?? 500;
+  return json(status, {
+    code: status === 409 ? 'CONFLICT' : 'INTERNAL',
+    message: status === 409 ? 'Changed on another phone' : 'Internal server error',
+    ...(status === 409 ? { reason: 'STALE' } : {}),
+  });
 }
 
 export const mockFetch: typeof fetch = async (input, init) => {
@@ -352,6 +431,12 @@ export const mockFetch: typeof fetch = async (input, init) => {
   const route = match ? mockRoutes[match.key] : undefined;
   const slow = url.searchParams.get('q')?.trim() === MOCK_SLOW_QUERY;
   await new Promise((resolve) => setTimeout(resolve, slow ? 3000 : 100));
+  // Behave like the network when the browser is offline (Playwright context.setOffline).
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new TypeError('Failed to fetch');
+  }
+  const failure = takeFailure(method, url.pathname);
+  if (failure) return failure;
   if (!route || !match) {
     return json(404, { code: 'NOT_FOUND', message: 'Not found' } satisfies ErrorResponse);
   }
