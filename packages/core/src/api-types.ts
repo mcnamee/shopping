@@ -12,12 +12,7 @@ export interface MeResponse {
 }
 
 export type ErrorCode =
-  | 'UNAUTHORISED'
-  | 'NO_HOUSEHOLD'
-  | 'FORBIDDEN'
-  | 'NOT_FOUND'
-  | 'VALIDATION'
-  | 'INTERNAL';
+  'UNAUTHORISED' | 'NO_HOUSEHOLD' | 'FORBIDDEN' | 'NOT_FOUND' | 'VALIDATION' | 'INTERNAL';
 
 export interface ErrorResponse {
   code: ErrorCode;
