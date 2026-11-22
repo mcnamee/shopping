@@ -222,16 +222,18 @@ Test it: **Actions -> Scrape fallback (runner) -> Run workflow**, untick "Dry ru
 switch back, delete `SCRAPE_FALLBACK_ENABLED` (the AWS schedule keeps running regardless;
 both are safe to run, they upsert the same items).
 
-## Step 6b - request Bedrock model access (needed from Stage 3)
+## Step 6b - enable Claude on Amazon Bedrock (needed from Stage 3)
 
-AI suggestions use Claude through Amazon Bedrock in your account. Do this once, any time
-before Stage 3:
+AI suggestions use Claude through Amazon Bedrock in your account. AWS retired the old
+**Model access** page - models are now enabled on first use. Do this once, any time
+before Stage 3, signed in as an admin in the Trolley account:
 
-1. In the AWS console (Sydney region) open **Amazon Bedrock -> Model access** (or **Model
-   catalog**, depending on the console version).
-2. Request access to an **Anthropic Claude Haiku** model. Fill in the short use-case form
-   (e.g. "personal shopping list suggestions").
-3. Wait for the status to show **Access granted** (usually minutes).
+1. In the AWS console (Sydney region) open **Amazon Bedrock -> Model catalog**.
+2. Open an **Anthropic Claude Haiku** model and click **Open in playground**.
+3. If prompted, fill in Anthropic's one-off use-case form (e.g. "personal shopping list
+   suggestions") and accept the offer.
+4. Send one test message in the playground. Once it replies, the model is enabled for
+   the account, so Trolley's Lambda can call it without extra Marketplace permissions.
 
 ## Step 7 (g) - add Trolley to your home screen
 
