@@ -25,7 +25,7 @@ describe('NewPasswordPage', () => {
 
   it('focuses the new password field and shows the rules as unmet', async () => {
     await reachNewPassword();
-    expect(field('New password')).toHaveFocus();
+    await waitFor(() => expect(field('New password')).toHaveFocus());
     expect(screen.getByRole('list')).toHaveAttribute('aria-live', 'polite');
     for (const text of [
       'At least 8 characters',
