@@ -103,7 +103,12 @@ export class TrolleyStack extends Stack {
       readAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({ email: true, emailVerified: true, fullname: true })
         .withCustomAttributes('householdId'),
-      writeAttributes: new cognito.ClientAttributes().withStandardAttributes({ fullname: true }),
+      // Cognito requires every required attribute (email) to be writable; householdId stays
+      // read-only so users cannot move themselves between households.
+      writeAttributes: new cognito.ClientAttributes().withStandardAttributes({
+        email: true,
+        fullname: true,
+      }),
     });
 
     // ---------------------------------------------------------------- API
