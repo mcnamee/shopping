@@ -1,7 +1,13 @@
-import { isDefaultGroupId, isPromoCategory, isUnitType, resolveGroup } from '@trolley/core';
+import {
+  allowedAlcohol,
+  isDefaultGroupId,
+  isPromoCategory,
+  isUnitType,
+  resolveGroup,
+} from '@trolley/core';
 import { describe, expect, it } from 'vitest';
 import type { AldiCategoryNode, AldiProduct } from '../src/aldi-types';
-import { displayBrand, imageUrl, mapProduct } from '../src/map-product';
+import { displayBrand, imageUrl, mapProduct, type StoreContext } from '../src/map-product';
 import { ALL_FIXTURE_PRODUCTS, fixture } from './fake-aldi';
 
 const byName = (name: string): AldiProduct => {
@@ -30,6 +36,7 @@ describe('mapProduct (real fixtures)', () => {
         { key: '1111111160', name: 'Milk', slug: 'dairy-eggs-fridge/milk' },
       ],
       storeId: 'G526',
+      notAtStore: false,
     });
   });
 
@@ -172,5 +179,95 @@ describe('category map vs the real ALDI tree', () => {
       ]);
       expect(r.via, leaf.name).toBe('promo');
     }
+  });
+});
+
+describe('notAtStore (D-080)', () => {
+  // Real Casey liquor product with onSaleDate 2026-12-02 ("On Sale Wed 02 Dec").
+  const upcoming = fixture<{ data: AldiProduct[] }>('search-liquor-casey.json').data.find(
+    (p) => p.onSaleDate === '2026-12-02',
+  )!;
+  const everyday = byName('Light Milk 2L');
+
+  it('flags Special Buys whose on-sale date is after today', () => {
+    expect(mapProduct(upcoming, 'G526', { today: '2026-11-22' })).toMatchObject({
+      notAtStore: true,
+      onSaleDate: '2026-12-02',
+    });
+  });
+
+  it('is on the shelf from the on-sale date', () => {
+    expect(mapProduct(upcoming, 'G526', { today: '2026-12-02' })).toMatchObject({
+      notAtStore: false,
+    });
+    expect(mapProduct(upcoming, 'G526', { today: '2026-12-03' })).toMatchObject({
+      notAtStore: false,
+    });
+  });
+
+  it('never flags everyday range, past Special Buys, or when today is unknown', () => {
+    const m = mapProduct(everyday, 'G526', { today: '2026-11-22' })!;
+    expect(m.notAtStore).toBe(false);
+    expect(m).not.toHaveProperty('onSaleDate');
+    const past = fixture<{ data: AldiProduct[] }>('search-meat-casey.json').data.find(
+      (p) => p.onSaleDate === '2026-11-04',
+    )!;
+    expect(mapProduct(past, 'G526', { today: '2026-11-22' })).toMatchObject({
+      notAtStore: false,
+      onSaleDate: '2026-11-04',
+    });
+    expect(mapProduct(upcoming, 'G526')!.notAtStore).toBe(false);
+  });
+
+  it('ignores malformed dates', () => {
+    expect(
+      mapProduct({ ...upcoming, onSaleDate: 'soon' }, 'G526', { today: '2026-11-22' }),
+    ).toMatchObject({
+      notAtStore: false,
+    });
+  });
+});
+
+describe('liquor licence (D-080)', () => {
+  const casey = {
+    today: '2026-11-22',
+    alcohol: allowedAlcohol(
+      fixture<{ data: { alcoholAvailability: string[] } }>('service-point-casey-by-id.json').data
+        .alcoholAvailability,
+    ),
+  };
+  const spirits = fixture<{ data: AldiProduct[] }>('liquor-spirits-casey.json').data;
+  const of = (name: string) => spirits.find((p) => p.name === name)!;
+  const flagged = (name: string, ctx: StoreContext = casey) =>
+    mapProduct(of(name), 'G526', ctx)!.notAtStore;
+
+  it('Casey is licensed for beer and wine only', () => {
+    expect([...casey.alcohol].sort()).toEqual(['beer', 'wine']);
+  });
+
+  it('flags spirits and spirit-based premixes, by category or by name', () => {
+    expect(flagged('Blended Scotch Whisky 700ml')).toBe(true); // Liquor > Spirits
+    expect(flagged('Irish Country Cream 700ml')).toBe(true);
+    expect(flagged('Jim Beam & Cola 10 Pack 375ml')).toBe(true); // Liquor > Premixed
+    expect(flagged('Gin 700ml')).toBe(true); // no categories, age restricted, name says gin
+  });
+
+  it('keeps wine, beer, malt-based premixes and anything it cannot classify', () => {
+    expect(flagged('The Player Barossa Shiraz 750ml')).toBe(false);
+    expect(flagged('Pacific Ale 12x330ml')).toBe(false);
+    expect(flagged('Ginger Beer 10x330ml')).toBe(false); // Premixed but beer based
+    expect(flagged('Premium Cuvee 750ml')).toBe(false); // ambiguous, no category
+    expect(flagged('Lager 6 Pack 375ml')).toBe(false);
+  });
+
+  it('flags nothing when the licence is unknown, and everything alcoholic with no licence', () => {
+    expect(flagged('Blended Scotch Whisky 700ml', { today: casey.today, alcohol: null })).toBe(
+      false,
+    );
+    expect(flagged('Pacific Ale 12x330ml', { alcohol: allowedAlcohol([]) })).toBe(true);
+  });
+
+  it('non-alcohol products are never flagged by licence', () => {
+    expect(mapProduct(byName('Light Milk 2L'), 'G526', casey)!.notAtStore).toBe(false);
   });
 });

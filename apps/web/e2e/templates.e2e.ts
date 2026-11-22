@@ -27,7 +27,7 @@ test.describe('Templates tab', () => {
 
     await page.getByRole('link', { name: /Tacos/ }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Tacos' })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Items in Tacos' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Items in Tacos' })).toBeVisible();
     await expectNoSeriousAxeViolations(page);
     await expectTapTargets(page);
     await expectNoHorizontalScroll(page);

@@ -4,6 +4,7 @@ export * from './product';
 export * from './unit-type';
 export * from './groups';
 export * from './search';
+export * from './alcohol';
 export * from './catalogue-items';
 export type * from './api-types';
 export * from './quantity';

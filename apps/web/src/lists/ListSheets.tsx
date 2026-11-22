@@ -5,6 +5,7 @@ import {
   CircleCheck,
   LayoutTemplate,
   Pencil,
+  Repeat,
   Sparkles,
   Star,
   Trash2,
@@ -89,6 +90,8 @@ interface OptionsSheetProps {
   onSetThisWeek: () => void;
   onAddFromTemplate: () => void;
   onSuggest: () => void;
+  /** Set when the household has a Regulars template. */
+  onRegulars?: () => void;
   /** Suggestions need the server: the row is aria-disabled while offline. */
   offline?: boolean;
   onFinish: () => void;
@@ -129,6 +132,11 @@ export function ListOptionsSheet(p: OptionsSheetProps) {
         <OptionRow Icon={Sparkles} disabled={!!p.offline} onClick={p.onSuggest}>
           Suggest items
         </OptionRow>
+        {p.onRegulars && (
+          <OptionRow Icon={Repeat} disabled={!!p.offline} onClick={p.onRegulars}>
+            Review regulars
+          </OptionRow>
+        )}
         {!allTicked && (
           <OptionRow Icon={CircleCheck} onClick={p.onFinish}>
             Finish shop

@@ -296,6 +296,10 @@ describe('validation (A2)', () => {
     expect(parseCreateTemplateRequest({ name: 'Weekly' })).toMatchObject({
       value: { type: 'weekly' },
     });
+    expect(parseCreateTemplateRequest({ name: 'Top-ups', type: 'regulars' })).toMatchObject({
+      ok: true,
+      value: { type: 'regulars' },
+    });
     expect(parseCreateTemplateRequest({ name: 'x', type: 'daily' })).toMatchObject({
       field: 'type',
     });
@@ -472,14 +476,19 @@ describe('aisle order and shop grouping (E1, E3, G1)', () => {
   });
 
   it('sorts templates weekly first then name, and lists this-week first then newest', () => {
-    const t = (id: string, name: string, type: 'weekly' | 'meal') => ({ id, name, type });
+    const t = (id: string, name: string, type: 'weekly' | 'meal' | 'regulars') => ({
+      id,
+      name,
+      type,
+    });
     expect(
       sortTemplates([
         t('1', 'Tacos', 'meal'),
         t('2', 'b weekly', 'weekly'),
         t('3', 'A weekly', 'weekly'),
+        t('4', 'Aaa regulars', 'regulars'),
       ]).map((x) => x.id),
-    ).toEqual(['3', '2', '1']);
+    ).toEqual(['3', '2', '1', '4']);
     const l = (id: string, createdAt: string, thisWeek = false) => ({ id, createdAt, thisWeek });
     expect(
       sortActiveLists([l('a', '2026-11-01'), l('b', '2026-11-03'), l('c', '2026-10-01', true)]).map(

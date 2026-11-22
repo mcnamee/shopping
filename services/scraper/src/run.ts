@@ -13,7 +13,7 @@
  *     returns nothing, freshly seen products are upserted but the discontinue step is
  *     skipped; status `failed` and it throws.
  */
-import type { CatalogueProduct } from '@trolley/core';
+import { allowedAlcohol, storeToday, type CatalogueProduct } from '@trolley/core';
 import type { AldiClient } from './aldi-client';
 import { crawlCatalogue, type CrawlOptions, type CrawlResult } from './crawl';
 import { mapProduct, type MappedProduct } from './map-product';
@@ -69,6 +69,8 @@ function sameContent(a: CatalogueProduct, b: Omit<MappedProduct, 'groupVia'>): b
     a.imageUrl === b.imageUrl &&
     a.groupId === b.groupId &&
     a.storeId === b.storeId &&
+    (a.notAtStore ?? false) === (b.notAtStore ?? false) &&
+    a.onSaleDate === b.onSaleDate &&
     JSON.stringify(a.categories) === JSON.stringify(b.categories)
   );
 }
@@ -78,6 +80,7 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
   const log = options.log ?? (() => undefined);
   const started = now();
   const startedAt = started.toISOString();
+  const today = storeToday(started);
   const safetyRatio = options.safetyRatio ?? DEFAULT_SAFETY_RATIO;
 
   const run: ScrapeRunRecord = {
@@ -99,6 +102,8 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
     discontinued: 0,
     errors: 0,
     discontinueStep: 'skipped',
+    notAtStore: 0,
+    alcoholAvailability: null,
     unmappedCategories: {},
     unitTypes: {},
     errorMessages: [],
@@ -113,6 +118,18 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
     if (options.store) await options.store.putRun(run);
   };
 
+  // The store's liquor licence (one request). Unknown (error) means nothing is hidden for it.
+  let alcohol: ReturnType<typeof allowedAlcohol> | null = null;
+  try {
+    const sp = await options.client.getServicePoint();
+    if (sp?.alcoholAvailability) {
+      run.alcoholAvailability = sp.alcoholAvailability;
+      alcohol = allowedAlcohol(sp.alcoholAvailability);
+    }
+  } catch (err) {
+    log({ level: 'warn', msg: 'could not read store alcohol availability', error: String(err) });
+  }
+
   let crawl: CrawlResult;
   try {
     crawl = await crawlCatalogue(options.client, { ...options.crawl, log });
@@ -123,7 +140,7 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
   }
 
   const mapped = crawl.products
-    .map((p) => mapProduct(p, options.servicePoint))
+    .map((p) => mapProduct(p, options.servicePoint, { today, alcohol }))
     .filter((p): p is MappedProduct => p !== null);
   const { products: _raw, ...crawlInfo } = crawl;
   run.expectedTotal = crawl.expectedTotal;
@@ -133,6 +150,7 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
     (p) => p.categories.map((c) => c.name).join(' > ') || '(no category)',
   );
   run.unitTypes = countBy(mapped, (p) => p.unitType);
+  run.notAtStore = mapped.filter((p) => p.notAtStore).length;
   run.errorMessages = crawl.errors.slice(0, 20);
 
   if (!options.store) {

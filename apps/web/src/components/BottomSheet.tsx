@@ -30,6 +30,9 @@ interface BottomSheetProps {
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+/** Fields that raise the on-screen keyboard (not checkboxes, radios or buttons). */
+const TEXT_FIELD =
+  'textarea, input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range])';
 const DISMISS_FRACTION = 0.25;
 const FLICK_PX_PER_MS = 0.6;
 const COMPACT_BELOW_PX = 480;
@@ -126,6 +129,35 @@ export function BottomSheet({
   }, [container]);
 
   const compact = viewport !== null && viewport.height < COMPACT_BELOW_PX;
+
+  // Keep the focused field visible when the keyboard opens or focus moves.
+  useEffect(() => {
+    const el = sheet.current;
+    if (!el) return;
+    const reveal = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement) || !target.matches(TEXT_FIELD)) return;
+      target.scrollIntoView?.({ block: 'center', behavior: 'auto' });
+    };
+    const onFocusIn = (e: FocusEvent) => {
+      reveal(e.target);
+      // iOS resizes the viewport after focus; reveal again once it settles.
+      setTimeout(() => reveal(document.activeElement), 300);
+    };
+    el.addEventListener('focusin', onFocusIn);
+    return () => el.removeEventListener('focusin', onFocusIn);
+  }, [container]);
+  const viewportHeight = viewport?.height;
+  useEffect(() => {
+    const a = document.activeElement;
+    if (
+      compact &&
+      a instanceof HTMLElement &&
+      sheet.current?.contains(a) &&
+      a.matches(TEXT_FIELD)
+    ) {
+      a.scrollIntoView?.({ block: 'center', behavior: 'auto' });
+    }
+  }, [compact, viewportHeight]);
   useEffect(() => {
     onCompactChange?.(compact);
   }, [compact, onCompactChange]);
@@ -213,7 +245,9 @@ export function BottomSheet({
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: drag.current ? 'none' : undefined,
         }}
-        className="sheet-enter relative mx-auto flex max-h-[90%] w-full max-w-[560px] flex-col rounded-t-lg bg-surface-raised shadow-sheet focus:outline-none"
+        className={`sheet-enter relative mx-auto flex w-full max-w-[560px] flex-col rounded-t-lg bg-surface-raised shadow-sheet focus:outline-none ${
+          compact ? 'max-h-full overflow-y-auto overscroll-contain' : 'max-h-[90%]'
+        }`}
       >
         <div
           className="shrink-0 touch-none px-[max(16px,var(--safe-left))]"
@@ -227,7 +261,11 @@ export function BottomSheet({
           </div>
           {header}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[max(16px,var(--safe-left))] pb-3 pt-1">
+        <div
+          className={`px-[max(16px,var(--safe-left))] pb-3 pt-1 ${
+            compact ? 'shrink-0' : 'min-h-0 flex-1 overflow-y-auto overscroll-contain'
+          }`}
+        >
           {children}
         </div>
         {footer && (

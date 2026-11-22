@@ -38,6 +38,8 @@ const PROJECTION = [
   'groupId',
   'categories',
   'discontinued',
+  'notAtStore',
+  'onSaleDate',
 ].join(', ');
 
 export function dynamoCatalogueLoader(doc: DocSender, tableName: string) {

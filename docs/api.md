@@ -10,7 +10,7 @@ Ids: lists and templates are UUIDs. Items (list and template) are `<productId>~<
 | Method and path | Body | Response |
 |---|---|---|
 | GET `/templates` | | `{ templates: TemplateSummary[] }` weekly first, then name; `preview` = first 3 names in aisle order |
-| POST `/templates` | `{ name, type? }` (`weekly` default, `meal`) | 201 `Template`; 409 LIMIT at 50 |
+| POST `/templates` | `{ name, type? }` (`weekly` default, `meal`, `regulars`: things bought now and then, reviewed per shop, never auto-added; suggestions treat it like `meal`) | 201 `Template`; 409 LIMIT at 50 |
 | GET `/templates/{templateId}` | | `Template` (items in aisle order, then name) |
 | PATCH `/templates/{templateId}` | `{ name?, type?, version }` (template version) | `Template`; 409 STALE |
 | DELETE `/templates/{templateId}` | | 204 |

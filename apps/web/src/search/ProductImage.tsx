@@ -67,3 +67,24 @@ export function ProductImage({
     </div>
   );
 }
+
+/** 40px rounded thumbnail for list, template and suggestion rows; dims with ticked text. */
+export function ProductThumb({
+  src,
+  name,
+  dim = false,
+}: {
+  src: string | null | undefined;
+  name: string;
+  dim?: boolean;
+}) {
+  return (
+    <ProductImage
+      src={src ?? null}
+      name={name}
+      className={`h-10 w-10 shrink-0 rounded-sm ${dim ? 'opacity-50' : ''}`}
+      letterClassName="text-lg"
+      padding="p-0.5"
+    />
+  );
+}

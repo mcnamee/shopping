@@ -8,7 +8,12 @@
  * Chrome-like User-Agent from a non-browser client, but 200 for a plain client UA.
  * We never impersonate a browser.
  */
-import type { AldiCategoryNode, AldiProduct, AldiSearchResponse } from './aldi-types';
+import type {
+  AldiCategoryNode,
+  AldiProduct,
+  AldiSearchResponse,
+  AldiServicePoint,
+} from './aldi-types';
 
 export const ALDI_API_BASE = 'https://api.aldi.com.au';
 /** ALDI Casey, 15 Kingsland Parade, Casey ACT 2913 (D-030). */
@@ -139,6 +144,23 @@ export class AldiClient {
     return body.data;
   }
 
+  /** The configured store (one request), or null when running without a store. */
+  async getServicePoint(): Promise<AldiServicePoint | null> {
+    if (!this.servicePoint) return null;
+    const body = await this.getJson(`/v2/service-points/${this.servicePoint}`, {});
+    const data = isObject(body) ? body.data : undefined;
+    if (!isObject(data) || typeof data.id !== 'string') {
+      throw new AldiShapeError('Unexpected service point response shape');
+    }
+    const raw = data.alcoholAvailability;
+    return {
+      id: data.id,
+      alcoholAvailability: Array.isArray(raw)
+        ? raw.filter((x): x is string => typeof x === 'string')
+        : null,
+    };
+  }
+
   /** One page of products, optionally filtered by category and/or query text. */
   async searchPage(params: {
     categoryKey?: string;
@@ -193,7 +215,8 @@ export class AldiClient {
   }
 
   private async getJson(path: string, query: Record<string, string>): Promise<unknown> {
-    const url = `${this.baseUrl}${path}?${new URLSearchParams(query).toString()}`;
+    const qs = new URLSearchParams(query).toString();
+    const url = `${this.baseUrl}${path}${qs ? `?${qs}` : ''}`;
     let lastError: unknown;
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {

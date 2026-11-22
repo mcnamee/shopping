@@ -112,8 +112,13 @@ export function NewListSheet({ lists, templates, initialTemplateIds, onClose }: 
             : `Created ${res.list.name}`,
         );
       }
+      const reviewRegulars = templates.some((t) => t.type === 'regulars');
       navigate(`/lists/${res.list.id}`, {
-        state: { name: res.list.name, ...(mode === 'suggestions' ? { suggest: true } : {}) },
+        state: {
+          name: res.list.name,
+          ...(mode === 'suggestions' ? { suggest: true } : {}),
+          ...(reviewRegulars ? { regulars: true } : {}),
+        },
       });
       onClose();
     } catch (e) {

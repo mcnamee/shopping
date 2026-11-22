@@ -1,6 +1,12 @@
 import { LayoutTemplate, Plus, ChevronRight } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { LIMITS, sortTemplates, type TemplateSummary, type TemplateType } from '@trolley/core';
+import {
+  LIMITS,
+  isTemplateType,
+  sortTemplates,
+  type TemplateSummary,
+  type TemplateType,
+} from '@trolley/core';
 import { AppBarAction } from '../components/appBar';
 import { Button } from '../components/Button';
 import { EmptyView, ErrorView, Skeleton } from '../components/StateViews';
@@ -15,6 +21,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'weekly', label: 'Weekly' },
   { id: 'meal', label: 'Meal' },
+  { id: 'regulars', label: 'Regulars' },
 ];
 
 const previewLine = (t: TemplateSummary) =>
@@ -31,7 +38,7 @@ export function TemplatesPage() {
   const { online } = useOnlineStatus();
   const showSkeleton = useDelayedFlag(query.isPending, 150);
   const raw = params.get('type');
-  const filter: Filter = raw === 'weekly' || raw === 'meal' ? raw : 'all';
+  const filter: Filter = isTemplateType(raw) ? raw : 'all';
   const all = query.data?.templates;
 
   const newTemplate = (type?: TemplateType) => {

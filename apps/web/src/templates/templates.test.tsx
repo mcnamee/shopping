@@ -25,7 +25,7 @@ async function templates(path = '/templates') {
 async function editor(id = MOCK_SEED_IDS.mealTemplate) {
   const app = await renderMockApp(`/templates/${id}`);
   await screen.findByRole('heading', { level: 1 }, { timeout: 3000 });
-  await screen.findByRole('list', { name: /^Items in / });
+  await screen.findByRole('group', { name: /^Items in / });
   return app;
 }
 
@@ -172,7 +172,7 @@ describe('create and edit a template', () => {
 describe('template items', () => {
   it('lists items in aisle order with quantity, pack size and note', async () => {
     await editor();
-    const list = screen.getByRole('list', { name: 'Items in Tacos' });
+    const list = screen.getByRole('group', { name: 'Items in Tacos' });
     const items = within(list).getAllByRole('listitem');
     expect(items).toHaveLength(5);
     expect(screen.getByText('Items (5)')).toBeVisible();

@@ -3,9 +3,11 @@ import {
   buildSearchIndex,
   decodeCursor,
   encodeCursor,
+  isNotAtStore,
   paginate,
   searchProducts,
   stem,
+  storeToday,
   tokenise,
   type SearchableProduct,
 } from './search';
@@ -137,6 +139,31 @@ describe('searchProducts', () => {
   it('excludes discontinued products unless asked', () => {
     expect(names('old milk')).toEqual([]);
     expect(names('old milk', { includeDiscontinued: true })).toEqual(['Old Milk 1L']);
+  });
+
+  it('hides notAtStore products by default, and shows them once their on-sale date arrives', () => {
+    const items = [
+      P('1', 'Spiced Rum 700ml', 'Dalwhinnie', 'other', {
+        notAtStore: true,
+        onSaleDate: '2026-12-02',
+      }),
+      P('2', 'Rum Baba 1 each', 'Bakers Life', 'other'),
+    ];
+    const index = buildSearchIndex(items);
+    const found = (opts = {}) => searchProducts(index, 'rum', opts).map((r) => r.item.sku);
+    expect(found()).toEqual(['2']);
+    expect(found({ today: '2026-12-01' })).toEqual(['2']);
+    expect(found({ includeNotAtStore: true }).sort()).toEqual(['1', '2']);
+    // The flag lapses on its own at the on-sale date (no re-scrape needed).
+    expect(found({ today: '2026-12-02' }).sort()).toEqual(['1', '2']);
+    expect(isNotAtStore(items[0]!, '2026-12-02')).toBe(false);
+    expect(isNotAtStore(items[0]!)).toBe(true);
+    expect(isNotAtStore(items[1]!, '2026-12-02')).toBe(false);
+  });
+
+  it('storeToday uses Sydney time', () => {
+    expect(storeToday(new Date('2026-11-21T14:30:00Z'))).toBe('2026-11-22');
+    expect(storeToday(new Date('2026-11-21T12:30:00Z'))).toBe('2026-11-21');
   });
 
   it('filters by group, with or without a query', () => {

@@ -45,6 +45,14 @@ export interface CatalogueProduct {
   categories: SourceCategory[];
   /** Store service point the data came from, e.g. "G526" (ALDI Casey ACT). */
   storeId: string | null;
+  /**
+   * True when the store's own data says the product is not on this store's shelves (yet),
+   * e.g. a Special Buy with a future on-sale date (D-080). Hidden from search by default;
+   * never deleted, and cleared automatically once the signal goes away.
+   */
+  notAtStore?: boolean;
+  /** ISO date (YYYY-MM-DD) a Special Buy goes on sale, when the store says so. */
+  onSaleDate?: string;
   /** ISO timestamps. */
   firstSeenAt: string;
   lastSeenAt: string;
