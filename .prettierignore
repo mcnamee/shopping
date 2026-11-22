@@ -9,3 +9,4 @@ package-lock.json
 *.md
 .claude
 infra/test/fixtures
+services/scraper/test/fixtures

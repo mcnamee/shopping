@@ -5,6 +5,7 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 import { ApiError, getMe } from '../api';
 import { StatusBanner, type StatusBannerVariant } from '../components/StatusBanner';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
+import { getLastSearch } from '../search/lastSearch';
 import { NoHouseholdState } from './NoHouseholdState';
 
 export const TABS: readonly { to: string; label: string; Icon: LucideIcon }[] = [
@@ -91,7 +92,7 @@ export function AppLayout() {
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
-            to={to}
+            to={to === '/search' ? `/search${getLastSearch()}` : to}
             end={to === '/'}
             onClick={() => {
               if (pathname === to) window.scrollTo({ top: 0, behavior: 'smooth' });

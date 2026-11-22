@@ -1,15 +1,10 @@
-import { LayoutTemplate, ListChecks, Search, type LucideIcon } from 'lucide-react';
+import { LayoutTemplate, ListChecks, type LucideIcon } from 'lucide-react';
 
 const PAGES = {
   lists: {
     Icon: ListChecks,
     heading: 'Lists are coming soon',
     body: "Soon you'll build your weekly shop here and tick items off as you go.",
-  },
-  search: {
-    Icon: Search,
-    heading: 'Search is coming soon',
-    body: "You'll be able to find ALDI products and add them to your list in a couple of taps.",
   },
   templates: {
     Icon: LayoutTemplate,

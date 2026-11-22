@@ -3,7 +3,6 @@ import { EMAIL, expectNoHorizontalScroll, signInToShell } from './helpers';
 
 const TABS = [
   { label: 'Lists', path: '/', heading: 'Lists are coming soon' },
-  { label: 'Search', path: '/search', heading: 'Search is coming soon' },
   { label: 'Templates', path: '/templates', heading: 'Templates are coming soon' },
 ] as const;
 

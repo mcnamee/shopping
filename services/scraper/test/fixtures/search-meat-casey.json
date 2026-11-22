@@ -1,0 +1,830 @@
+{
+  "meta": {
+    "spellingSuggestion": null,
+    "pinned": [],
+    "keywordRedirect": null,
+    "pagination": {
+      "offset": 0,
+      "limit": 60,
+      "totalCount": 149
+    },
+    "debug": null,
+    "sort": [
+      {
+        "parameterName": "sort",
+        "parameterValue": "relevance",
+        "localizedName": "Relevance",
+        "isActive": true
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_asc",
+        "localizedName": "Name (A to Z)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "name_desc",
+        "localizedName": "Name (Z to A)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_asc",
+        "localizedName": "Price (Low to High)",
+        "isActive": false
+      },
+      {
+        "parameterName": "sort",
+        "parameterValue": "price_desc",
+        "localizedName": "Price (High to Low)",
+        "isActive": false
+      }
+    ],
+    "facets": []
+  },
+  "data": [
+    {
+      "sku": "000000000000398426",
+      "name": "Pork Loin Marinated Thai Style per kg",
+      "brandName": "KR CASTLEMAINE EST. 1911",
+      "urlSlugText": "kr-castlemaine-est-1911-pork-loin-marinated-thai-style-per-kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "kg",
+      "weightType": "1",
+      "sellingSize": "approx. 0.8 kg per package",
+      "energyClass": null,
+      "onSaleDateDisplay": "While Stocks Last",
+      "onSaleDate": "2026-11-04",
+      "isAbstract": false,
+      "abstractSku": "000000000000398426A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 1699,
+        "amountRelevant": 1359,
+        "amountRelevantDisplay": "$13.59",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 1699,
+        "comparisonDisplay": "$16.99 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111145",
+          "name": "Pork",
+          "urlSlugText": "meat-seafood/pork"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/aaf374db-2542-4c6e-a8de-ddfa40c4f047/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/ac79ddf2-2d70-488c-9503-ffa778a3517c/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398952",
+      "name": "RSPCA Approved Chicken Thigh Bulk per kg",
+      "brandName": "BROAD OAK FARMS",
+      "urlSlugText": "broad-oak-farms-rspca-approved-chicken-thigh-bulk-per-kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "kg",
+      "weightType": "1",
+      "sellingSize": "approx. 1.157 kg per package",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398952A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 1329,
+        "amountRelevant": 1538,
+        "amountRelevantDisplay": "$15.38",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 1329,
+        "comparisonDisplay": "$13.29 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111146",
+          "name": "Poultry",
+          "urlSlugText": "meat-seafood/poultry"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/d48779a5-dc78-45d7-989b-d38165ac37b5/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398953",
+      "name": "Marinated Chicken Roasting Pieces per kg",
+      "brandName": "READY, SET…COOK!",
+      "urlSlugText": "ready-set-cook-marinated-chicken-roasting-pieces-per-kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "kg",
+      "weightType": "1",
+      "sellingSize": "approx. 1.8 kg per package",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398953A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 549,
+        "amountRelevant": 988,
+        "amountRelevantDisplay": "$9.88",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 549,
+        "comparisonDisplay": "$5.49 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111146",
+          "name": "Poultry",
+          "urlSlugText": "meat-seafood/poultry"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/d84ae505-8fd9-49e6-9bf0-4ffb2d95400e/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/92fb486e-4363-4b76-a1f4-2edcab494d0c/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "NU01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399496",
+      "name": "Beef Porterhouse Steak",
+      "brandName": "JINDURRA STATION",
+      "urlSlugText": "jindurra-station-beef-porterhouse-steak",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "kg",
+      "weightType": "1",
+      "sellingSize": "approx. 0.854 kg per package",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399496A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 2799,
+        "amountRelevant": 2390,
+        "amountRelevantDisplay": "$23.90",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 2799,
+        "comparisonDisplay": "$27.99 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111144",
+          "name": "Beef",
+          "urlSlugText": "meat-seafood/beef"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/e1718c0f-b755-45ca-a39b-58009be92bb1/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399525",
+      "name": "Whole Marinated RSPCA Approved Chicken with BBQ Seasoning per kg",
+      "brandName": "READY, SET…COOK!",
+      "urlSlugText": "ready-set-cook-whole-marinated-rspca-approved-chicken-with-bbq-seasoning-per-kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "kg",
+      "weightType": "1",
+      "sellingSize": "approx. 1.85 kg per package",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399525A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 599,
+        "amountRelevant": 1108,
+        "amountRelevantDisplay": "$11.08",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 599,
+        "comparisonDisplay": "$5.99 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111146",
+          "name": "Poultry",
+          "urlSlugText": "meat-seafood/poultry"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/faad51e2-1b47-46aa-a329-9920cafaebcf/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/7a7f63af-0130-48ea-8473-945a04bccf64/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000304580",
+      "name": "Smoked Salmon 200g",
+      "brandName": "THE FISHMONGER",
+      "urlSlugText": "the-fishmonger-smoked-salmon-200g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "200 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000304580A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 999,
+        "amountRelevant": 999,
+        "amountRelevantDisplay": "$9.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 4995,
+        "comparisonDisplay": "$49.95 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111148",
+          "name": "Seafood",
+          "urlSlugText": "meat-seafood/seafood"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/e685d4d7-bb55-4acb-8eba-dee628daf286/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/fb5c01bb-49bd-4395-b887-80bcd72bf53d/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398515",
+      "name": "Wagyu Beef Burgers 400g",
+      "brandName": "READY, SET…COOK!",
+      "urlSlugText": "ready-set-cook-wagyu-beef-burgers-400g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "400 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398515A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 899,
+        "amountRelevant": 899,
+        "amountRelevantDisplay": "$8.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 2248,
+        "comparisonDisplay": "$22.48 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111144",
+          "name": "Beef",
+          "urlSlugText": "meat-seafood/beef"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/1f404d63-84ae-47ef-9d12-e9e65f508468/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/c2630a29-4fa1-40f3-8161-47fab65e5d5f/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398596",
+      "name": "Pork, Pepper and Oregano Gourmet Sausages 500g",
+      "brandName": "SPECIALLY SELECTED",
+      "urlSlugText": "specially-selected-pork-pepper-and-oregano-gourmet-sausages-500g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "500 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398596A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 749,
+        "amountRelevant": 749,
+        "amountRelevantDisplay": "$7.49",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 1498,
+        "comparisonDisplay": "$14.98 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111145",
+          "name": "Pork",
+          "urlSlugText": "meat-seafood/pork"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/9f238d51-5794-4220-8fc2-e58d406bbe0b/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/8ee4ee45-f3fa-4c2f-b5d7-5f24c97010ac/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000398905",
+      "name": "Extra Lean Beef Mince 500g",
+      "brandName": "JINDURRA STATION",
+      "urlSlugText": "jindurra-station-extra-lean-beef-mince-500g",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "500 g",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000398905A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 899,
+        "amountRelevant": 899,
+        "amountRelevantDisplay": "$8.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 1798,
+        "comparisonDisplay": "$17.98 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111144",
+          "name": "Beef",
+          "urlSlugText": "meat-seafood/beef"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/eb530d59-8bf9-40cb-8e4d-09fcc9fe981f/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/ff5ce917-3f5c-4910-88b1-cbed1888c065/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    },
+    {
+      "sku": "000000000000399018",
+      "name": "RSPCA Approved Chicken Drumsticks Bulk Pack 2kg",
+      "brandName": "BROAD OAK FARMS",
+      "urlSlugText": "broad-oak-farms-rspca-approved-chicken-drumsticks-bulk-pack-2kg",
+      "urlSlugTextAlternatives": [],
+      "ageRestriction": null,
+      "alcohol": null,
+      "discontinued": false,
+      "discontinuedNote": null,
+      "notForSale": true,
+      "notForSaleReason": null,
+      "quantityMin": 1,
+      "quantityMax": 99,
+      "quantityInterval": 1,
+      "quantityDefault": 1,
+      "quantityUnit": "ea",
+      "weightType": "0",
+      "sellingSize": "2 kg",
+      "energyClass": null,
+      "onSaleDateDisplay": null,
+      "onSaleDate": null,
+      "isAbstract": false,
+      "abstractSku": "000000000000399018A",
+      "isDropship": false,
+      "sellingUnitDisplay": null,
+      "contentUnit": "kg",
+      "price": {
+        "amount": 699,
+        "amountRelevant": 699,
+        "amountRelevantDisplay": "$6.99",
+        "bottleDeposit": 0,
+        "bottleDepositDisplay": "$0.00",
+        "comparison": 350,
+        "comparisonDisplay": "$3.50 per 1 kg",
+        "currencyCode": "AUD",
+        "currencySymbol": "$",
+        "perUnit": null,
+        "perUnitDisplay": null,
+        "wasPriceDisplay": null,
+        "additionalInfo": null,
+        "savingsDisplay": null,
+        "bottleDepositType": null,
+        "feeText": null
+      },
+      "countryExtensions": null,
+      "categories": [
+        {
+          "id": "940000000",
+          "name": "Meat & Seafood",
+          "urlSlugText": "meat-seafood"
+        },
+        {
+          "id": "1111111146",
+          "name": "Poultry",
+          "urlSlugText": "meat-seafood/poultry"
+        }
+      ],
+      "assets": [
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/97324943-785b-40b0-adcb-2bd2e365da3d/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR01",
+          "alt": null,
+          "displayName": null
+        },
+        {
+          "url": "https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/{width}/a3ba292e-fa31-4c19-9b1b-c3c2a9955ac0/{slug}",
+          "maxWidth": 1500,
+          "maxHeight": 1500,
+          "mimeType": "image/*",
+          "assetType": "FR02",
+          "alt": null,
+          "displayName": null
+        }
+      ],
+      "badges": []
+    }
+  ]
+}

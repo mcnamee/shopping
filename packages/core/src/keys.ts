@@ -31,4 +31,23 @@ export const keys = {
     assertSegment('sku', sku);
     return `PRODUCT#${sku}`;
   },
+  /** Sort key of a catalogue product item (pk = productPk). */
+  productSk: 'META',
+  /** Custom product: pk = householdPk, sk = customProductSk. */
+  customProductSk(sku: string): string {
+    assertSegment('sku', sku);
+    return `PRODUCT#${sku}`;
+  },
+  /** GSI1 partition holding every catalogue product (one Query loads the catalogue). */
+  catalogueGsi1Pk: 'CATALOGUE#PRODUCT',
+  catalogueGsi1Sk(groupId: string, sku: string): string {
+    assertSegment('groupId', groupId);
+    assertSegment('sku', sku);
+    return `${groupId}#${sku}`;
+  },
+  /** Scrape run records: pk = scrapeRunPk, sk = ISO start time. */
+  scrapeRunPk: 'SCRAPE#RUN',
 } as const;
+
+/** Partition-key prefixes the scraper may write (IAM dynamodb:LeadingKeys, see infra). */
+export const SCRAPER_WRITABLE_PK_PREFIXES = ['PRODUCT#', 'SCRAPE#'] as const;

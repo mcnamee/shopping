@@ -20,6 +20,31 @@ function synth(overrides: Partial<TrolleyStackProps> = {}) {
 }
 
 type Resource = { Type: string; Properties: Record<string, unknown> };
+type Statement = Record<string, unknown>;
+
+function roleIdOf(template: Template, pattern: RegExp): string {
+  const id = Object.keys(template.findResources('AWS::IAM::Role')).find((k) => pattern.test(k));
+  if (!id) throw new Error(`role ${String(pattern)} not found`);
+  return id;
+}
+
+function statementsFor(template: Template, roleId: string): Statement[] {
+  return Object.values(template.findResources('AWS::IAM::Policy'))
+    .filter((p) =>
+      ((p as Resource).Properties.Roles as Array<{ Ref: string }>).some((r) => r.Ref === roleId),
+    )
+    .flatMap(
+      (p) => ((p as Resource).Properties.PolicyDocument as { Statement: Statement[] }).Statement,
+    );
+}
+
+function functionByName(template: Template, name: string): Resource {
+  const fn = Object.values(template.findResources('AWS::Lambda::Function')).find(
+    (r) => (r as Resource).Properties.FunctionName === name,
+  );
+  if (!fn) throw new Error(`function ${name} not found`);
+  return fn as Resource;
+}
 
 describe('TrolleyStack', () => {
   const { stack, template } = synth();
@@ -177,10 +202,7 @@ describe('TrolleyStack', () => {
   });
 
   it('grants the API Lambda access to this table (and its own log group) only', () => {
-    const fn = Object.values(template.findResources('AWS::Lambda::Function')).find(
-      (r) => (r as Resource).Properties.Runtime === 'nodejs22.x',
-    ) as Resource;
-    const roleId = (fn.Properties.Role as { 'Fn::GetAtt': [string, string] })['Fn::GetAtt'][0];
+    const roleId = roleIdOf(template, /^ApiFunctionRole/);
 
     const role = template.findResources('AWS::IAM::Role')[roleId] as Resource;
     expect(role.Properties.ManagedPolicyArns).toBeUndefined();
@@ -207,6 +229,87 @@ describe('TrolleyStack', () => {
         expect(json).toMatch(/ApiFunctionLogs/);
       }
     }
+  });
+
+  it('protects the product routes with the JWT authoriser', () => {
+    for (const routeKey of [
+      'GET /api/products/search',
+      'GET /api/products/{sku}',
+      'POST /api/products/custom',
+      'GET /api/groups',
+    ]) {
+      template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+        RouteKey: routeKey,
+        AuthorizationType: 'JWT',
+        AuthorizerId: Match.anyValue(),
+      });
+    }
+  });
+
+  it('runs the scraper on Node 22 arm64, 512 MB, 15 min, Casey service point, no async retries', () => {
+    const fn = functionByName(template, 'trolley-scraper');
+    expect(fn.Properties).toMatchObject({
+      Runtime: 'nodejs22.x',
+      Architectures: ['arm64'],
+      MemorySize: 512,
+      Timeout: 900,
+      Environment: {
+        Variables: expect.objectContaining({
+          ALDI_SERVICE_POINT: 'G526',
+          SCRAPE_MIN_INTERVAL_MS: '1000',
+          TABLE_NAME: { Ref: expect.stringMatching(/^Table/) },
+        }),
+      },
+    });
+    template.hasResourceProperties('AWS::Lambda::EventInvokeConfig', {
+      FunctionName: Match.anyValue(),
+      MaximumRetryAttempts: 0,
+    });
+    template.hasOutput('ScraperFunctionName', {});
+  });
+
+  it('limits the scraper to its logs, the catalogue index, and PRODUCT#/SCRAPE# writes', () => {
+    const roleId = roleIdOf(template, /^ScraperFunctionRole/);
+    const role = template.findResources('AWS::IAM::Role')[roleId] as Resource;
+    expect(role.Properties.ManagedPolicyArns).toBeUndefined();
+    const statements = statementsFor(template, roleId);
+    expect(statements).toHaveLength(4);
+    for (const st of statements) expect(JSON.stringify(st.Resource)).not.toContain('"*"');
+
+    const byAction = (a: string) =>
+      statements.find((st) => ([] as string[]).concat(st.Action as string).includes(a))!;
+    expect(JSON.stringify(byAction('logs:PutLogEvents').Resource)).toMatch(/ScraperFunctionLogs/);
+    const queries = statements.filter((st) => st.Action === 'dynamodb:Query');
+    expect(queries).toHaveLength(2);
+    expect(JSON.stringify(queries[0]!.Resource)).toContain('/index/GSI1');
+    expect(queries[1]!.Condition).toEqual({
+      'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] },
+    });
+    const write = byAction('dynamodb:BatchWriteItem');
+    expect(write.Action).toEqual(['dynamodb:BatchWriteItem', 'dynamodb:PutItem']);
+    expect(write.Condition).toEqual({
+      'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['PRODUCT#*', 'SCRAPE#*'] },
+    });
+    const all = JSON.stringify(statements);
+    expect(all).not.toMatch(/dynamodb:(DeleteItem|UpdateItem|Scan|GetItem|\*)/);
+  });
+
+  it('schedules the scraper monthly on the 1st at 03:00 Sydney time', () => {
+    template.hasResourceProperties('AWS::Scheduler::Schedule', {
+      ScheduleExpression: 'cron(0 3 1 * ? *)',
+      ScheduleExpressionTimezone: 'Australia/Sydney',
+      State: 'ENABLED',
+      Target: Match.objectLike({
+        Arn: { 'Fn::GetAtt': [Match.stringLikeRegexp('^ScraperFunction'), 'Arn'] },
+        Input: JSON.stringify({ trigger: 'schedule' }),
+        RetryPolicy: Match.objectLike({ MaximumRetryAttempts: 0 }),
+      }),
+    });
+  });
+
+  it('creates no scraper alarm or SNS topic without alertEmail', () => {
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 0);
+    template.resourceCountIs('AWS::SNS::Topic', 0);
   });
 
   it('creates the single table with GSI1, PITR, TTL and retain policy', () => {
@@ -267,6 +370,33 @@ describe('TrolleyStack options', () => {
           Subscribers: [{ SubscriptionType: 'EMAIL', Address: 'alerts@example.com' }],
         },
       ],
+    });
+  });
+
+  it('alarms on scraper errors to an SNS email subscription when alertEmail is set', () => {
+    const { template } = synth({ alertEmail: 'alerts@example.com' });
+    template.hasResourceProperties('AWS::SNS::Subscription', {
+      Protocol: 'email',
+      Endpoint: 'alerts@example.com',
+    });
+    template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+      MetricName: 'Errors',
+      Namespace: 'AWS/Lambda',
+      Statistic: 'Sum',
+      Threshold: 1,
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold',
+      TreatMissingData: 'notBreaching',
+      Dimensions: [
+        { Name: 'FunctionName', Value: { Ref: Match.stringLikeRegexp('^ScraperFunction') } },
+      ],
+      AlarmActions: [{ Ref: Match.stringLikeRegexp('^ScraperAlertTopic') }],
+    });
+  });
+
+  it('uses a configured ALDI service point', () => {
+    const { template } = synth({ aldiServicePoint: 'G662' });
+    expect(functionByName(template, 'trolley-scraper').Properties.Environment).toMatchObject({
+      Variables: expect.objectContaining({ ALDI_SERVICE_POINT: 'G662' }),
     });
   });
 

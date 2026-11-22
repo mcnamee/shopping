@@ -89,6 +89,23 @@ TrolleyGithubOidcStack.DeployRoleArn = arn:aws:iam::123456789012:role/trolley-gi
 Copy that ARN for the next step. (You can also find it later in CloudFormation ->
 `TrolleyGithubOidcStack` -> Outputs.)
 
+### Step 2c - updating the GitHub role (Stage 1 and later)
+
+Stage 1 lets the **Scrape now** workflow start the ALDI catalogue scrape. The deploy role
+gets exactly one extra permission: invoke the `trolley-scraper` function (nothing else). If
+you created the role before Stage 1, update it once from CloudShell:
+
+```bash
+cd ~/shopping
+git pull
+npm ci -w @trolley/infra
+cd infra
+npx cdk deploy TrolleyGithubOidcStack
+# (add -c existingOidcProviderArn=... if you used it in step 2)
+```
+
+Type `y` to confirm the IAM change. The role ARN does not change.
+
 ## Step 3 (c) - set GitHub repository variables
 
 In GitHub: **mcnamee/shopping -> Settings -> Secrets and variables -> Actions ->
@@ -101,6 +118,7 @@ them are secret).
 | `AWS_DEPLOY_ROLE_ARN` | the `DeployRoleArn` from step 2 | yes |
 | `ALERT_EMAIL` | where AWS Budget alerts go (USD 5/month budget; alerts at 80% actual and 100% forecast) | recommended - no budget is created without it |
 | `CERTIFICATE_ARN` | ACM certificate ARN from step 4 | only for a custom domain |
+| `ALDI_SERVICE_POINT` | ALDI store id for the catalogue (default `G526` = ALDI Casey ACT; `none` = no store) | no |
 
 `ALERT_EMAIL` is required for deploys: the Deploy workflow stops with a clear error if it
 is missing, so the app never runs without a cost alarm. AWS Budgets emails it directly -
@@ -164,16 +182,58 @@ scripts/create-user.sh partner@example.com our-home
   upper case, lower case and a number).
 - Invite expired? `scripts/create-user.sh you@example.com our-home --resend`
 
-## Step 6b - request Bedrock model access (needed from Stage 3)
+## Step 6a - load the ALDI catalogue (Stage 1)
 
-AI suggestions use Claude through Amazon Bedrock in your account. Do this once, any time
-before Stage 3:
+The catalogue loads automatically at 03:00 Sydney time on the 1st of each month. To load
+it now, after the first deploy:
 
-1. In the AWS console (Sydney region) open **Amazon Bedrock -> Model access** (or **Model
-   catalog**, depending on the console version).
-2. Request access to an **Anthropic Claude Haiku** model. Fill in the short use-case form
-   (e.g. "personal shopping list suggestions").
-3. Wait for the status to show **Access granted** (usually minutes).
+1. **Confirm the alert email.** AWS sends "AWS Notification - Subscription Confirmation" to
+   `ALERT_EMAIL`. Click **Confirm subscription**, or you won't hear about failed scrapes.
+2. GitHub: **Actions -> Scrape now -> Run workflow** (branch `main`). It takes ~2-4 minutes.
+3. The job summary shows the run record. Expect `"status": "succeeded"` and `fetched` around
+   3,000+. Search "milk" in the app.
+
+If it fails with `blocked` (ALDI refusing requests from AWS addresses), existing products
+are untouched; switch to the fallback below.
+
+### Scrape fallback (only if ALDI blocks AWS)
+
+Runs the same scraper from a GitHub-hosted runner instead of AWS. It needs a second, narrow
+GitHub role that can only write catalogue items (never your lists). One-off, in CloudShell:
+
+```bash
+cd ~/shopping && git pull && npm ci -w @trolley/infra && cd infra
+TABLE=$(aws cloudformation describe-stacks --stack-name TrolleyStack \
+  --query "Stacks[0].Outputs[?OutputKey=='TableName'].OutputValue" --output text)
+echo "$TABLE"
+npx cdk deploy TrolleyGithubOidcStack -c scrapeFallbackTableName="$TABLE"
+```
+
+Then in GitHub repository variables (Settings -> Secrets and variables -> Actions ->
+Variables):
+
+| Name | Value |
+|---|---|
+| `AWS_SCRAPE_ROLE_ARN` | the `ScrapeFallbackRoleArn` output from the command above |
+| `TROLLEY_TABLE_NAME` | the table name printed by `echo "$TABLE"` |
+| `SCRAPE_FALLBACK_ENABLED` | `true` (turns on the monthly runner scrape, 03:23-04:23 Sydney on the 2nd) |
+
+Test it: **Actions -> Scrape fallback (runner) -> Run workflow**, untick "Dry run". To
+switch back, delete `SCRAPE_FALLBACK_ENABLED` (the AWS schedule keeps running regardless;
+both are safe to run, they upsert the same items).
+
+## Step 6b - enable Claude on Amazon Bedrock (needed from Stage 3)
+
+AI suggestions use Claude through Amazon Bedrock in your account. AWS retired the old
+**Model access** page - models are now enabled on first use. Do this once, any time
+before Stage 3, signed in as an admin in the Trolley account:
+
+1. In the AWS console (Sydney region) open **Amazon Bedrock -> Model catalog**.
+2. Open an **Anthropic Claude Haiku** model and click **Open in playground**.
+3. If prompted, fill in Anthropic's one-off use-case form (e.g. "personal shopping list
+   suggestions") and accept the offer.
+4. Send one test message in the playground. Once it replies, the model is enabled for
+   the account, so Trolley's Lambda can call it without extra Marketplace permissions.
 
 ## Step 7 (g) - add Trolley to your home screen
 
@@ -201,5 +261,7 @@ Trolley now opens full screen like a normal app.
 |---|---|
 | Deploy fails at "Configure AWS credentials" with "Not authorized to perform sts:AssumeRoleWithWebIdentity" | Check `AWS_DEPLOY_ROLE_ARN`; make sure the workflow ran on `main` (other branches are refused by design). |
 | Deploy fails with "SSM parameter /cdk-bootstrap/hnb659fds/version not found" | Step 1 (bootstrap) wasn't run in ap-southeast-2. |
+| Scrape now fails with "AccessDeniedException ... lambda:InvokeFunction" | Do step 2c (update the GitHub role). |
+| Scrape run `aborted` | ALDI returned far fewer products than last time (often a block or an API change). Nothing was written; check the trolley-scraper logs in CloudWatch, then re-run Scrape now later. |
 | `create-user.sh` says it can't find `UserPoolId` | The first deploy hasn't finished, or you're in the wrong region (use Sydney). |
 | Signed in but the app says your account isn't set up | The user was created without `custom:householdId`; delete the user in Cognito and re-run `create-user.sh`. |

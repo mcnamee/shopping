@@ -9,16 +9,31 @@ export interface GithubOidcStackProps extends StackProps {
   repo: string;
   /** Branch allowed to deploy, e.g. "main". */
   branch: string;
+  /**
+   * Numeric GitHub owner and repository IDs (D-041). Repos created after 15 Jul 2026 emit
+   * GitHub's immutable subject claim "repo:owner@ownerId/name@repoId:ref:...", so the trust
+   * policy accepts that exact form as well as the legacy name-only form.
+   */
+  ownerId: string;
+  repoId: string;
   /** Re-use an existing GitHub OIDC provider in the account instead of creating one. */
   existingProviderArn?: string;
+  /** Lambda the "scrape-now" workflow may invoke (D-036). */
+  scraperFunctionName: string;
+  /**
+   * Opt-in (D-037): the Trolley table name. When set, also creates a separate role for the
+   * "scrape-fallback" workflow that may only read the catalogue index and write
+   * PRODUCT#/SCRAPE# items. Not created by default.
+   */
+  scrapeFallbackTableName?: string;
 }
 
 /**
  * One-off stack, deployed manually from CloudShell (see docs/SETUP.md).
  * Creates the GitHub OIDC identity provider and a role that GitHub Actions on the
  * given repo + branch can assume. The role can ONLY assume the CDK bootstrap roles
- * (deploy, file/image publishing, lookup); CloudFormation does the actual deploy
- * using the bootstrap execution role.
+ * (deploy, file/image publishing, lookup) and invoke the scraper Lambda;
+ * CloudFormation does the actual deploy using the bootstrap execution role.
  */
 export class GithubOidcStack extends Stack {
   constructor(scope: Construct, id: string, props: GithubOidcStackProps) {
@@ -26,6 +41,19 @@ export class GithubOidcStack extends Stack {
 
     if (!/^[\w.-]+\/[\w.-]+$/.test(props.repo)) throw new Error('repo must be "owner/name"');
     if (!/^[\w./-]+$/.test(props.branch)) throw new Error('invalid branch');
+    if (!/^\d+$/.test(props.ownerId) || !/^\d+$/.test(props.repoId)) {
+      throw new Error('ownerId and repoId must be numeric GitHub IDs');
+    }
+    const [owner, name] = props.repo.split('/');
+    const ref = `ref:refs/heads/${props.branch}`;
+    const allowedSubjects = [
+      `repo:${owner}@${props.ownerId}/${name}@${props.repoId}:${ref}`,
+      `repo:${props.repo}:${ref}`,
+    ];
+    if (!/^[\w-]{1,64}$/.test(props.scraperFunctionName)) throw new Error('invalid function name');
+    if (props.scrapeFallbackTableName && !/^[\w.-]{3,255}$/.test(props.scrapeFallbackTableName)) {
+      throw new Error('invalid table name');
+    }
 
     const providerArn =
       props.existingProviderArn ??
@@ -34,16 +62,19 @@ export class GithubOidcStack extends Stack {
         clientIdList: ['sts.amazonaws.com'],
       }).attrArn;
 
+    const githubPrincipal = () =>
+      new iam.WebIdentityPrincipal(providerArn, {
+        StringEquals: {
+          [`${GITHUB_OIDC_HOST}:aud`]: 'sts.amazonaws.com',
+          [`${GITHUB_OIDC_HOST}:sub`]: allowedSubjects,
+        },
+      });
+
     const role = new iam.Role(this, 'GithubDeployRole', {
       roleName: 'trolley-github-deploy',
       description: `GitHub Actions deploy role for ${props.repo} (${props.branch} only)`,
       maxSessionDuration: Duration.hours(1),
-      assumedBy: new iam.WebIdentityPrincipal(providerArn, {
-        StringEquals: {
-          [`${GITHUB_OIDC_HOST}:aud`]: 'sts.amazonaws.com',
-          [`${GITHUB_OIDC_HOST}:sub`]: `repo:${props.repo}:ref:refs/heads/${props.branch}`,
-        },
-      }),
+      assumedBy: githubPrincipal(),
     });
 
     role.addToPolicy(
@@ -55,6 +86,56 @@ export class GithubOidcStack extends Stack {
         ],
       }),
     );
+
+    // "scrape-now" workflow: invoke this one function, nothing else (D-036).
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'InvokeScraper',
+        actions: ['lambda:InvokeFunction'],
+        resources: [
+          `arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:${props.scraperFunctionName}`,
+        ],
+      }),
+    );
+
+    if (props.scrapeFallbackTableName) {
+      const tableArn = `arn:${Aws.PARTITION}:dynamodb:${Aws.REGION}:${Aws.ACCOUNT_ID}:table/${props.scrapeFallbackTableName}`;
+      const fallback = new iam.Role(this, 'GithubScrapeFallbackRole', {
+        roleName: 'trolley-github-scrape-fallback',
+        description: `GitHub Actions ALDI scrape fallback for ${props.repo} (${props.branch} only): catalogue items only`,
+        maxSessionDuration: Duration.hours(1),
+        assumedBy: githubPrincipal(),
+      });
+      fallback.addToPolicy(
+        new iam.PolicyStatement({
+          sid: 'ReadCatalogueIndex',
+          actions: ['dynamodb:Query'],
+          resources: [`${tableArn}/index/GSI1`],
+        }),
+      );
+      fallback.addToPolicy(
+        new iam.PolicyStatement({
+          sid: 'ReadScrapeRuns',
+          actions: ['dynamodb:Query'],
+          resources: [tableArn],
+          conditions: { 'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] } },
+        }),
+      );
+      fallback.addToPolicy(
+        new iam.PolicyStatement({
+          sid: 'WriteCatalogueItemsOnly',
+          actions: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem'],
+          resources: [tableArn],
+          conditions: {
+            'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['PRODUCT#*', 'SCRAPE#*'] },
+          },
+        }),
+      );
+      new CfnOutput(this, 'ScrapeFallbackRoleArn', {
+        value: fallback.roleArn,
+        description: 'Set this as the AWS_SCRAPE_ROLE_ARN GitHub repository variable',
+      });
+    }
 
     new CfnOutput(this, 'DeployRoleArn', {
       value: role.roleArn,

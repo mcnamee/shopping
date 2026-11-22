@@ -5,6 +5,7 @@ import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { NewPasswordPage } from './routes/NewPasswordPage';
 import { PlaceholderPage } from './routes/PlaceholderPage';
 import { PublicOnly, RequireAuth } from './routes/RequireAuth';
+import { SearchPage } from './routes/SearchPage';
 import { SettingsPage } from './routes/SettingsPage';
 import { SignInPage } from './routes/SignInPage';
 
@@ -44,7 +45,7 @@ export function AppRoutes() {
         }
       >
         <Route index element={<PlaceholderPage kind="lists" />} />
-        <Route path="/search" element={<PlaceholderPage kind="search" />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/templates" element={<PlaceholderPage kind="templates" />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

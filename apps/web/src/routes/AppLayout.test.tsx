@@ -64,7 +64,7 @@ describe('bottom navigation', () => {
       'page',
     );
     expect(within(nav).getByRole('link', { name: 'Lists' })).not.toHaveAttribute('aria-current');
-    expect(await screen.findByText('Search is coming soon')).toBeInTheDocument();
+    expect(await screen.findByRole('searchbox', { name: 'Search products' })).toBeInTheDocument();
   });
 
   it('shows the placeholder copy for each tab', async () => {

@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "code": "3501",
+      "message": "Merchant not found.",
+      "context": []
+    }
+  ]
+}

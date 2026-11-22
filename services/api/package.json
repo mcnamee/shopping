@@ -8,6 +8,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1175.0",
+    "@aws-sdk/lib-dynamodb": "^3.1175.0",
     "@trolley/core": "*"
   },
   "devDependencies": {

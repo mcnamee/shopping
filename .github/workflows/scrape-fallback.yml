@@ -1,0 +1,81 @@
+name: Scrape fallback (runner)
+
+# FALLBACK ONLY: use if ALDI blocks AWS IP addresses (the scheduled Lambda then fails with
+# "blocked" and emails an alarm). Runs the same scraper CLI on a GitHub-hosted runner and
+# writes to DynamoDB with the same safety rules (never deletes; aborts with no writes below
+# 50% of the last successful run; skips the discontinue step on partial runs).
+#
+# Writing needs the opt-in role from docs/SETUP.md "Scrape fallback" (D-037): it may only
+# query the catalogue index and write PRODUCT#/SCRAPE# items. A dry run needs no AWS access.
+
+on:
+  # Switch-over (docs/SETUP.md): set repository variable SCRAPE_FALLBACK_ENABLED=true and
+  # this runs monthly on its own. 17:23 UTC on the 1st = 03:23/04:23 on the 2nd in Sydney.
+  schedule:
+    - cron: '23 17 1 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (fetch and report only, no AWS access)'
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: catalogue-scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    name: Scrape ALDI from the runner
+    # Scheduled runs only when switched over; manual runs always.
+    if: github.event_name == 'workflow_dispatch' || vars.SCRAPE_FALLBACK_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ALDI_SERVICE_POINT: ${{ vars.ALDI_SERVICE_POINT }}
+      # Scheduled runs (no inputs) write; manual runs default to a dry run.
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Dry run
+        if: env.DRY_RUN == 'true'
+        run: npm run scrape -w @trolley/scraper -- --dry-run --trigger github-fallback --out "$RUNNER_TEMP/products.json"
+
+      - name: Check fallback configuration
+        if: env.DRY_RUN != 'true'
+        env:
+          ROLE: ${{ vars.AWS_SCRAPE_ROLE_ARN }}
+          TABLE: ${{ vars.TROLLEY_TABLE_NAME }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run on main (the AWS role only trusts main)."; exit 1
+          fi
+          if [ -z "$ROLE" ] || [ -z "$TABLE" ]; then
+            echo "::error::Set AWS_SCRAPE_ROLE_ARN and TROLLEY_TABLE_NAME (docs/SETUP.md, Scrape fallback)."; exit 1
+          fi
+
+      - name: Configure AWS credentials (OIDC, catalogue-only role)
+        if: env.DRY_RUN != 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_SCRAPE_ROLE_ARN }}
+          aws-region: ap-southeast-2
+          role-session-name: trolley-scrape-fallback-${{ github.run_id }}
+
+      - name: Scrape and write
+        if: env.DRY_RUN != 'true'
+        env:
+          TABLE_NAME: ${{ vars.TROLLEY_TABLE_NAME }}
+        run: npm run scrape -w @trolley/scraper -- --trigger github-fallback

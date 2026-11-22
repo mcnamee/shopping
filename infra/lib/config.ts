@@ -31,3 +31,11 @@ export function assertCertificateArn(value: string): string {
   }
   return value;
 }
+
+/** ALDI store id like "G526", or "none" for no store (national range). */
+export function assertServicePoint(value: string): string {
+  if (!/^(?:[A-Z0-9-]{2,12}|none)$/.test(value)) {
+    throw new Error('aldiServicePoint must look like "G526" or be "none"');
+  }
+  return value;
+}
