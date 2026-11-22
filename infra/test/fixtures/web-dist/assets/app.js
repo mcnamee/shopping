@@ -1,1 +1,1 @@
-console.log("fixture");
+console.log('fixture');

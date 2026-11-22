@@ -7,12 +7,15 @@ import {
   Fn,
   RemovalPolicy,
   Stack,
+  TimeZone,
   type StackProps,
 } from 'aws-cdk-lib';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as budgets from 'aws-cdk-lib/aws-budgets';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cwActions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
@@ -24,9 +27,30 @@ import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
+import * as schedulerTargets from 'aws-cdk-lib/aws-scheduler-targets';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as snsSubs from 'aws-cdk-lib/aws-sns-subscriptions';
 import type { Construct } from 'constructs';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
+/** Fixed name so the GitHub "scrape-now" workflow can invoke it (D-036). */
+export const SCRAPER_FUNCTION_NAME = 'trolley-scraper';
+/** ALDI Casey ACT (D-030). */
+export const DEFAULT_ALDI_SERVICE_POINT = 'G526';
+
+const LAMBDA_BUNDLING = {
+  format: OutputFormat.ESM,
+  target: 'node22',
+  minify: true,
+  sourceMap: true,
+  // Runtime-provided AWS SDK v3 is used; keeps the bundle small.
+  externalModules: ['@aws-sdk/*'],
+  banner:
+    "import { createRequire as __trolleyCreateRequire } from 'node:module';" +
+    'const require = __trolleyCreateRequire(import.meta.url);',
+};
 
 export interface TrolleyStackProps extends StackProps {
   /** Directory containing the built web app (apps/web/dist). */
@@ -37,6 +61,8 @@ export interface TrolleyStackProps extends StackProps {
   certificateArn?: string;
   /** Custom domain served by CloudFront when certificateArn is given. */
   domainName: string;
+  /** ALDI store ("service point") the scraper uses; "none" for no store. Default G526. */
+  aldiServicePoint?: string;
 }
 
 export class TrolleyStack extends Stack {
@@ -139,17 +165,7 @@ export class TrolleyStack extends Stack {
         TABLE_NAME: table.tableName,
         NODE_OPTIONS: '--enable-source-maps',
       },
-      bundling: {
-        format: OutputFormat.ESM,
-        target: 'node22',
-        minify: true,
-        sourceMap: true,
-        // Runtime-provided AWS SDK v3 is used; keeps the bundle small.
-        externalModules: ['@aws-sdk/*'],
-        banner:
-          "import { createRequire as __trolleyCreateRequire } from 'node:module';" +
-          'const require = __trolleyCreateRequire(import.meta.url);',
-      },
+      bundling: LAMBDA_BUNDLING,
     });
     table.grantReadWriteData(apiFunction);
 
@@ -181,12 +197,113 @@ export class TrolleyStack extends Stack {
       methods: [apigw.HttpMethod.GET],
       integration,
     });
-    httpApi.addRoutes({
-      path: '/api/me',
-      methods: [apigw.HttpMethod.GET],
-      integration,
-      authorizer: jwtAuthorizer,
+    const authedRoutes: Array<[string, apigw.HttpMethod]> = [
+      ['/api/me', apigw.HttpMethod.GET],
+      ['/api/products/search', apigw.HttpMethod.GET],
+      ['/api/products/{sku}', apigw.HttpMethod.GET],
+      ['/api/products/custom', apigw.HttpMethod.POST],
+    ];
+    for (const [routePath, method] of authedRoutes) {
+      httpApi.addRoutes({
+        path: routePath,
+        methods: [method],
+        integration,
+        authorizer: jwtAuthorizer,
+      });
+    }
+
+    // ---------------------------------------------------------------- Catalogue scraper
+    const scraperLogGroup = new logs.LogGroup(this, 'ScraperFunctionLogs', {
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
+    const scraperRole = new iam.Role(this, 'ScraperFunctionRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      description:
+        'Trolley ALDI scraper: own logs; read catalogue GSI; write PRODUCT#/SCRAPE# items only',
+    });
+    scraperRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+        resources: [scraperLogGroup.logGroupArn],
+      }),
+    );
+    scraperRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'ReadCatalogueIndex',
+        actions: ['dynamodb:Query'],
+        resources: [`${table.tableArn}/index/GSI1`],
+      }),
+    );
+    scraperRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'WriteCatalogueItemsOnly',
+        actions: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem'],
+        resources: [table.tableArn],
+        // Household data (HH#...) can never be written by the scraper.
+        conditions: {
+          'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['PRODUCT#*', 'SCRAPE#*'] },
+        },
+      }),
+    );
+
+    const scraperFunction = new NodejsFunction(this, 'ScraperFunction', {
+      functionName: SCRAPER_FUNCTION_NAME,
+      description: 'Monthly ALDI AU catalogue scrape into the Trolley table',
+      entry: path.join(REPO_ROOT, 'services', 'scraper', 'src', 'handler.ts'),
+      handler: 'handler',
+      projectRoot: REPO_ROOT,
+      depsLockFilePath: path.join(REPO_ROOT, 'package-lock.json'),
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 512,
+      timeout: Duration.minutes(15),
+      role: scraperRole,
+      logGroup: scraperLogGroup,
+      // Failures alarm instead of silently re-scraping ALDI.
+      retryAttempts: 0,
+      environment: {
+        TABLE_NAME: table.tableName,
+        ALDI_SERVICE_POINT: props.aldiServicePoint ?? DEFAULT_ALDI_SERVICE_POINT,
+        SCRAPE_MIN_INTERVAL_MS: '1000',
+        NODE_OPTIONS: '--enable-source-maps',
+      },
+      bundling: LAMBDA_BUNDLING,
+    });
+
+    // 1st of each month, 03:00 Sydney time (D-035).
+    new scheduler.Schedule(this, 'ScraperSchedule', {
+      description: 'Monthly ALDI catalogue scrape',
+      schedule: scheduler.ScheduleExpression.cron({
+        minute: '0',
+        hour: '3',
+        day: '1',
+        timeZone: TimeZone.AUSTRALIA_SYDNEY,
+      }),
+      target: new schedulerTargets.LambdaInvoke(scraperFunction, {
+        input: scheduler.ScheduleTargetInput.fromObject({ trigger: 'schedule' }),
+        retryAttempts: 0,
+      }),
+    });
+
+    if (props.alertEmail) {
+      const alertTopic = new sns.Topic(this, 'ScraperAlertTopic', {
+        displayName: 'Trolley scraper alerts',
+        enforceSSL: true,
+      });
+      alertTopic.addSubscription(new snsSubs.EmailSubscription(props.alertEmail));
+      const alarm = new cloudwatch.Alarm(this, 'ScraperErrorsAlarm', {
+        alarmName: 'trolley-scraper-errors',
+        alarmDescription:
+          'The ALDI catalogue scrape failed, was partial, or was blocked. Existing products are untouched; see the trolley-scraper logs and the SCRAPE#RUN record.',
+        metric: scraperFunction.metricErrors({ period: Duration.minutes(5), statistic: 'Sum' }),
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+      alarm.addAlarmAction(new cwActions.SnsAction(alertTopic));
+    }
 
     // ---------------------------------------------------------------- Web hosting
     const siteBucket = new s3.Bucket(this, 'SiteBucket', {
@@ -392,5 +509,6 @@ export class TrolleyStack extends Stack {
     new CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
     new CfnOutput(this, 'ApiEndpoint', { value: httpApi.apiEndpoint });
     new CfnOutput(this, 'TableName', { value: table.tableName });
+    new CfnOutput(this, 'ScraperFunctionName', { value: scraperFunction.functionName });
   }
 }

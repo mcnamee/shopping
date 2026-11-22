@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 import * as path from 'node:path';
 import { App, Tags } from 'aws-cdk-lib';
-import { APP_TAG, REGION, assertCertificateArn, assertEmail, setting } from '../lib/config';
+import {
+  APP_TAG,
+  REGION,
+  assertCertificateArn,
+  assertEmail,
+  assertServicePoint,
+  setting,
+} from '../lib/config';
 import { GithubOidcStack } from '../lib/github-oidc-stack';
-import { TrolleyStack } from '../lib/trolley-stack';
+import { SCRAPER_FUNCTION_NAME, TrolleyStack } from '../lib/trolley-stack';
 
 const app = new App();
 
@@ -23,6 +30,7 @@ if (!alertEmail && app.node.tryGetContext('requireAlertEmail') === 'true') {
   );
 }
 const certificateArn = setting(app, 'certificateArn', 'CERTIFICATE_ARN');
+const aldiServicePoint = setting(app, 'aldiServicePoint', 'ALDI_SERVICE_POINT');
 
 new TrolleyStack(app, 'TrolleyStack', {
   env,
@@ -31,15 +39,23 @@ new TrolleyStack(app, 'TrolleyStack', {
   domainName: setting(app, 'domainName', 'DOMAIN_NAME') ?? 'trolley.mcn.am',
   ...(alertEmail ? { alertEmail: assertEmail(alertEmail) } : {}),
   ...(certificateArn ? { certificateArn: assertCertificateArn(certificateArn) } : {}),
+  ...(aldiServicePoint ? { aldiServicePoint: assertServicePoint(aldiServicePoint) } : {}),
 });
 
 const existingProviderArn = setting(app, 'existingOidcProviderArn', 'EXISTING_OIDC_PROVIDER_ARN');
+const scrapeFallbackTableName = setting(
+  app,
+  'scrapeFallbackTableName',
+  'SCRAPE_FALLBACK_TABLE_NAME',
+);
 new GithubOidcStack(app, 'TrolleyGithubOidcStack', {
   env,
   description: 'One-off: GitHub Actions OIDC deploy role for Trolley',
   repo: setting(app, 'githubRepo', 'GITHUB_REPO') ?? 'mcnamee/shopping',
   branch: setting(app, 'githubBranch', 'GITHUB_BRANCH') ?? 'main',
+  scraperFunctionName: SCRAPER_FUNCTION_NAME,
   ...(existingProviderArn ? { existingProviderArn } : {}),
+  ...(scrapeFallbackTableName ? { scrapeFallbackTableName } : {}),
 });
 
 Tags.of(app).add(APP_TAG.key, APP_TAG.value);
