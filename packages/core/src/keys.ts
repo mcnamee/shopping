@@ -45,6 +45,40 @@ export const keys = {
     assertSegment('sku', sku);
     return `${groupId}#${sku}`;
   },
+  // ----- Stage 2 (spec 5.1, D-050, D-053 to D-056). pk = householdPk unless noted.
+  /** List row. */
+  listSk(listId: string): string {
+    assertSegment('listId', listId);
+    return `LIST#${listId}`;
+  },
+  /** List item row: pk = listItemPk(hh, listId). itemId = lineIdFor(productId, unit). */
+  listItemSk(itemId: string): string {
+    assertSegment('itemId', itemId);
+    return `ITEM#${itemId}`;
+  },
+  listItemSkPrefix: 'ITEM#',
+  listSkPrefix: 'LIST#',
+  /** Template row (items embedded). */
+  templateSk(templateId: string): string {
+    assertSegment('templateId', templateId);
+    return `TEMPLATE#${templateId}`;
+  },
+  templateSkPrefix: 'TEMPLATE#',
+  /** Household settings: aisle order, unit overrides. */
+  settingsSk: 'SETTINGS',
+  /** Pointer to the "this week" list (D-056): one item, so flagging is one atomic write. */
+  thisWeekSk: 'THISWEEK',
+  purchaseSkPrefix: 'PURCHASE#',
+  /** GSI2 partition of a household's lists by status (D-057). */
+  listsGsi2Pk(householdId: string, status: 'active' | 'archived'): string {
+    assertHousehold(householdId);
+    return `HH#${householdId}#LISTS#${status}`;
+  },
+  /** GSI2 sort key: createdAt (active) or completedAt (archived), then id. */
+  listsGsi2Sk(at: string, listId: string): string {
+    assertSegment('listId', listId);
+    return `${at}#${listId}`;
+  },
   /** Scrape run records: pk = scrapeRunPk, sk = ISO start time. */
   scrapeRunPk: 'SCRAPE#RUN',
 } as const;
