@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { useAuth } from '../auth';
 import { Button } from '../components/Button';
 import { ConfirmSheet } from '../components/ConfirmSheet';
+import { saveTextSize, readTextSize, TEXT_SIZES, type TextSize } from '../settings/textSize';
 import { useAisleOrderQuery, useUnitOverridesQuery } from '../lists/data';
 
 /** /settings (docs/ux/app-shell.md section 3): account card + sign out with confirmation. */
@@ -11,6 +12,7 @@ export function SettingsPage() {
   const { user, signOut } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [textSize, setTextSize] = useState<TextSize>(readTextSize);
   const aisle = useAisleOrderQuery();
   const units = useUnitOverridesQuery();
   const unitCount = units.data?.overrides.length;
@@ -54,6 +56,36 @@ export function SettingsPage() {
           </li>
         ))}
       </ul>
+
+      <h2 id="display-heading" className="mb-2 text-xs uppercase tracking-wide text-muted">
+        Display
+      </h2>
+      <div className="mb-6 rounded-md bg-surface p-4">
+        <p id="text-size-label" className="mb-2 text-lg">
+          Text size
+        </p>
+        <div role="radiogroup" aria-labelledby="text-size-label" className="grid grid-cols-3 gap-2">
+          {TEXT_SIZES.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={textSize === value}
+              onClick={() => {
+                setTextSize(value);
+                saveTextSize(value);
+              }}
+              className={`min-h-tap rounded-sm border-2 px-2 text-base ${
+                textSize === value
+                  ? 'border-accent bg-accent-soft text-accent-strong'
+                  : 'border-border-subtle bg-bg'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <h2 className="mb-2 text-xs uppercase tracking-wide text-muted">Account</h2>
       <div className="rounded-md bg-surface p-4">
