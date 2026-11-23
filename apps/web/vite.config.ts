@@ -53,8 +53,15 @@ export default defineConfig(({ command, mode }) => {
         },
         workbox: {
           navigateFallback: '/index.html',
-          // Never let the service worker answer API or runtime-config requests.
-          navigateFallbackDenylist: [/^\/api\//, /^\/config\.json$/],
+          // Never let the service worker answer API, runtime-config, OAuth or MCP requests (Claude's
+          // connector sign-in opens /oauth/authorize, which must reach the server).
+          navigateFallbackDenylist: [
+            /^\/api\//,
+            /^\/config\.json$/,
+            /^\/oauth\//,
+            /^\/\.well-known\//,
+            /^\/mcp/,
+          ],
           globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         },
       }),

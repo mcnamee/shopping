@@ -33,3 +33,5 @@
 - PM criteria + UX notes: `docs/stages/stage-4.md` (D-082 to D-089; backlog B-014..B-017). Next: build (senior engineer owns OAuth shim) -> QA -> merge.
 - Remote MCP at `https://trolley.mcn.am/mcp`, own OAuth 2.1 shim (DCR + PKCE) in Lambda, consent at SPA `/connect`, Settings > Connected apps.
 - [U] after deploy: connect from Claude (custom connector) and ChatGPT (developer mode), "add tissues to my shopping list".
+
+## Stage 4 shipped (main 6d5c7ae, deploy green 23 Nov). Awaiting user [U]: connect Claude/ChatGPT per docs/CONNECT.md. Fix applied: single API-wide Lambda permission (policy size limit).
