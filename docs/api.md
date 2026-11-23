@@ -93,7 +93,7 @@ Public endpoints (not under `/api`; same origin via CloudFront, no Cognito):
 | POST `/oauth/revoke` | RFC 7009, always 200. A refresh token revokes its whole grant; an access token just itself |
 | POST `/mcp` | MCP Streamable HTTP, stateless JSON (GET/DELETE 405). Bearer access token or 401 `WWW-Authenticate: Bearer resource_metadata="https://<domain>/.well-known/oauth-protected-resource/mcp"` |
 
-MCP tools (all on the token's household, this week's list only): `add_item { text, quantity?, unit?, note? (<= 100), productId? }` -> usual product (D-086/D-094) added via the this-week path, or `structuredContent.options` (<= 5) and nothing added; `get_current_list {}`; `remove_item { text }` (single match only); `search_products { query }` (<= 10, bought first). 60 tool calls/min per grant, then a tool error.
+MCP tools (all on the token's household, this week's list only): `add_item { text, quantity?, unit?, note? (<= 100), productId? }` -> usual product (D-086/D-094, templates first per D-099: weekly, regulars, meal, using the template item's qty/unit/note unless given; then history, remembered unit, catalogue) added via the this-week path, or `structuredContent.options` (<= 5) and nothing added; `get_current_list {}`; `remove_item { text }` (single match only); `search_products { query }` (<= 10, bought first). 60 tool calls/min per grant, then a tool error.
 
 ## Siri & Shortcuts (personal access keys)
 Decisions D-096 to D-098; server: `services/api/src/shortcuts/`; mock: `apps/web/src/api/mock-stage4.ts`; user steps: `docs/CONNECT.md` ("Siri").
@@ -110,7 +110,7 @@ Public endpoints (no Cognito authoriser; the Lambda checks `Authorization: Beare
 
 | Method and path | Notes |
 |---|---|
-| POST `/quick/add` | Body JSON `{ text, quantity? }`, a JSON string or plain text. "and", commas and "&" split items (max 8). Same resolution as MCP `add_item` (D-086/D-094): history, remembered unit, clear catalogue match (not `notAtStore`), else nothing added and "I found a few - A, B or C. Try saying the one you want." No match: "I couldn't find X at ALDI." Success: "Added A and B to Week of 23 Nov." with `added: [{ name, qty, unit }]`. Empty body: 400 "I didn't catch what to add." |
+| POST `/quick/add` | Body JSON `{ text, quantity? }`, a JSON string or plain text. "and", commas and "&" split items (max 8). Same resolution as MCP `add_item` (D-086/D-094/D-099): templates (spoken as "(from your Weekly template)"), history, remembered unit, clear catalogue match (not `notAtStore`), else nothing added and "I found a few - A, B or C. Try saying the one you want." No match: "I couldn't find X at ALDI." Success: "Added A and B to Week of 23 Nov." with `added: [{ name, qty, unit }]`. Empty body: 400 "I didn't catch what to add." |
 | GET `/quick/list` | "You've got 12 things left: milk, eggs, ..." (unticked only, 20 names then "and N more") |
 
 401 `{ spoken: "That Trolley key isn't valid any more." }` for a missing, malformed, unknown or revoked key. 429 (30 calls per key per minute, `Retry-After: 60`) `{ spoken: "That's a lot at once..." }`.

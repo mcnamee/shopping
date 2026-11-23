@@ -146,6 +146,7 @@ export function stage4DepsFor(
     purchases: (hh) => stage3.suggestions.purchases(hh),
     catalogue: () => productDeps.catalogue.get(),
     customs: (hh) => productDeps.custom.list(hh),
+    templates: (hh) => stage3.templates.list(hh),
     resolveProduct: stage3.resolveProduct,
     now: stage3.now,
   }));

@@ -2,10 +2,12 @@
  * Chatbot (MCP) domain rules, Stage 4 (D-085 to D-088). Pure functions: the API wires
  * them to the household's data in services/api/src/mcp/.
  *
- * "Usual product" resolution (D-086): explicit productId > purchase history (most distinct
- * purchase dates, ties latest) > products with a remembered unit > a clear catalogue match
- * > otherwise up to 5 options and nothing is added.
+ * "Usual product" resolution (D-086, amended by D-099): explicit productId > household
+ * templates (weekly, regulars, meal) > purchase history (most distinct purchase dates, ties
+ * latest) > products with a remembered unit > a clear catalogue match > otherwise up to 5
+ * options and nothing is added.
  */
+import type { TemplateType } from './lists';
 import type { UnitType } from './product';
 import { describeQuantity } from './quantity';
 import { stem, tokenise } from './search';
@@ -118,6 +120,95 @@ export function mostBoughtUnit(
     }
   }
   return best;
+}
+
+/** Template tiers in order of preference (D-099). */
+export const TEMPLATE_TIER_ORDER: readonly TemplateType[] = ['weekly', 'regulars', 'meal'];
+
+/** The parts of a template the resolver reads. */
+export interface TemplateLike {
+  name: string;
+  type: TemplateType;
+  items: ReadonlyArray<{
+    product: { productId: string; name: string };
+    qty: number;
+    unit: UnitType;
+    note: string | null;
+  }>;
+}
+
+export interface TemplateCandidate {
+  templateType: TemplateType;
+  templateName: string;
+  productId: string;
+  name: string;
+  qty: number;
+  unit: UnitType;
+  note: string | null;
+}
+
+/**
+ * Template items whose product name matches every word of `text`, one per product per
+ * tier (first template/item wins), in tier order weekly, regulars, meal (D-099).
+ */
+export function templateMatches(
+  templates: readonly TemplateLike[],
+  text: string,
+): TemplateCandidate[] {
+  const out: TemplateCandidate[] = [];
+  const seen = new Set<string>();
+  for (const type of TEMPLATE_TIER_ORDER) {
+    for (const t of templates) {
+      if (t.type !== type) continue;
+      for (const i of t.items) {
+        const key = `${type}|${i.product.productId}`;
+        if (seen.has(key) || !nameMatchesAll(text, i.product.name)) continue;
+        seen.add(key);
+        out.push({
+          templateType: type,
+          templateName: t.name,
+          productId: i.product.productId,
+          name: i.product.name,
+          qty: i.qty,
+          unit: i.unit,
+          note: i.note,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+export type TemplatePick =
+  | { kind: 'one'; candidate: TemplateCandidate }
+  | { kind: 'tied'; candidates: TemplateCandidate[] }
+  | { kind: 'none' };
+
+/**
+ * Choose among (already availability-filtered) `templateMatches` (D-099): the highest tier
+ * with any match; inside it exact-name matches only, if there are any; one left -> it;
+ * several -> the most bought (distinct purchase dates) if that is a strict lead, else tied.
+ */
+export function pickTemplateItem(
+  candidates: readonly TemplateCandidate[],
+  text: string,
+  purchases: readonly HistoryPurchase[],
+): TemplatePick {
+  for (const type of TEMPLATE_TIER_ORDER) {
+    let tier = candidates.filter((c) => c.templateType === type);
+    if (tier.length === 0) continue;
+    const exact = tier.filter((c) => isExactName(text, c.name));
+    if (exact.length > 0) tier = exact;
+    if (tier.length === 1) return { kind: 'one', candidate: tier[0] as TemplateCandidate };
+    const stats = purchaseStats(purchases);
+    const bought = (c: TemplateCandidate) => stats.get(c.productId)?.timesBought ?? 0;
+    const best = Math.max(...tier.map(bought));
+    const top = tier.filter((c) => bought(c) === best);
+    if (best > 0 && top.length === 1)
+      return { kind: 'one', candidate: top[0] as TemplateCandidate };
+    return { kind: 'tied', candidates: top };
+  }
+  return { kind: 'none' };
 }
 
 /** Score gap between the first and second search result that makes the first a clear match. */

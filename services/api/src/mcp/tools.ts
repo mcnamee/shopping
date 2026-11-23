@@ -22,17 +22,21 @@ import {
   mostBoughtUnit,
   nameMatchesAll,
   parseItemQuantity,
+  pickTemplateItem,
   purchaseStats,
   quoted,
   rankHistoryMatches,
   searchProducts,
   snapshotOf,
+  templateMatches,
   storeToday,
   UNIT_TYPES,
   type CatalogueProduct,
   type CustomProduct,
   type HistoryPurchase,
   type ProductSummary,
+  type TemplateCandidate,
+  type TemplateLike,
   type UnitType,
 } from '@trolley/core';
 import { HttpFailure } from '../http';
@@ -48,6 +52,8 @@ export interface ToolDeps {
   purchases(householdId: string): Promise<HistoryPurchase[]>;
   catalogue(): Promise<CatalogueSnapshot>;
   customs(householdId: string): Promise<CustomProduct[]>;
+  /** The household's templates (one query; they are few). */
+  templates(householdId: string): Promise<TemplateLike[]>;
   resolveProduct: ProductResolver;
   now: () => Date;
 }
@@ -269,7 +275,8 @@ export function createTools(getDeps: () => ToolDeps) {
     | {
         kind: 'product';
         product: ProductSummary;
-        via: 'productId' | 'history' | 'remembered' | 'catalogue';
+        via: 'productId' | 'template' | 'history' | 'remembered' | 'catalogue';
+        template?: TemplateCandidate;
       }
     | { kind: 'options'; options: ProductSummary[] };
 
@@ -284,12 +291,29 @@ export function createTools(getDeps: () => ToolDeps) {
       if (!p) throw new ToolError('That productId is not available - search again and pick one.');
       return { kind: 'product', product: p, via: 'productId' };
     }
-    // (2) Usual product from purchase history.
+    // (2) The household's templates: weekly, then regulars, then meal (D-099).
+    const fromTemplates: TemplateCandidate[] = [];
+    for (const c of templateMatches(await getDeps().templates(hh), itemText)) {
+      if (await availableProduct(hh, c.productId)) fromTemplates.push(c);
+    }
+    const pick = pickTemplateItem(fromTemplates, itemText, purchases);
+    if (pick.kind === 'one') {
+      const p = (await availableProduct(hh, pick.candidate.productId)) as ProductSummary;
+      return { kind: 'product', product: p, via: 'template', template: pick.candidate };
+    }
+    if (pick.kind === 'tied') {
+      const options: ProductSummary[] = [];
+      for (const c of pick.candidates.slice(0, MAX_OPTIONS)) {
+        options.push((await availableProduct(hh, c.productId)) as ProductSummary);
+      }
+      return { kind: 'options', options };
+    }
+    // (3) Usual product from purchase history.
     for (const m of rankHistoryMatches(purchases, itemText)) {
       const p = await availableProduct(hh, m.productId);
       if (p) return { kind: 'product', product: p, via: 'history' };
     }
-    // (3) Products with a remembered unit.
+    // (4) Products with a remembered unit.
     const remembered: ProductSummary[] = [];
     for (const o of await getDeps().settings.unitOverrides(hh)) {
       if (!nameMatchesAll(itemText, o.name)) continue;
@@ -299,7 +323,7 @@ export function createTools(getDeps: () => ToolDeps) {
     if (remembered.length === 1) {
       return { kind: 'product', product: remembered[0] as ProductSummary, via: 'remembered' };
     }
-    // (4) A clear catalogue match.
+    // (5) A clear catalogue match.
     const ranked = await search(hh, itemText);
     if (remembered.length === 0) {
       const i = clearMatchIndex(
@@ -314,7 +338,7 @@ export function createTools(getDeps: () => ToolDeps) {
         };
       }
     }
-    // (5) Ambiguous: options, nothing added.
+    // (6) Ambiguous: options, nothing added.
     const seen = new Set(remembered.map((p) => p.sku));
     const options = [...remembered];
     for (const r of ranked) {
@@ -346,8 +370,6 @@ export function createTools(getDeps: () => ToolDeps) {
         throw new ToolError(`Keep the note to ${MAX_NOTE} characters or fewer.`);
       }
     }
-    const quantity = args.quantity ?? 1;
-
     const purchases = await d.purchases(hh);
     const resolution = await resolveItem(hh, itemText, productId, purchases);
     if (resolution.kind === 'options') {
@@ -381,10 +403,15 @@ export function createTools(getDeps: () => ToolDeps) {
     }
 
     const p = resolution.product;
+    // Template item's qty/unit/note are defaults unless the user gave a quantity or unit (D-099).
+    const tpl = resolution.template;
+    const userQty = args.quantity !== undefined;
+    const quantity = userQty || !tpl || requestedUnit ? (args.quantity ?? 1) : tpl.qty;
+    if (tpl && note === null) note = tpl.note;
     const defaultUnit = p.defaultUnitType ?? p.unitType;
     const overrides = await d.settings.unitOverrideMap(hh);
     const unit: UnitType = chooseUnit({
-      requested: requestedUnit as UnitType | undefined,
+      requested: (requestedUnit as UnitType | undefined) ?? tpl?.unit,
       override: overrides[p.sku]?.unit,
       mostBought: mostBoughtUnit(purchases, p.sku),
       defaultUnit,
@@ -406,7 +433,9 @@ export function createTools(getDeps: () => ToolDeps) {
     const added = await addToThisWeek(d, hh, ctx.userId, line);
     const list = await d.lists.mustGetRecord(hh, added.listId);
     const message =
-      `Added ${describeLine(qty.value, unit, p.name, p.packSize)} to ${quoted(list.name)}` +
+      `Added ${describeLine(qty.value, unit, p.name, p.packSize)}` +
+      (tpl ? ` (from your ${quoted(tpl.templateName)} template)` : '') +
+      ` to ${quoted(list.name)}` +
       ` (now ${formatQuantity(added.item.qty, unit)} on the list).` +
       (added.listCreated ? ' Started a new list for this week.' : '');
     return text(message, {
@@ -420,6 +449,7 @@ export function createTools(getDeps: () => ToolDeps) {
       productId: p.sku,
       name: p.name,
       chosenBy: resolution.via,
+      ...(tpl ? { template: tpl.templateName } : {}),
     });
   }
 
