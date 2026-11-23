@@ -259,7 +259,11 @@ export class TrolleyStack extends Stack {
       throttle: { rateLimit: 20, burstLimit: 40 },
     });
 
-    const integration = new HttpLambdaIntegration('ApiIntegration', apiFunction);
+    const integration = new HttpLambdaIntegration('ApiIntegration', apiFunction, {
+      // One invoke permission for the whole API instead of one per route: ~40 routes overflowed
+      // the Lambda resource policy's 20 KB limit (first Stage 4 deploy).
+      scopePermissionToRoute: false,
+    });
     httpApi.addRoutes({
       path: '/api/health',
       methods: [apigw.HttpMethod.GET],
