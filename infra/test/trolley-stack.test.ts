@@ -639,3 +639,15 @@ describe('TrolleyStack suggestions model (Bedrock, D-061, D-073)', () => {
     expect(others).toHaveLength(0);
   });
 });
+
+describe('API Lambda permissions', () => {
+  it('uses one API-wide invoke permission so the resource policy stays under 20 KB', () => {
+    const { template } = synth();
+    const perms = Object.values(template.findResources('AWS::Lambda::Permission')).filter(
+      (r) =>
+        (r as { Properties: { Principal?: string } }).Properties.Principal ===
+        'apigateway.amazonaws.com',
+    );
+    expect(perms.length).toBe(1);
+  });
+});
