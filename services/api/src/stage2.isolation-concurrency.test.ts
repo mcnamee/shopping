@@ -276,6 +276,43 @@ describe('concurrency (H2, H3, C4, F3)', () => {
       expect(detail).toMatchObject({ status: 'archived', version: 2 });
     }
   });
+
+  // D-058, accepted gap (B-013): documents CURRENT behaviour, it is not a desired one.
+  it('an untick landing between the auto-archive read and the archive update still archives (D-058)', async () => {
+    const { listId, ids } = await listWith(2);
+    await tick(listId, ids[0]!, true);
+
+    // Inject the untick just before the conditional `active -> archived` update runs.
+    const doc = h.table.doc;
+    const realSend = doc.send.bind(doc);
+    let injected = false;
+    doc.send = (async (cmd: unknown) => {
+      const input = (cmd as { input?: { UpdateExpression?: string } }).input;
+      if (!injected && input?.UpdateExpression?.startsWith('SET #status = :archived')) {
+        injected = true;
+        const untick = await tick(listId, ids[0]!, false, 'user-2');
+        expect(untick.status).toBe(200);
+      }
+      return realSend(cmd as never);
+    }) as typeof doc.send;
+
+    const last = await tick(listId, ids[1]!, true);
+    doc.send = realSend as typeof doc.send;
+
+    expect(injected).toBe(true);
+    // The list archives from the earlier all-ticked snapshot, so the untick is not reflected
+    // in the archive: both items were recorded as bought. Recovery is Undo (D-049).
+    expect(last.body.archived).toBe(true);
+    expect(last.body.list.status).toBe('archived');
+    const purchases = h.table.all().filter((i) => String(i.sk).includes(`#${listId}#`));
+    expect(purchases).toHaveLength(2);
+    const detail = (await h.call<ListDetail>('GET /api/lists/{listId}', { path: { listId } })).body;
+    expect(detail.status).toBe('archived');
+    // The racing untick had landed before the archive, so the stored row is unticked even
+    // though the archive counted it as bought.
+    expect(detail.items.find((i) => i.id === ids[0])?.ticked).toBe(false);
+    expect(detail.tickedCount).toBe(2);
+  });
 });
 
 describe('access patterns', () => {

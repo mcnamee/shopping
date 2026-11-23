@@ -64,6 +64,17 @@ describe('mapProduct (real fixtures)', () => {
     });
   });
 
+  it('maps every recorded loose-produce product (weightType 3) end to end to kg (B-005, D-045)', () => {
+    const loose = ALL_FIXTURE_PRODUCTS.filter((p) => p.weightType === '3');
+    expect(loose.length).toBeGreaterThan(0);
+    for (const raw of loose) {
+      const m = mapProduct(raw, 'G526')!;
+      expect(m.unitType).toBe('kg');
+      expect(m.packSize).toBe('per kg');
+      expect(m.unitPrice).toMatch(/^\$[\d.]+ per 1 kg$/);
+    }
+  });
+
   it('maps random-weight meat packs to pack', () => {
     const meat = fixture<{ data: AldiProduct[] }>('search-meat-casey.json').data.filter(
       (p) => p.weightType === '1',

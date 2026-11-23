@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
+import { AuthContext } from '../auth/AuthContext';
 import { TrolleyGlyph } from './TrolleyGlyph';
 
 /**
@@ -9,6 +10,8 @@ import { TrolleyGlyph } from './TrolleyGlyph';
 export function Splash() {
   const [showSpinner, setShowSpinner] = useState(false);
   const [slow, setSlow] = useState(false);
+  // Optional: the splash also renders outside the auth provider in tests.
+  const auth = useContext(AuthContext);
 
   useEffect(() => {
     const spinner = setTimeout(() => setShowSpinner(true), 300);
@@ -18,6 +21,26 @@ export function Splash() {
       clearTimeout(slowTimer);
     };
   }, []);
+
+  if (auth?.restoreFailed) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-bg px-4 text-center">
+        <TrolleyGlyph size={72} />
+        <p className="text-2xl">Trolley</p>
+        <div role="alert" className="flex flex-col items-center gap-3">
+          <p className="text-lg">Can't reach Trolley right now.</p>
+          <p className="text-base text-muted">You're still signed in. Check your connection.</p>
+        </div>
+        <button
+          type="button"
+          onClick={auth.retryRestore}
+          className="min-h-primary rounded-md bg-accent px-6 text-lg text-accent-on active:bg-accent-strong"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-bg px-4 text-center">

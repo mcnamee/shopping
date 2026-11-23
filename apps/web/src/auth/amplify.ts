@@ -94,7 +94,10 @@ export function createAmplifyAuth(config: AppConfig): AuthService {
         const session = await fetchAuthSession();
         const payload = session.tokens?.idToken?.payload;
         return payload ? userFromClaims(payload) : null;
-      } catch {
+      } catch (err) {
+        // A refresh that fails only because the phone is offline must not look like being signed out.
+        const e = toAuthError(err);
+        if (e.code === 'NETWORK') throw e;
         return null;
       }
     },

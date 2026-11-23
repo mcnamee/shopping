@@ -6,6 +6,8 @@ interface StatusBannerProps {
   variant: StatusBannerVariant;
   onRetry?: () => void;
   onDismiss?: () => void;
+  /** Offline ticks waiting to sync (shown on the offline banner). */
+  waiting?: number;
 }
 
 const CONTENT = {
@@ -36,8 +38,12 @@ const CONTENT = {
 } as const;
 
 /** Banner under the app bar (docs/ux/app-shell.md section 5). */
-export function StatusBanner({ variant, onRetry, onDismiss }: StatusBannerProps) {
-  const { Icon, text, style, role } = CONTENT[variant];
+export function StatusBanner({ variant, onRetry, onDismiss, waiting = 0 }: StatusBannerProps) {
+  const { Icon, style, role } = CONTENT[variant];
+  const text =
+    variant === 'offline' && waiting > 0
+      ? `Offline - ticks will sync when you're back online (${waiting} waiting)`
+      : CONTENT[variant].text;
   const isError = variant === 'error' || variant === 'unreachable';
   return (
     <div

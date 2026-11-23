@@ -54,7 +54,10 @@ export interface AuthService {
   resetPassword(email: string): Promise<ResetPasswordResult>;
   confirmResetPassword(email: string, code: string, newPassword: string): Promise<void>;
   signOut(): Promise<void>;
-  /** Signed-in user from the (refreshed if needed) ID token, or null. */
+  /**
+   * Signed-in user from the (refreshed if needed) ID token, or null. Rejects with
+   * AuthError('NETWORK') when the session could not be checked only because of the network.
+   */
   getCurrentUser(): Promise<AuthUser | null>;
   /** Cognito ID token (JWT) for the API's Authorization header, or null if signed out. */
   getIdToken(): Promise<string | null>;

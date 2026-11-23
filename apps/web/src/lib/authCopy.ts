@@ -10,6 +10,7 @@ export const COPY = {
   generic: 'Something went wrong. Please try again.',
   tooManyAttempts: 'Too many attempts. Wait a few minutes, then try again.',
   tooManyRequests: 'Too many requests. Wait a few minutes, then try again.',
+  samePassword: 'Choose a different password from your temporary one.',
   passwordRules: "Your password doesn't meet all the rules below.",
   sessionTimedOut: 'Your session timed out. Sign in again with your temporary password.',
 } as const;

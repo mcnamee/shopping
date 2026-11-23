@@ -1,5 +1,5 @@
 import type { ListItem } from '@trolley/core';
-import { Check, MessageSquare, Pencil, Trash2 } from 'lucide-react';
+import { Check, Clock, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { ProductThumb } from '../search/ProductImage';
 import { qtyLabel } from './format';
@@ -13,6 +13,8 @@ interface ShopRowProps {
   readOnly?: boolean;
   /** Fresh from the other phone: 2 s accent-soft highlight. */
   highlight?: boolean;
+  /** Ticked or unticked offline and not yet synced. */
+  pending?: boolean;
   onToggle?: (item: ListItem) => void;
   onEdit?: (item: ListItem, button: HTMLButtonElement) => void;
   onDelete?: (item: ListItem) => void;
@@ -43,6 +45,7 @@ export function ShopRow({
   item,
   readOnly = false,
   highlight = false,
+  pending = false,
   onToggle,
   onEdit,
   onDelete,
@@ -121,7 +124,7 @@ export function ShopRow({
         {product.name}
       </span>
       {(meta.length > 0 || readOnly) && (
-        <span className="block truncate text-sm font-normal text-muted">
+        <span className="block whitespace-normal break-words text-sm font-normal text-muted">
           {readOnly && <span className="sr-only">{ticked ? 'Bought. ' : 'Not bought. '}</span>}
           {readOnly && !ticked && <span aria-hidden>Not bought{meta.length ? ' · ' : ''}</span>}
           {!shownPackSize(product.name, product.packSize) && item.note && (
@@ -136,12 +139,20 @@ export function ShopRow({
   const thumb = <ProductThumb src={product.imageUrl} name={product.name} dim={ticked} />;
 
   const qtyEl = (
-    <span
-      className={`max-w-24 shrink-0 whitespace-nowrap text-right text-lg font-bold tabular-nums ${
-        ticked ? 'text-muted line-through' : 'text-text'
-      }`}
-    >
-      {qtyText}
+    <span className="flex shrink-0 items-center gap-2">
+      {pending && (
+        <span data-testid="pending-sync" className="text-warning-text">
+          <Clock aria-hidden className="h-4 w-4" />
+          <span className="sr-only">Waiting to sync</span>
+        </span>
+      )}
+      <span
+        className={`max-w-24 whitespace-nowrap text-right text-lg font-bold tabular-nums ${
+          ticked ? 'text-muted line-through' : 'text-text'
+        }`}
+      >
+        {qtyText}
+      </span>
     </span>
   );
 

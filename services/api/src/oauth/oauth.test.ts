@@ -14,6 +14,11 @@ import {
   requestIdFrom,
   token,
 } from '../test/oauth-client';
+import {
+  AUTHORIZE_PER_CLIENT_PER_MIN,
+  AUTHORIZE_PER_IP_PER_MIN,
+  TOKEN_PER_CLIENT_PER_MIN,
+} from './routes';
 import { cleanClientName, isAllowedRedirectUri } from './validate';
 
 const MIN = 60 * 1000;
@@ -485,5 +490,56 @@ describe('connected apps (E1, D-089)', () => {
     expect(
       (await h.call('DELETE /api/connected-apps/{grantId}', { path: { grantId } })).status,
     ).toBe(404);
+  });
+
+  describe('rate limits (B-018)', () => {
+    it('limits /oauth/authorize per client with a plain 429 page, never a redirect', async () => {
+      const h = setup();
+      const clientId = await register(h);
+      const { challenge } = pkcePair();
+      for (let i = 0; i < AUTHORIZE_PER_CLIENT_PER_MIN; i++) {
+        expect((await authorize(h, clientId, challenge)).status).toBe(302);
+      }
+      const res = await authorize(h, clientId, challenge);
+      expect(res.status).toBe(429);
+      expect(res.headers.location).toBeUndefined();
+      expect(res.headers['content-type']).toContain('text/html');
+      // A different client from the same address is unaffected until the address limit.
+      const other = await register(h);
+      expect((await authorize(h, other, challenge)).status).toBe(302);
+      h.advance(MIN);
+      expect((await authorize(h, clientId, challenge)).status).toBe(302);
+    });
+
+    it('limits /oauth/authorize per address, even for unknown clients', async () => {
+      const h = setup();
+      const { challenge } = pkcePair();
+      for (let i = 0; i < AUTHORIZE_PER_IP_PER_MIN; i++) {
+        expect((await authorize(h, `nope-${i}`, challenge)).status).toBe(400);
+      }
+      const res = await authorize(h, 'nope-last', challenge);
+      expect(res.status).toBe(429);
+      expect(res.headers.location).toBeUndefined();
+    });
+
+    it('limits /oauth/token per client with OAuth error JSON', async () => {
+      const h = setup();
+      const clientId = await register(h);
+      const bad = {
+        grant_type: 'authorization_code',
+        code: 'x',
+        code_verifier: 'y',
+        client_id: clientId,
+        redirect_uri: CLAUDE_REDIRECT,
+      };
+      for (let i = 0; i < TOKEN_PER_CLIENT_PER_MIN; i++) {
+        expect((await token(h, bad)).status).toBe(400);
+      }
+      const res = await token(h, bad);
+      expect(res.status).toBe(429);
+      expect(res.body.error).toBe('slow_down');
+      h.advance(MIN);
+      expect((await token(h, bad)).status).toBe(400);
+    });
   });
 });

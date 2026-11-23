@@ -52,6 +52,12 @@ export interface OAuthDeps {
 export const REGISTER_PER_IP_PER_HOUR = 20;
 export const REGISTER_GLOBAL_PER_HOUR = 200;
 const HOUR_MS = 60 * 60 * 1000;
+const MIN_MS = 60 * 1000;
+/** B-018: fixed one-minute windows, counted per viewer address and per client. */
+export const AUTHORIZE_PER_IP_PER_MIN = 30;
+export const AUTHORIZE_PER_CLIENT_PER_MIN = 20;
+export const TOKEN_PER_IP_PER_MIN = 60;
+export const TOKEN_PER_CLIENT_PER_MIN = 30;
 
 export const SCOPE = 'lists';
 
@@ -112,18 +118,26 @@ function escapeHtml(s: string): string {
 }
 
 /** Bad client or redirect URI: never redirect (B4); a plain page instead. */
-function errorPage(detail: string): HttpResult {
+function errorPage(
+  detail: string,
+  status = 400,
+  title = "This connection link isn't valid",
+): HttpResult {
   const html =
     '<!doctype html><html lang="en-AU"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-    '<title>Trolley - connection link not valid</title></head>' +
+    `<title>Trolley - ${title}</title></head>` +
     '<body style="font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem">' +
-    "<h1>This connection link isn't valid</h1>" +
+    `<h1>${title}</h1>` +
     "<p>Start again from the app you're connecting.</p>" +
     `<p style="color:#666;font-size:0.875rem">${escapeHtml(detail)}</p></body></html>`;
   return {
-    statusCode: 400,
-    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+    statusCode: status,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+      ...(status === 429 ? { 'retry-after': '60' } : {}),
+    },
     body: html,
   };
 }
@@ -272,8 +286,34 @@ export function createOAuthRoutes(getDeps: () => OAuthDeps): RouteTable {
   async function authorize({ event }: PublicRequest): Promise<HttpResult> {
     const { store, origin } = getDeps();
     const now = nowMs();
+    const ipKey = hashForKey(viewerAddress(event));
+    if (!(await store.consume('AUTHIP', ipKey, MIN_MS, AUTHORIZE_PER_IP_PER_MIN, now))) {
+      log({ event: 'authorize', outcome: 'rate_limited', scope: 'ip' });
+      return errorPage(
+        'Too many attempts. Wait a minute, then try again.',
+        429,
+        'Too many attempts',
+      );
+    }
     const q = parseQuery(event);
     if (!q) return errorPage('A parameter was repeated.');
+    if (
+      q.client_id &&
+      !(await store.consume(
+        'AUTHCL',
+        hashForKey(q.client_id),
+        MIN_MS,
+        AUTHORIZE_PER_CLIENT_PER_MIN,
+        now,
+      ))
+    ) {
+      log({ event: 'authorize', clientId: q.client_id, outcome: 'rate_limited', scope: 'client' });
+      return errorPage(
+        'Too many attempts. Wait a minute, then try again.',
+        429,
+        'Too many attempts',
+      );
+    }
     const client = q.client_id ? await store.getClient(q.client_id, now) : null;
     if (!client) {
       log({ event: 'authorize', outcome: 'unknown_client' });
@@ -364,8 +404,32 @@ export function createOAuthRoutes(getDeps: () => OAuthDeps): RouteTable {
     const started = Date.now();
     const { store, origin } = getDeps();
     const now = nowMs();
+    if (
+      !(await store.consume(
+        'TOKIP',
+        hashForKey(viewerAddress(event)),
+        MIN_MS,
+        TOKEN_PER_IP_PER_MIN,
+        now,
+      ))
+    ) {
+      log({ event: 'token', outcome: 'rate_limited', scope: 'ip' });
+      return oauthError(429, 'slow_down', 'Too many requests - try again shortly', {
+        'retry-after': '60',
+      });
+    }
     const form = parseFormBody(event.body, event.isBase64Encoded, header(event, 'content-type'));
     if (!form) return oauthError(400, 'invalid_request', 'Malformed request body');
+    const limitedId = basicCredentials(header(event, 'authorization'))?.clientId ?? form.client_id;
+    if (
+      limitedId &&
+      !(await store.consume('TOKCL', hashForKey(limitedId), MIN_MS, TOKEN_PER_CLIENT_PER_MIN, now))
+    ) {
+      log({ event: 'token', clientId: limitedId, outcome: 'rate_limited', scope: 'client' });
+      return oauthError(429, 'slow_down', 'Too many requests - try again shortly', {
+        'retry-after': '60',
+      });
+    }
     const auth = await authenticateClient(event, form);
     if (!auth.ok) {
       log({ event: 'token', outcome: 'invalid_client' });

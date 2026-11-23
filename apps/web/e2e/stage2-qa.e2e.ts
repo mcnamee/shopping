@@ -39,7 +39,8 @@ test.describe('Stage 2 QA exploratory', () => {
     }, KEY);
     await page.reload();
     const rows = page.getByRole('checkbox');
-    await expect(rows.first()).toBeVisible();
+    // The cached copy paints first; wait for the refetch to bring the cloned rows.
+    await expect(rows).toHaveCount(63);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await page.waitForTimeout(300);
     const last = rows.last();

@@ -7,6 +7,9 @@ export interface AuthContextValue {
   status: AuthStatus;
   /** Set when status is 'signedIn'. */
   user: AuthUser | null;
+  /** Session restore failed only because of the network (Splash offers Try again). */
+  restoreFailed: boolean;
+  retryRestore(): void;
   signIn(email: string, password: string): Promise<SignInResult>;
   completeNewPassword(newPassword: string): Promise<SignInResult>;
   resetPassword(email: string): Promise<ResetPasswordResult>;
