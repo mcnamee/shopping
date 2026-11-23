@@ -159,13 +159,18 @@ export function BottomSheet({
       if (!(target instanceof HTMLElement) || !target.matches(TEXT_FIELD)) return;
       target.scrollIntoView?.({ block: 'center', behavior: 'auto' });
     };
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const onFocusIn = (e: FocusEvent) => {
       reveal(e.target);
       // iOS resizes the viewport after focus; reveal again once it settles.
-      setTimeout(() => reveal(document.activeElement), 300);
+      clearTimeout(timer);
+      timer = setTimeout(() => reveal(el.ownerDocument.activeElement), 300);
     };
     el.addEventListener('focusin', onFocusIn);
-    return () => el.removeEventListener('focusin', onFocusIn);
+    return () => {
+      clearTimeout(timer);
+      el.removeEventListener('focusin', onFocusIn);
+    };
   }, [container]);
   const viewportHeight = viewport?.height;
   useEffect(() => {
