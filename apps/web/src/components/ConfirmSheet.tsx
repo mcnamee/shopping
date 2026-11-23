@@ -5,6 +5,8 @@ interface ConfirmSheetProps {
   description: string;
   confirm: ReactNode;
   cancel: ReactNode;
+  /** Optional middle action (e.g. Discard) between confirm and cancel. */
+  extra?: { label: ReactNode; onClick: () => void };
   /** Locks the sheet (no Esc/scrim dismissal) while the action runs. */
   busy?: boolean;
   /** `danger` (default) or `primary` for non-destructive confirms such as Finish shop. */
@@ -25,6 +27,7 @@ export function ConfirmSheet({
   description,
   confirm,
   cancel,
+  extra,
   busy = false,
   tone = 'danger',
   onConfirm,
@@ -99,6 +102,16 @@ export function ConfirmSheet({
           >
             {confirm}
           </button>
+          {extra && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={extra.onClick}
+              className="flex min-h-primary w-full items-center justify-center rounded-md px-4 text-lg font-semibold text-danger active:bg-danger-soft disabled:opacity-70"
+            >
+              {extra.label}
+            </button>
+          )}
           <button
             ref={cancelButton}
             type="button"

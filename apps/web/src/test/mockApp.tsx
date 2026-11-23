@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, RouterProvider, createMemoryRouter } from 'react-router';
 import { AppRoutes } from '../App';
 import { AuthProvider } from '../auth';
 import type { AuthService } from '../auth/types';
@@ -58,14 +58,15 @@ export async function renderMockApp(
   if (opts.fail) failNext(opts.fail.match, opts.fail.status, opts.fail.times);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const user = userEvent.setup();
+  const router = createMemoryRouter([{ path: '*', element: <AppRoutes /> }], {
+    initialEntries: [path],
+  });
   const result = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider auth={auth}>
-        <MemoryRouter initialEntries={[path]}>
-          <ToastProvider>
-            <AppRoutes />
-          </ToastProvider>
-        </MemoryRouter>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>,
   );

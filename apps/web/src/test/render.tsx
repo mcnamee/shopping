@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router';
+import { RouterProvider, createMemoryRouter, useLocation } from 'react-router';
 import { AppRoutes } from '../App';
 import { AuthProvider } from '../auth';
 import { createMockAuth } from '../auth/mock';
@@ -33,15 +33,26 @@ export function renderApp(
   const auth = options.auth ?? makeAuth();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const user = userEvent.setup(options.userEvent);
+  const router = createMemoryRouter(
+    [
+      {
+        path: '*',
+        element: (
+          <>
+            <AppRoutes />
+            <LocationProbe />
+          </>
+        ),
+      },
+    ],
+    { initialEntries: [path] },
+  );
   const result = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider auth={auth}>
-        <MemoryRouter initialEntries={[path]}>
-          <ToastProvider>
-            <AppRoutes />
-            <LocationProbe />
-          </ToastProvider>
-        </MemoryRouter>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>,
   );
