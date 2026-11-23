@@ -5,15 +5,19 @@ import { App } from './App';
 import { AuthProvider, initAuth } from './auth';
 import { loadConfig } from './config';
 import { MOCK_AUTH } from './env';
+import { CACHE_GC_MS, startCachePersistence } from './offline/cachePersist';
 import { ConfigErrorScreen } from './routes/ConfigErrorScreen';
 import { applyTextSize, readTextSize } from './settings/textSize';
 import './index.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 },
+    queries: { gcTime: CACHE_GC_MS, staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 },
   },
 });
+
+// Mirror the lists/list queries to localStorage for offline shop mode (B-006).
+startCachePersistence(queryClient);
 
 // Apply the saved text size before the first render (CSP forbids an inline script).
 applyTextSize(readTextSize());

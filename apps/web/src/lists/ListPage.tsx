@@ -58,6 +58,7 @@ import {
   useUnitOverridesQuery,
 } from './data';
 import { countLabel, shortDay, updatedLabel } from './format';
+import { enqueueTick, useTickQueue } from '../offline/tickQueue';
 import { useNow, useSettledTicks } from './hooks';
 import { AddFromTemplateSheet, ListOptionsSheet, RenameSheet } from './ListSheets';
 import { SuggestSheet } from './SuggestSheet';
@@ -102,6 +103,10 @@ function productOf(item: ListItem, effectiveUnit: UnitType): ProductSummary {
   };
 }
 
+/** Banner copy while offline in shop mode. */
+export const offlineTickText = (waiting: number) =>
+  `Offline - ticks will sync when you're back online${waiting > 0 ? ` (${waiting} waiting)` : ''}`;
+
 /**
  * /lists/:id. Shop mode for an active list (docs/ux/lists.md 3), read-only view for an archived
  * one (4.2). Optimistic ticks with rollback, 10 s polling plus refetch on focus, deferred
@@ -114,6 +119,7 @@ export function ListPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const { online } = useOnlineStatus();
+  const tickQueue = useTickQueue();
   const routeState = location.state as {
     name?: string;
     from?: string;
@@ -121,7 +127,20 @@ export function ListPage() {
     regulars?: boolean;
   } | null;
 
-  const [sheet, setSheet] = useState<Sheet>(null);
+  const [sheet, setSheetRaw] = useState<Sheet>(null);
+  // Only ticking works offline (B-006): every other change needs the server.
+  const offlineBlocked = useCallback(() => {
+    if (online) return false;
+    toast.show("You're offline. You can still tick items; other changes need a connection.");
+    return true;
+  }, [online, toast]);
+  const setSheet = useCallback(
+    (next: Sheet) => {
+      if (next !== null && next !== 'suggest' && next !== 'regulars' && offlineBlocked()) return;
+      setSheetRaw(next);
+    },
+    [offlineBlocked],
+  );
   const [editing, setEditing] = useState<{
     item: ListItem;
     opener: HTMLButtonElement | null;
@@ -137,6 +156,10 @@ export function ListPage() {
   const createdForSuggest = useRef(false);
   const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const pendingIds = useMemo(
+    () => new Set(tickQueue.filter((t) => t.listId === id).map((t) => t.itemId)),
+    [tickQueue, id],
+  );
   const pollRef = useRef(false);
   const query = useListQuery(id, () => pollRef.current);
   const list = query.data;
@@ -194,7 +217,7 @@ export function ListPage() {
       return;
     }
     setSheet('suggest');
-  }, [online, toast]);
+  }, [online, toast, setSheet]);
   // "Create and suggest" lands here with state.suggest: open the sheet once, then clear it.
   const wantsSuggest = routeState?.suggest === true;
   useEffect(() => {
@@ -212,7 +235,7 @@ export function ListPage() {
       return;
     }
     setSheet('regulars');
-  }, [online, toast]);
+  }, [online, toast, setSheet]);
   // New list flow with a Regulars template: review them (after suggestions, if asked for).
   const wantsRegulars = routeState?.regulars === true;
   const regularsPending = useRef(false);
@@ -257,6 +280,41 @@ export function ListPage() {
 
   // ---- ticks
   const tickKey = ['tick', id] as const;
+  /** Apply a tick to the cached list at once. Returns true when it completed (archived) the list. */
+  const optimisticTick = (itemId: string, ticked: boolean, canArchive: boolean): boolean => {
+    let completes = false;
+    qc.setQueryData<ListDetail>(key, (old) => {
+      if (!old) return old;
+      const next = old.items.map((i) =>
+        i.id === itemId ? { ...i, ticked, tickedAt: ticked ? new Date().toISOString() : null } : i,
+      );
+      const p = progressOf(next);
+      completes =
+        canArchive && ticked && p.total > 0 && p.ticked === p.total && old.status === 'active';
+      if (completes) ownArchive.current = true;
+      return {
+        ...old,
+        items: next,
+        tickedCount: p.ticked,
+        ...(completes
+          ? {
+              status: 'archived' as const,
+              completedAt: new Date().toISOString(),
+              finishedBy: 'auto' as const,
+              thisWeek: false,
+            }
+          : {}),
+      };
+    });
+    patchListSummary(qc, id, (l) => ({
+      ...l,
+      tickedCount: l.tickedCount + (ticked ? 1 : -1),
+    }));
+    const item = qc.getQueryData<ListDetail>(key)?.items.find((i) => i.id === itemId);
+    setAnnouncement(`${item?.product.name ?? 'Item'} ${ticked ? 'ticked' : 'unticked'}.`);
+    return completes;
+  };
+
   const tickMutation = useMutation({
     mutationKey: tickKey,
     networkMode: 'always',
@@ -264,41 +322,21 @@ export function ListPage() {
       updateListItem(id, itemId, { ticked }),
     onMutate: async ({ itemId, ticked }) => {
       await qc.cancelQueries({ queryKey: key });
-      let completes = false;
-      qc.setQueryData<ListDetail>(key, (old) => {
-        if (!old) return old;
-        const next = old.items.map((i) =>
-          i.id === itemId
-            ? { ...i, ticked, tickedAt: ticked ? new Date().toISOString() : null }
-            : i,
-        );
-        const p = progressOf(next);
-        completes = ticked && p.total > 0 && p.ticked === p.total && old.status === 'active';
-        if (completes) ownArchive.current = true;
-        return {
-          ...old,
-          items: next,
-          tickedCount: p.ticked,
-          ...(completes
-            ? {
-                status: 'archived' as const,
-                completedAt: new Date().toISOString(),
-                finishedBy: 'auto' as const,
-                thisWeek: false,
-              }
-            : {}),
-        };
-      });
-      patchListSummary(qc, id, (l) => ({
-        ...l,
-        tickedCount: l.tickedCount + (ticked ? 1 : -1),
-      }));
-      const item = qc.getQueryData<ListDetail>(key)?.items.find((i) => i.id === itemId);
-      setAnnouncement(`${item?.product.name ?? 'Item'} ${ticked ? 'ticked' : 'unticked'}.`);
-      return { completes };
+      return { completes: optimisticTick(itemId, ticked, true) };
     },
-    onError: (_err, vars, ctx) => {
+    onError: (err, vars, ctx) => {
       if (ctx?.completes) ownArchive.current = false;
+      if (!(err instanceof ApiError)) {
+        // No connection (navigator.onLine can lag): keep the tick and sync it when back online.
+        enqueueTick({ listId: id, itemId: vars.itemId, ticked: vars.ticked });
+        if (ctx?.completes) {
+          qc.setQueryData<ListDetail>(key, (old) =>
+            old ? { ...old, status: 'active' as const, completedAt: null, finishedBy: null } : old,
+          );
+        }
+        toast.show("No connection. Tick saved on this phone; it'll sync when you're back online.");
+        return;
+      }
       qc.setQueryData<ListDetail>(key, (old) => {
         if (!old) return old;
         const next = old.items.map((i) =>
@@ -369,9 +407,17 @@ export function ListPage() {
   const toggle = useCallback(
     (item: ListItem) => {
       navigator.vibrate?.(10);
+      if (!online) {
+        // Offline: update the row, queue the tick (persisted) and replay it on reconnect.
+        void qc.cancelQueries({ queryKey: key });
+        optimisticTick(item.id, !item.ticked, false);
+        enqueueTick({ listId: id, itemId: item.id, ticked: !item.ticked });
+        return;
+      }
       tickMutation.mutate({ itemId: item.id, ticked: !item.ticked });
     },
-    [tickMutation],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tickMutation, online, id],
   );
 
   // ---- archive / undo
@@ -795,7 +841,16 @@ export function ListPage() {
           className="flex min-h-12 items-center gap-2 bg-warning-soft px-4 py-3 text-sm font-semibold text-warning-text"
         >
           <WifiOff aria-hidden className="h-5 w-5 shrink-0" />
-          You're offline - ticks won't save until you're back
+          {offlineTickText(tickQueue.length)}
+        </div>
+      )}
+      {active && online && pendingIds.size > 0 && (
+        <div
+          role="status"
+          className="flex min-h-12 items-center gap-2 bg-accent-soft px-4 py-3 text-sm font-semibold text-text"
+        >
+          <RefreshCw aria-hidden className="h-5 w-5 shrink-0 animate-spin text-accent" />
+          Syncing {pendingIds.size === 1 ? '1 tick' : `${pendingIds.size} ticks`}...
         </div>
       )}
       {readOnly && archiveInfo === 'own' && (
@@ -835,6 +890,9 @@ export function ListPage() {
             >
               <Link
                 to={`/search?list=${id}`}
+                onClick={(e) => {
+                  if (offlineBlocked()) e.preventDefault();
+                }}
                 className="flex min-h-primary items-center justify-center gap-2 rounded-md bg-accent text-lg text-accent-on"
               >
                 <Plus aria-hidden className="h-5 w-5" />
@@ -895,9 +953,14 @@ export function ListPage() {
                         item={item}
                         readOnly={readOnly}
                         highlight={fresh.has(item.id)}
+                        pending={pendingIds.has(item.id)}
                         onToggle={toggle}
-                        onEdit={(it, button) => setEditing({ item: it, opener: button })}
-                        onDelete={removeItem}
+                        onEdit={(it, button) => {
+                          if (!offlineBlocked()) setEditing({ item: it, opener: button });
+                        }}
+                        onDelete={(it) => {
+                          if (!offlineBlocked()) removeItem(it);
+                        }}
                         onSwipeChange={setSwiping}
                       />
                     ))}
@@ -916,6 +979,9 @@ export function ListPage() {
       {active && progress.total > 0 && (
         <Link
           to={`/search?list=${id}`}
+          onClick={(e) => {
+            if (offlineBlocked()) e.preventDefault();
+          }}
           className="fixed bottom-[calc(var(--nav-height)+16px)] right-[max(16px,var(--safe-right))] z-20 flex h-14 items-center gap-2 rounded-full bg-accent px-5 text-lg text-accent-on shadow-sheet active:bg-accent-strong"
         >
           <Plus aria-hidden className="h-6 w-6" />

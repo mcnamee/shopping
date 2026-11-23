@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { DEFAULT_GROUPS } from '@trolley/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MOCK_SEED_IDS } from '../api/mock-stage2';
+import { getTickQueue, resetTickQueue } from '../offline/tickQueue';
 import { failNext, renderMockApp } from '../test/mockApp';
 
 vi.mock('../auth/service', async () => (await import('../test/authService')).serviceMock);
@@ -10,12 +11,21 @@ vi.mock('../auth/service', async () => (await import('../test/authService')).ser
 const WEEK = `/lists/${MOCK_SEED_IDS.thisWeekList}`;
 const ARCHIVED = `/lists/${MOCK_SEED_IDS.archivedLists[0]}`;
 
+function setOnline(online: boolean) {
+  Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => online });
+  // React Query's online manager is global: tell it too.
+  act(() => {
+    window.dispatchEvent(new Event(online ? 'online' : 'offline'));
+  });
+}
+
 const log = () => (globalThis as { __mockApiLog?: string[] }).__mockApiLog ?? [];
 beforeEach(() => {
   (globalThis as { __mockApiLog?: string[] }).__mockApiLog = [];
 });
 afterEach(async () => {
   vi.useRealTimers();
+  resetTickQueue();
   // Unmounting flushes pending deletes; let those mock calls land before the next test resets state.
   cleanup();
   await new Promise((resolve) => setTimeout(resolve, 300));
@@ -446,22 +456,47 @@ describe('shop mode: sync and states', () => {
     expect(pill()).toHaveTextContent('7 of 21 ticked');
   });
 
-  it('shows the offline banner', async () => {
-    await shop();
-    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+  it('offline: ticks update the row, queue with a pending marker, then sync on reconnect', async () => {
+    const { user } = await shop();
+    setOnline(false);
     try {
-      act(() => {
-        window.dispatchEvent(new Event('offline'));
-      });
       expect(
-        await screen.findByText("You're offline - ticks won't save until you're back"),
+        await screen.findByText("Offline - ticks will sync when you're back online"),
       ).toBeVisible();
+      await user.click(row(/Granny Smith Apples/));
+      expect(row(/Granny Smith Apples/)).toHaveAttribute('aria-checked', 'true');
+      expect(pill()).toHaveTextContent('7 of 21 ticked');
+      expect(
+        screen.getByText("Offline - ticks will sync when you're back online (1 waiting)"),
+      ).toBeVisible();
+      expect(within(row(/Granny Smith Apples/)).getByTestId('pending-sync')).toBeInTheDocument();
+      expect(getTickQueue()).toHaveLength(1);
+      expect(log().some((c) => c.startsWith('PATCH'))).toBe(false);
     } finally {
-      Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
-      // React Query's online manager is global: tell it we are back.
-      act(() => {
-        window.dispatchEvent(new Event('online'));
-      });
+      setOnline(true);
+    }
+    await waitFor(() => expect(log().some((c) => c.startsWith('PATCH /api/lists/'))).toBe(true));
+    await waitFor(() => expect(getTickQueue()).toHaveLength(0));
+    expect(await screen.findByText('Ticks synced')).toBeVisible();
+    expect(row(/Granny Smith Apples/)).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByTestId('pending-sync')).toBeNull();
+  });
+
+  it('offline: only the last tick per item is kept; other edits are blocked with a message', async () => {
+    const { user } = await shop();
+    setOnline(false);
+    try {
+      await user.click(row(/Granny Smith Apples/));
+      await user.click(row(/Granny Smith Apples/));
+      expect(getTickQueue()).toHaveLength(1);
+      expect(getTickQueue()[0]).toMatchObject({ ticked: false });
+      await user.click(screen.getByRole('button', { name: 'Edit Garlic per kg' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(screen.getByTestId('toast')).toHaveTextContent(
+        "You're offline. You can still tick items; other changes need a connection.",
+      );
+    } finally {
+      setOnline(true);
     }
   });
 

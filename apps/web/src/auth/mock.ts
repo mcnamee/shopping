@@ -138,7 +138,12 @@ export function createMockAuth(options: MockAuthOptions = {}): AuthService {
     },
 
     async getCurrentUser() {
-      return load();
+      const user = load();
+      // Like an expired access token that cannot be refreshed without a network.
+      if (user && globalThis.navigator?.onLine === false) {
+        throw new AuthError('NETWORK', 'Network request failed');
+      }
+      return user;
     },
 
     async getIdToken() {

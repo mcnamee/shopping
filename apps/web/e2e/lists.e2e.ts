@@ -271,10 +271,7 @@ test.describe('Shop mode', () => {
     await expect(dialog).toBeHidden();
   });
 
-  test('failed ticks roll back with a toast; offline shows the banner', async ({
-    page,
-    context,
-  }) => {
+  test('failed ticks roll back with a toast', async ({ page }) => {
     await openShop(page);
     await page.evaluate(
       () =>
@@ -286,14 +283,6 @@ test.describe('Shop mode', () => {
     await check(page, /Granny Smith Apples/).click();
     await expect(page.getByTestId('toast')).toContainText("Couldn't save. Check your connection.");
     await expect(check(page, /Granny Smith Apples/)).toHaveAttribute('aria-checked', 'false');
-    await context.setOffline(true);
-    await expect(
-      page.getByText("You're offline - ticks won't save until you're back"),
-    ).toBeVisible();
-    await check(page, /Granny Smith Apples/).click();
-    await expect(check(page, /Granny Smith Apples/)).toHaveAttribute('aria-checked', 'false');
-    await expect(page.getByTestId('toast')).toContainText("Couldn't save. Check your connection.");
-    await context.setOffline(false);
   });
 
   test('options: rename, finish shop and delete', async ({ page }) => {
