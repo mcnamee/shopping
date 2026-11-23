@@ -20,6 +20,8 @@ import { createMcpRoutes, type McpDeps } from './mcp/server';
 import { createTools } from './mcp/tools';
 import { createOAuthRoutes, originFromEnv, type OAuthDeps } from './oauth/routes';
 import { OAuthStore } from './oauth/store';
+import { createShortcutRoutes, type ShortcutDeps } from './shortcuts/routes';
+import { ShortcutKeyStore } from './shortcuts/store';
 
 export const baseRoutes: RouteTable = {
   'GET /api/health': {
@@ -127,6 +129,7 @@ export function stage3DepsFor(
 export interface Stage4Deps {
   oauth: OAuthDeps;
   mcp: McpDeps;
+  shortcuts: ShortcutDeps;
 }
 
 /** Stage 4 dependencies (OAuth shim + MCP tools), sharing the Stage 2/3 stores. */
@@ -149,6 +152,13 @@ export function stage4DepsFor(
   return {
     oauth: { store, origin, now: stage3.now },
     mcp: { store, origin, now: stage3.now, callTool },
+    shortcuts: {
+      keys: new ShortcutKeyStore(db),
+      limiter: store,
+      lists: stage3.lists,
+      callTool,
+      now: stage3.now,
+    },
   };
 }
 
@@ -176,6 +186,7 @@ export function createRoutes(
     ...createSuggestionRoutes(getStage3),
     ...createOAuthRoutes(() => getStage4().oauth),
     ...createMcpRoutes(() => getStage4().mcp),
+    ...createShortcutRoutes(() => getStage4().shortcuts),
   };
 }
 

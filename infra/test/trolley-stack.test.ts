@@ -166,6 +166,37 @@ describe('TrolleyStack', () => {
     }
   });
 
+  it('leaves only /api/health and the two quick routes without the JWT authoriser among /api/* (Siri keys)', () => {
+    const routes = Object.values(template.findResources('AWS::ApiGatewayV2::Route')).map(
+      (r) => (r as Resource).Properties,
+    );
+    const publicApi = routes
+      .filter(
+        (p) => String(p.RouteKey).includes(' /api/') && (p.AuthorizationType ?? 'NONE') === 'NONE',
+      )
+      .map((p) => p.RouteKey as string)
+      .sort();
+    expect(publicApi).toEqual(['GET /api/health', 'GET /api/quick/list', 'POST /api/quick/add']);
+    for (const routeKey of [
+      'POST /api/shortcut-keys',
+      'GET /api/shortcut-keys',
+      'DELETE /api/shortcut-keys/{keyId}',
+    ]) {
+      template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+        RouteKey: routeKey,
+        AuthorizationType: 'JWT',
+        AuthorizerId: Match.anyValue(),
+      });
+    }
+  });
+
+  it('keeps a single API-wide Lambda invoke permission (policy size limit)', () => {
+    const perms = Object.values(template.findResources('AWS::Lambda::Permission')).filter(
+      (r) => (r as Resource).Properties.Principal === 'apigateway.amazonaws.com',
+    );
+    expect(perms).toHaveLength(1);
+  });
+
   it('sets security headers including a CSP that allows Cognito', () => {
     template.hasResourceProperties('AWS::CloudFront::ResponseHeadersPolicy', {
       ResponseHeadersPolicyConfig: {

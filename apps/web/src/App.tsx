@@ -10,6 +10,7 @@ import { TemplatesPage } from './templates/TemplatesPage';
 import { AppLayout } from './routes/AppLayout';
 import { ConnectPage } from './routes/ConnectPage';
 import { ConnectedAppsPage } from './settings/ConnectedAppsPage';
+import { ShortcutsPage } from './settings/ShortcutsPage';
 import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { NewPasswordPage } from './routes/NewPasswordPage';
 import { PublicOnly, RequireAuth } from './routes/RequireAuth';
@@ -64,6 +65,7 @@ export function AppRoutes() {
         <Route path="/settings/aisle-order" element={<AisleOrderPage />} />
         <Route path="/settings/units" element={<UnitsPage />} />
         <Route path="/settings/connected-apps" element={<ConnectedAppsPage />} />
+        <Route path="/settings/shortcuts" element={<ShortcutsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

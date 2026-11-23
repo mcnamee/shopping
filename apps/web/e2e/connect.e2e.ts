@@ -139,3 +139,27 @@ test.describe('Connected apps', () => {
     await expect(page.getByText('No apps connected')).toBeVisible();
   });
 });
+
+test.describe('Siri & Shortcuts', () => {
+  test('creates a key, shows it once, then revokes it', async ({ page }) => {
+    await signInToShell(page);
+    await page.goto('/settings');
+    await page.getByRole('link', { name: /Siri & Shortcuts/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Siri & Shortcuts' })).toBeVisible();
+    await page.getByLabel('Key name').fill("Matt's iPhone");
+    await page.getByRole('button', { name: 'Create key' }).click();
+    const key = (await page.getByTestId('new-key').textContent()) ?? '';
+    expect(key).toMatch(/^trl_/);
+    await expect(page.getByText(/won.t be shown again/)).toBeVisible();
+    await expect(page.getByTestId('quick-auth-header')).toHaveText(`Bearer ${key}`);
+    await expectNoSeriousAxeViolations(page);
+    await expectNoHorizontalScroll(page);
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByText(key)).toHaveCount(0);
+    await expect(page.getByRole('list', { name: 'Keys' })).toContainText("Matt's iPhone");
+    await page.getByRole('button', { name: "Revoke Matt's iPhone" }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Revoke' }).click();
+    await expect(page.getByText("Matt's iPhone revoked")).toBeVisible();
+    await expect(page.getByText('No keys yet.')).toBeVisible();
+  });
+});
