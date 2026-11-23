@@ -151,6 +151,11 @@ test.describe('Siri & Shortcuts', () => {
     const key = (await page.getByTestId('new-key').textContent()) ?? '';
     expect(key).toMatch(/^trl_/);
     await expect(page.getByText(/won.t be shown again/)).toBeVisible();
+    await expect(page.getByRole('link', { name: /Get .Add to Trolley./ })).toHaveAttribute(
+      'href',
+      /icloud\.com\/shortcuts\//,
+    );
+    await page.getByText('Or build it yourself').click();
     await expect(page.getByTestId('quick-auth-header')).toHaveText(`Bearer ${key}`);
     await expectNoSeriousAxeViolations(page);
     await expectNoHorizontalScroll(page);
