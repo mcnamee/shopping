@@ -24,7 +24,13 @@ async function captureRedirect(page: Page, host: string): Promise<() => Promise<
     resolve(new URL(route.request().url()));
     return route.fulfill({ status: 200, contentType: 'text/html', body: '<p>external</p>' });
   });
-  return () => got;
+  // Wait for the browser to finish landing on the external page, so a following page.goto
+  // doesn't race the in-flight navigation (QA D-1 flake).
+  return async () => {
+    const url = await got;
+    await page.waitForURL((u) => u.host === host);
+    return url;
+  };
 }
 
 test.describe('Connect screen', () => {

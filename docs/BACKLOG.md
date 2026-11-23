@@ -23,3 +23,4 @@ Small items deferred from signed-off stages. Highest priority first. Pull into a
 | B-015 | Low | MCP: tick items, change qty of an existing line, pick a list other than this week's, templates. | Stage 4 cut | Core ask is adding/reading this week's list. |
 | B-016 | Low | MCP: read-only grants / per-tool scopes. | Stage 4 cut | Two trusted users; one scope is enough. |
 | B-017 | Low | OAuth: pre-registered client id/secret (non-DCR clients). | Stage 4 cut | Claude and ChatGPT both use DCR. |
+| B-018 | Rate-limit /oauth/authorize and /oauth/token per client/IP (QA Stage 4 D-2) | Low | open |
