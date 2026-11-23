@@ -212,7 +212,10 @@ export function createShortcutRoutes(getDeps: () => ShortcutDeps): RouteTable {
       const res = await getDeps().callTool('add_item', args, ctx);
       const s = res.structuredContent;
       if (s?.added === true) {
-        addedNames.push(String(s.name));
+        addedNames.push(
+          String(s.name) +
+            (typeof s.template === 'string' ? ` (from your ${s.template} template)` : ''),
+        );
         listName = String(s.listName);
         added.push({ name: String(s.name), qty: Number(s.qty), unit: String(s.unit) });
       } else if (Array.isArray(s?.options) && s.options.length > 0) {

@@ -175,6 +175,24 @@ describe('POST /api/quick/add', () => {
     expect(detail.body.items[0]?.qty).toBe(3);
   });
 
+  it('uses the household template first and says so', async () => {
+    const { h, key } = await ready();
+    await bought(h, 'home-1', ALDI_TISSUES, 'ALDI Tissues', '2026-09-01');
+    await bought(h, 'home-1', ALDI_TISSUES, 'ALDI Tissues', '2026-10-01');
+    const t = await h.call<{ id: string }>('POST /api/templates', {
+      body: { name: 'Weekly', type: 'weekly' },
+    });
+    await h.call('POST /api/templates/{templateId}/items', {
+      path: { templateId: t.body.id },
+      body: { productId: KLEENEX, qty: 2, unit: 'pack' },
+    });
+    const r = await add(h, key, { text: 'tissues' });
+    expect(r.body.spoken).toBe(
+      'Added Kleenex Tissues (from your Weekly template) to Week of 23 Nov.',
+    );
+    expect(r.body.added).toEqual([{ name: 'Kleenex Tissues', qty: 2, unit: 'pack' }]);
+  });
+
   it('ambiguous with no history adds nothing and names up to three options', async () => {
     const { h, key } = await ready();
     const r = await add(h, key, { text: 'tissues' });

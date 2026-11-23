@@ -6,6 +6,9 @@ import {
   isExactName,
   mostBoughtUnit,
   nameMatchesAll,
+  pickTemplateItem,
+  templateMatches,
+  type TemplateLike,
   quoted,
   rankHistoryMatches,
   type HistoryPurchase,
@@ -171,5 +174,88 @@ describe('formatListText (C4)', () => {
     expect(text).toMatch(/\.\.\.and \d+ more$/);
     const shown = text.split('\n').filter((l) => l.startsWith('- ')).length;
     expect(text).toContain(`...and ${200 - shown} more`);
+  });
+});
+
+describe('template resolution (D-099)', () => {
+  const item = (
+    productId: string,
+    name: string,
+    qty = 1,
+    unit = 'pack',
+    note: string | null = null,
+  ) => ({ product: { productId, name }, qty, unit, note }) as TemplateLike['items'][number];
+  const tpl = (
+    type: TemplateLike['type'],
+    name: string,
+    items: TemplateLike['items'],
+  ): TemplateLike => ({
+    type,
+    name,
+    items,
+  });
+  const pick = (templates: TemplateLike[], text: string, purchases: HistoryPurchase[] = []) =>
+    pickTemplateItem(templateMatches(templates, text), text, purchases);
+
+  it('prefers weekly, then regulars, then meal', () => {
+    const meal = tpl('meal', 'Tacos', [item('M', 'Beef Mince')]);
+    const regulars = tpl('regulars', 'Regulars', [item('R', 'Beef Mince')]);
+    const weekly = tpl('weekly', 'Weekly', [item('W', 'Beef Mince')]);
+    expect(pick([meal, regulars, weekly], 'mince')).toMatchObject({
+      candidate: { productId: 'W' },
+    });
+    expect(pick([meal, regulars], 'mince')).toMatchObject({ candidate: { productId: 'R' } });
+    expect(pick([meal], 'mince')).toMatchObject({ candidate: { productId: 'M' } });
+    expect(pick([meal], 'butter')).toEqual({ kind: 'none' });
+  });
+
+  it('carries the template item qty, unit and note', () => {
+    const r = pick(
+      [tpl('weekly', 'Weekly', [item('A', 'Pink Lady Apples', 1, 'kg', 'crisp')])],
+      'apples',
+    );
+    expect(r).toMatchObject({
+      kind: 'one',
+      candidate: { qty: 1, unit: 'kg', note: 'crisp', templateName: 'Weekly' },
+    });
+  });
+
+  it('within a tier an exact-name match beats a looser one', () => {
+    const t = tpl('weekly', 'Weekly', [item('X', 'Full Cream Milk 2L'), item('Y', 'Milk')]);
+    expect(pick([t], 'milk')).toMatchObject({ kind: 'one', candidate: { productId: 'Y' } });
+  });
+
+  it('breaks a same-tier tie by most bought, else is tied', () => {
+    const t = tpl('weekly', 'Weekly', [
+      item('P', 'Pink Lady Apples'),
+      item('G', 'Granny Smith Apples'),
+    ]);
+    const hist = [
+      buy('G', 'Granny Smith Apples', '2026-10-01'),
+      buy('G', 'Granny Smith Apples', '2026-10-08'),
+      buy('P', 'Pink Lady Apples', '2026-10-09'),
+    ];
+    expect(pick([t], 'apples', hist)).toMatchObject({ kind: 'one', candidate: { productId: 'G' } });
+    const level = [
+      buy('G', 'Granny Smith Apples', '2026-10-01'),
+      buy('P', 'Pink Lady Apples', '2026-10-09'),
+    ];
+    expect(pick([t], 'apples', level).kind).toBe('tied');
+    expect(pick([t], 'apples').kind).toBe('tied');
+  });
+
+  it('a tie in the top tier does not fall through to a lower tier', () => {
+    const w = tpl('weekly', 'Weekly', [
+      item('P', 'Pink Lady Apples'),
+      item('G', 'Granny Smith Apples'),
+    ]);
+    const r = tpl('regulars', 'Regulars', [item('F', 'Fuji Apples')]);
+    expect(pick([w, r], 'apples').kind).toBe('tied');
+  });
+
+  it('one product in two weekly templates is one candidate', () => {
+    const a = tpl('weekly', 'Weekly', [item('A', 'Bananas')]);
+    const b = tpl('weekly', 'Other weekly', [item('A', 'Bananas', 3)]);
+    expect(pick([a, b], 'bananas')).toMatchObject({ kind: 'one', candidate: { qty: 1 } });
   });
 });

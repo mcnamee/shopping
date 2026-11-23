@@ -420,3 +420,80 @@ describe('safety (C7, C8, D-088)', () => {
     expect((await callTool(h, access, 'get_current_list')).isError).toBeUndefined();
   });
 });
+
+describe('add_item prefers household templates (D-099)', () => {
+  async function template(
+    h: Harness,
+    name: string,
+    type: string,
+    items: Array<Record<string, unknown>>,
+  ) {
+    const t = await h.call<{ id: string }>('POST /api/templates', { body: { name, type } });
+    for (const body of items) {
+      await h.call('POST /api/templates/{templateId}/items', {
+        path: { templateId: t.body.id },
+        body,
+      });
+    }
+  }
+
+  it('uses the single weekly match with its qty/unit/note, over purchase history', async () => {
+    const { h, access } = await ready();
+    await bought(h, 'home-1', TISSUES_ALDI, 'Confidence Tissues', '2026-11-01');
+    await bought(h, 'home-1', TISSUES_ALDI, 'Confidence Tissues', '2026-11-15');
+    await template(h, 'Weekly', 'weekly', [
+      { productId: TISSUES_KLEENEX, qty: 2, unit: 'pack', note: 'soft ones' },
+    ]);
+    const r = await callTool(h, access, 'add_item', { text: 'tissues' });
+    expect(r.text).toContain(
+      'Added 2 x "Kleenex Tissues 3-ply" ("6 pack") (from your "Weekly" template) to "Week of 23 Nov"',
+    );
+    expect(r.structuredContent).toMatchObject({
+      productId: TISSUES_KLEENEX,
+      chosenBy: 'template',
+      template: 'Weekly',
+      qty: 2,
+    });
+    // A quantity from the user overrides the template's.
+    const r2 = await callTool(h, access, 'add_item', { text: 'tissues', quantity: 1 });
+    expect(r2.structuredContent).toMatchObject({ qty: 1, lineQty: 3 });
+    expect((await thisWeek(h))?.items).toHaveLength(1);
+  });
+
+  it('falls to regulars when weekly has no match, and to history when no template matches', async () => {
+    const { h, access } = await ready();
+    await template(h, 'Weekly', 'weekly', [{ productId: MILK, qty: 1, unit: 'pack' }]);
+    await template(h, 'Regulars', 'regulars', [{ productId: TISSUES_ALDI, qty: 1, unit: 'pack' }]);
+    const r = await callTool(h, access, 'add_item', { text: 'tissues' });
+    expect(r.structuredContent).toMatchObject({ productId: TISSUES_ALDI, template: 'Regulars' });
+    await bought(h, 'home-1', CHIPS_BBQ, 'BBQ Chips', '2026-11-01');
+    const c = await callTool(h, access, 'add_item', { text: 'chips' });
+    expect(c.structuredContent).toMatchObject({ productId: CHIPS_BBQ, chosenBy: 'history' });
+  });
+
+  it('breaks a same-tier tie by history, else returns options and adds nothing', async () => {
+    const { h, access } = await ready();
+    await template(h, 'Weekly', 'weekly', [
+      { productId: TISSUES_KLEENEX, qty: 1, unit: 'pack' },
+      { productId: TISSUES_FACIAL, qty: 1, unit: 'pack' },
+    ]);
+    const tied = await callTool(h, access, 'add_item', { text: 'tissues' });
+    expect(tied.structuredContent?.added).toBe(false);
+    expect(
+      (tied.structuredContent?.options as Array<{ productId: string }>)
+        .map((o) => o.productId)
+        .sort(),
+    ).toEqual([TISSUES_KLEENEX, TISSUES_FACIAL].sort());
+    expect(await thisWeek(h)).toBeNull();
+    await bought(h, 'home-1', TISSUES_FACIAL, 'Facial Tissues', '2026-11-01');
+    const r = await callTool(h, access, 'add_item', { text: 'tissues' });
+    expect(r.structuredContent).toMatchObject({ productId: TISSUES_FACIAL, chosenBy: 'template' });
+  });
+
+  it('an explicit productId still wins over templates', async () => {
+    const { h, access } = await ready();
+    await template(h, 'Weekly', 'weekly', [{ productId: TISSUES_KLEENEX, qty: 1, unit: 'pack' }]);
+    const r = await callTool(h, access, 'add_item', { text: 'tissues', productId: TISSUES_ALDI });
+    expect(r.structuredContent).toMatchObject({ productId: TISSUES_ALDI, chosenBy: 'productId' });
+  });
+});
