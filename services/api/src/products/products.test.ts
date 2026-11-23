@@ -94,6 +94,8 @@ const product = (
 const CATALOGUE = [
   product('398691', 'Light Milk 2L', 'dairy-eggs'),
   product('759535', 'Light Milk 1L', 'dairy-eggs'),
+  // Scraped before Eggs was its own group: stored under Dairy, read as Eggs (D-081).
+  product('100020', 'Free Range Eggs 12 Pack', 'dairy-eggs'),
   product('285757', 'Milk Chocolate Block 200g', 'snacks', { brand: 'Choceur', packSize: '200 g' }),
   product('100001', 'Cavendish Bananas per kg', 'fruit-veg', {
     brand: null,
@@ -277,6 +279,19 @@ describe('GET /api/products/search', () => {
       ),
     ) as unknown as ProductSearchResponse;
     expect(res2.items.map((i) => i.name)).toEqual(['Milk Chocolate Block 200g']);
+  });
+
+  it('treats egg products stored under Dairy as Eggs (category filter and summary)', async () => {
+    const { handler } = deps();
+    const get = async (category: string) =>
+      body(
+        await handler(event('GET /api/products/search', { query: { category } }), context),
+      ) as unknown as ProductSearchResponse;
+    const eggs = await get('eggs');
+    expect(eggs.items.map((i) => [i.name, i.groupId])).toEqual([
+      ['Free Range Eggs 12 Pack', 'eggs'],
+    ]);
+    expect((await get('dairy-eggs')).items.some((i) => i.name.includes('Eggs'))).toBe(false);
   });
 
   it.each([

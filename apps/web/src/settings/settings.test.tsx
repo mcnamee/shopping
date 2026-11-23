@@ -35,7 +35,7 @@ const defaults = DEFAULT_GROUPS.map((g) => g.name);
 const puts = () => log().filter((c) => c.startsWith('PUT /api/settings/aisle-order'));
 
 describe('Aisle order', () => {
-  it('shows the 15 groups numbered in ALDI order with Reset disabled', async () => {
+  it('shows the 16 groups numbered in ALDI order with Reset disabled', async () => {
     await aisle();
     expect(names()).toEqual(defaults);
     expect(
@@ -66,7 +66,7 @@ describe('Aisle order', () => {
     await user.click(screen.getByRole('button', { name: 'Move Bakery up' }));
     expect(names().slice(0, 4)).toEqual(['Fruit & Veg', 'Meat & Seafood', 'Bakery', 'Deli']);
     expect(screen.getByRole('button', { name: 'Move Bakery up' })).toHaveFocus();
-    expect(screen.getByText('Bakery moved up. Position 3 of 15.')).toBeInTheDocument();
+    expect(screen.getByText('Bakery moved up. Position 3 of 16.')).toBeInTheDocument();
     expect(screen.getByText('Saving...')).toBeVisible();
     expect(await screen.findByText('Saved', {}, { timeout: 3000 })).toBeVisible();
     expect(puts()).toHaveLength(1);

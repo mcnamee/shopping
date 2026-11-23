@@ -30,7 +30,7 @@ beforeEach(() => {
 describe('mock product API', () => {
   it('has ~60 real products across all groups with https images', () => {
     expect(MOCK_CATALOGUE.length).toBeGreaterThanOrEqual(55);
-    expect(new Set(MOCK_CATALOGUE.map((p) => p.groupId)).size).toBe(15);
+    expect(new Set(MOCK_CATALOGUE.map((p) => p.groupId)).size).toBe(16);
     for (const p of MOCK_CATALOGUE) expect(p.imageUrl).toMatch(/^https:\/\//);
   });
 
@@ -94,6 +94,6 @@ describe('mock product API', () => {
 
   it('lists groups', async () => {
     const { body } = await call('/groups');
-    expect((body.groups as unknown[]).length).toBe(15);
+    expect((body.groups as unknown[]).length).toBe(16);
   });
 });

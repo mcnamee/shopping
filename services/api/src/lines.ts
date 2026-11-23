@@ -1,5 +1,11 @@
 /** Tolerant DynamoDB item -> domain readers for lines (template items, list items). */
-import { isUnitType, type Line, type ListItem, type ProductSnapshot } from '@trolley/core';
+import {
+  effectiveGroupId,
+  isUnitType,
+  type Line,
+  type ListItem,
+  type ProductSnapshot,
+} from '@trolley/core';
 
 const str = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -16,7 +22,8 @@ export function toSnapshot(v: unknown): ProductSnapshot | null {
     brand: str(r.brand),
     imageUrl: str(r.imageUrl),
     packSize: str(r.packSize),
-    groupId: str(r.groupId) ?? 'other',
+    // Read-time Eggs split (D-081): no migration of stored snapshots.
+    groupId: effectiveGroupId({ groupId: str(r.groupId) ?? 'other', name }),
     unitType: isUnitType(r.unitType) ? r.unitType : 'each',
   };
 }

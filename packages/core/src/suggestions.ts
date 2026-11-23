@@ -15,6 +15,7 @@ import {
   type TemplateItem,
   type TemplateType,
 } from './lists';
+import { effectiveGroupId } from './groups';
 import type { UnitType } from './product';
 import { QUANTITY_RULES, roundQuantity } from './quantity';
 
@@ -212,7 +213,7 @@ export function productStats(
     out.set(productId, {
       productId,
       name: latest.name,
-      groupId: latest.groupId,
+      groupId: effectiveGroupId({ groupId: latest.groupId, name: latest.name }),
       unit,
       count: dates.length,
       avgQty: suggestionQty(avg, unit),
@@ -312,7 +313,7 @@ export function suggestCandidates(input: SuggestInput): SuggestResult {
     .filter((l) => !exclude.has(l.product.productId))
     .sort(
       (a, b) =>
-        rank(a.product.groupId) - rank(b.product.groupId) ||
+        rank(effectiveGroupId(a.product)) - rank(effectiveGroupId(b.product)) ||
         a.product.name.localeCompare(b.product.name, 'en-AU', { sensitivity: 'base' }),
     )
     .map((l) => {
@@ -322,7 +323,7 @@ export function suggestCandidates(input: SuggestInput): SuggestResult {
       return {
         productId: l.product.productId,
         name: l.product.name,
-        groupId: l.product.groupId,
+        groupId: effectiveGroupId(l.product),
         qty: l.qty,
         unit: l.unit,
         note: l.note,

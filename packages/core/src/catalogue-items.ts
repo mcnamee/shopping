@@ -2,6 +2,7 @@
  * DynamoDB item <-> domain conversions for catalogue and custom products. Pure (no AWS
  * SDK) so the scraper, API and tests share one definition of the stored shape.
  */
+import { effectiveGroupId } from './groups';
 import { keys } from './keys';
 import type { CatalogueProduct, CustomProduct, SourceCategory, UnitType } from './product';
 import { isUnitType } from './product';
@@ -104,7 +105,7 @@ export function catalogueSummary(p: CatalogueProduct): ProductSummary {
     packSize: p.packSize,
     unitType: p.unitType,
     defaultUnitType: p.unitType,
-    groupId: p.groupId,
+    groupId: effectiveGroupId(p),
     custom: false,
   };
 }
@@ -120,7 +121,7 @@ export function customSummary(p: CustomProduct): ProductSummary {
     packSize: p.packSize,
     unitType: p.unitType,
     defaultUnitType: p.unitType,
-    groupId: p.groupId,
+    groupId: effectiveGroupId(p),
     custom: true,
   };
 }

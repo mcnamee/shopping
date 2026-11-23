@@ -8,6 +8,7 @@ import {
   canUndoArchive,
   defaultListName,
   groupForShop,
+  groupTemplateItems,
   isDefaultAisleOrder,
   isListComplete,
   isValidEntityId,
@@ -338,7 +339,7 @@ describe('validation (A2)', () => {
     expect(parseTemplateIdsRequest({ templateIds: [] })).toMatchObject({ field: 'templateIds' });
   });
 
-  it('aisle order must be a permutation of the 15 groups', () => {
+  it('aisle order must be a permutation of the 16 groups', () => {
     const order = [...DEFAULT_AISLE_ORDER].reverse();
     expect(parseAisleOrderRequest({ order })).toEqual({ ok: true, value: { order } });
     expect(parseAisleOrderRequest({ order, version: 3 })).toEqual({
@@ -434,9 +435,38 @@ describe('aisle order and shop grouping (E1, E3, G1)', () => {
     expect(custom[0]).toBe('frozen');
     expect(custom.slice(-2)).toEqual(['other', 'bakery']);
     expect(custom[1]).toBe('fruit-veg');
-    expect(custom).toHaveLength(15);
-    expect(new Set(custom).size).toBe(15);
+    expect(custom).toHaveLength(16);
+    expect(new Set(custom).size).toBe(16);
     expect(normaliseAisleOrder(['frozen']).at(-1)).toBe('other');
+  });
+
+  it('inserts Eggs right after Dairy in stored orders that lack it (read time)', () => {
+    const old = DEFAULT_AISLE_ORDER.filter((id) => id !== 'eggs');
+    const out = normaliseAisleOrder(old);
+    expect(out).toEqual(DEFAULT_AISLE_ORDER);
+    const custom = normaliseAisleOrder(['frozen', 'dairy-eggs', 'bakery', 'other']);
+    expect(custom.indexOf('eggs')).toBe(custom.indexOf('dairy-eggs') + 1);
+    expect(normaliseAisleOrder(['eggs', 'dairy-eggs', 'other']).slice(0, 2)).toEqual([
+      'eggs',
+      'dairy-eggs',
+    ]);
+  });
+
+  it('shows egg items stored under Dairy in the Eggs section', () => {
+    const sections = groupForShop(
+      [item('1', 'Free Range Eggs 12 Pack', 'dairy-eggs'), item('2', 'Milk', 'dairy-eggs')],
+      DEFAULT_AISLE_ORDER,
+    );
+    expect(sections.map((s) => [s.group.id, s.items.length])).toEqual([
+      ['dairy-eggs', 1],
+      ['eggs', 1],
+    ]);
+    expect(
+      groupTemplateItems(
+        [item('1', 'Free Range Eggs', 'dairy-eggs'), item('2', 'Milk', 'dairy-eggs')],
+        DEFAULT_AISLE_ORDER,
+      ).map((s) => s.group.id),
+    ).toEqual(['dairy-eggs', 'eggs']);
   });
 
   it('groups in aisle order, hides empty groups, unticked by name then ticked', () => {
