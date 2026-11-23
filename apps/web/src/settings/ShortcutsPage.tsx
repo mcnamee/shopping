@@ -39,55 +39,75 @@ function CopyRow({ label, value, testId }: { label: string; value: string; testI
   );
 }
 
+/** Shared iCloud link to the ready-made shortcut; it asks for the key on import. */
+const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/048b8a16be834d65b41a394ad1221ec4';
+
 function Instructions({ origin, keyValue }: { origin: string; keyValue: string | null }) {
   const header = `Bearer ${keyValue ?? KEY_PLACEHOLDER}`;
   return (
     <section aria-labelledby="shortcut-steps" className="mt-8">
       <h2 id="shortcut-steps" className="text-lg font-semibold">
-        Build the shortcut
+        Get the shortcut
       </h2>
       <p className="mt-1 text-base text-muted">
-        Do this once on your iPhone, in the Shortcuts app.
-        {keyValue === null && ' Create a key above first, then paste it where it says <your key>.'}
+        On your iPhone, open the link below and tap <b>Add Shortcut</b>. When it asks for the secret
+        key, paste your key (it starts with <b>trl_</b>).
+        {keyValue === null && ' Create a key above first.'}
       </p>
-      <ol className="mt-3 list-decimal space-y-4 pl-5 text-base">
-        <li>
-          Tap <b>+</b> to make a new shortcut and name it <b>Add to Trolley</b>. That name is what
-          you say to Siri.
-        </li>
-        <li>
-          Add <b>Ask for Text</b> with the prompt <b>What should I add?</b>
-        </li>
-        <li>
-          Add <b>Get Contents of URL</b>. Set the URL, then tap Show More and set Method to{' '}
-          <b>POST</b>.
-          <CopyRow label="Address" value={`${origin}/api/quick/add`} testId="quick-add-url" />
-          <p className="mt-2">
-            Add a header named <b>Authorization</b> with this value:
-          </p>
-          <CopyRow label="Header value" value={header} testId="quick-auth-header" />
-          <p className="mt-2">
-            Set Request Body to <b>JSON</b>, add a Text field named <b>text</b> and choose{' '}
-            <b>Provided Input</b> (the answer from Ask for Text).
-          </p>
-        </li>
-        <li>
-          Add <b>Get Dictionary Value</b>: get the value for <b>spoken</b> from Contents of URL.
-        </li>
-        <li>
-          Add <b>Speak Text</b> (or Show Result) and give it the Dictionary Value.
-        </li>
-      </ol>
+      <a
+        href={SHORTCUT_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 text-base font-semibold text-accent-on"
+      >
+        Get &ldquo;Add to Trolley&rdquo;
+      </a>
       <p className="mt-3 text-base text-muted">
         Then say &ldquo;Hey Siri, Add to Trolley&rdquo; and answer when it asks.
       </p>
-      <h3 className="mt-6 text-base font-semibold">Optional: What&rsquo;s on my Trolley list</h3>
-      <p className="mt-1 text-base text-muted">
-        Make a second shortcut with that name: <b>Get Contents of URL</b> with the address below,
-        Method <b>GET</b> and the same Authorization header, then Get Dictionary Value <b>spoken</b>{' '}
-        and Speak Text.
-      </p>
-      <CopyRow label="List address" value={`${origin}/api/quick/list`} testId="quick-list-url" />
+      <details className="mt-6 rounded-md border border-border-subtle px-4 py-3">
+        <summary className="min-h-11 cursor-pointer py-2 text-base font-semibold">
+          Or build it yourself
+        </summary>
+        <ol className="mt-3 list-decimal space-y-4 pl-5 text-base">
+          <li>
+            Tap <b>+</b> to make a new shortcut and name it <b>Add to Trolley</b>. That name is what
+            you say to Siri.
+          </li>
+          <li>
+            Add <b>Ask for Text</b> with the prompt <b>What should I add?</b>
+          </li>
+          <li>
+            Add <b>Get Contents of URL</b>. Set the URL, then tap Show More and set Method to{' '}
+            <b>POST</b>.
+            <CopyRow label="Address" value={`${origin}/api/quick/add`} testId="quick-add-url" />
+            <p className="mt-2">
+              Add a header named <b>Authorization</b> with this value:
+            </p>
+            <CopyRow label="Header value" value={header} testId="quick-auth-header" />
+            <p className="mt-2">
+              Set Request Body to <b>JSON</b>, add a Text field named <b>text</b> and choose{' '}
+              <b>Provided Input</b> (the answer from Ask for Text).
+            </p>
+          </li>
+          <li>
+            Add <b>Get Dictionary Value</b>: get the value for <b>spoken</b> from Contents of URL.
+          </li>
+          <li>
+            Add <b>Speak Text</b> (or Show Result) and give it the Dictionary Value.
+          </li>
+        </ol>
+        <p className="mt-3 text-base text-muted">
+          Then say &ldquo;Hey Siri, Add to Trolley&rdquo; and answer when it asks.
+        </p>
+        <h3 className="mt-6 text-base font-semibold">Optional: What&rsquo;s on my Trolley list</h3>
+        <p className="mt-1 text-base text-muted">
+          Make a second shortcut with that name: <b>Get Contents of URL</b> with the address below,
+          Method <b>GET</b> and the same Authorization header, then Get Dictionary Value{' '}
+          <b>spoken</b> and Speak Text.
+        </p>
+        <CopyRow label="List address" value={`${origin}/api/quick/list`} testId="quick-list-url" />
+      </details>
     </section>
   );
 }
