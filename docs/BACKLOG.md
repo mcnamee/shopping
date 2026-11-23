@@ -19,3 +19,7 @@ Small items deferred from signed-off stages. Highest priority first. Pull into a
 | B-013 | Low | Test top-ups: E6 speed e2e at 30 rows (runs 15); 401 mid-shop e2e from shop mode (only Search today); a test for the accepted D-058 untick/archive race. | Stage 2 QA INFO-3 | Behaviour covered by unit/API tests; race accepted with Undo as recovery. |
 
 | B-OPS-1 | Tidy up orphaned resources from the first failed deploy (user task, needs AWS console) - docs/ops/tidy-orphans.md | Low | open |
+| B-014 | Low | MCP: suggestions tool (run Stage 3 engine from a chatbot). | Stage 4 cut | Add later once MCP use is proven. |
+| B-015 | Low | MCP: tick items, change qty of an existing line, pick a list other than this week's, templates. | Stage 4 cut | Core ask is adding/reading this week's list. |
+| B-016 | Low | MCP: read-only grants / per-tool scopes. | Stage 4 cut | Two trusted users; one scope is enough. |
+| B-017 | Low | OAuth: pre-registered client id/secret (non-DCR clients). | Stage 4 cut | Claude and ChatGPT both use DCR. |

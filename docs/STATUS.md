@@ -1,4 +1,4 @@
-# Status / handoff (2026-11-22)
+# Status / handoff (2026-11-23)
 
 ## Where things are
 - **Stage 0**: signed off, live.
@@ -9,8 +9,8 @@
 ## Open user items
 - **Stage 2 [U] first real shop** (K1/K2): checklist in `docs/stages/stage-2-qa.md` section 5 - set aisle order for Casey, build the list in under 5 min, both phones ticking the same list, archive + Undo, list in History.
 - Stage 1 [U] checklist in `docs/stages/stage-1-qa.md` section 6 (images on phones, search speed, `SCRAPE_FALLBACK_ENABLED=true`, first monthly run after 1 Dec).
-- `trolley.mcn.am` CNAME not resolving yet - user's DNS provider side (`trolley` -> CloudFront domain).
-- Low priority: possible orphaned RETAIN'd resources (user pool, table, bucket) from the first failed deploy; check the console and delete if unused.
+- Done by user (23 Nov): `trolley.mcn.am` CNAME live; store re-scrape run (populates `notAtStore`, D-080).
+- Orphaned RETAIN'd resources from the first failed deploy: tidy-up script given to the user to run (their call).
 
 ## Stage 3 (AI suggestions) - in progress
 - PM acceptance criteria written: `docs/stages/stage-3.md` (decisions D-061 to D-068). Next: UX spec for the review sheet, then build, QA, PM sign-off.
@@ -28,3 +28,8 @@
 - Stage 3 done so far (branch only, NOT on main): PM criteria (docs/stages/stage-3.md), UX (docs/ux/suggestions.md), backend + suggestion engine + Bedrock Nova Micro (`apac.amazon.nova-micro-v1:0`, configurable via SUGGEST_MODEL_ID; unverified id/IAM condition - wrong = silent rules fallback, check logs for `suggestions_ai_fallback`).
 - Stopped: software-engineer building the suggestions review UI (any partial commits listed above this note in git log). Next: finish UI per the backend handoff in docs/api.md + D-069..D-074 -> QA -> PM sign-off -> merge to main.
 - Production = Stage 2 (main 7ef192e).
+
+## Stage 4 (Chatbot / MCP) - in progress
+- PM criteria + UX notes: `docs/stages/stage-4.md` (D-082 to D-089; backlog B-014..B-017). Next: build (senior engineer owns OAuth shim) -> QA -> merge.
+- Remote MCP at `https://trolley.mcn.am/mcp`, own OAuth 2.1 shim (DCR + PKCE) in Lambda, consent at SPA `/connect`, Settings > Connected apps.
+- [U] after deploy: connect from Claude (custom connector) and ChatGPT (developer mode), "add tissues to my shopping list".
