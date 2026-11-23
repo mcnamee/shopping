@@ -23,6 +23,14 @@ describe('SignInPage', () => {
     expect(pathname()).toBe('/sign-in');
   });
 
+  it.each(['/settings', '/settings/units'])('returns to %s after sign-in (B-002)', async (path) => {
+    const { user, pathname } = renderApp(path);
+    await screen.findByLabelText('Email');
+    expect(pathname()).toBe('/sign-in');
+    await fillAndSubmit(user, 'a@example.com', 'Password1');
+    await waitFor(() => expect(pathname()).toBe(path));
+  });
+
   it('has labelled fields, forgot link and no sign-up link', async () => {
     renderApp('/sign-in');
     expect(await screen.findByLabelText('Email')).toHaveAttribute('autocomplete', 'username');

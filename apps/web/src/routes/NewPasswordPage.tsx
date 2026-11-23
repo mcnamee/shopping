@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { PasswordRules } from '../components/PasswordRules';
 import { PasswordField } from '../components/TextField';
 import { useToast } from '../components/Toast';
+import { clearTempPassword, matchesTempPassword } from '../auth/tempPassword';
 import { COPY, UNSUPPORTED_STEP_MESSAGE, newPasswordFailure } from '../lib/authCopy';
 import { passwordMeetsRules } from '../lib/password';
 import { returnPath, type AuthRouteState } from './routeState';
@@ -53,12 +54,13 @@ export function NewPasswordPage() {
     let pwMsg: string | null = null;
     let confirmMsg: string | null = null;
     if (!password) pwMsg = 'Enter a new password.';
+    else if (matchesTempPassword(password)) pwMsg = COPY.samePassword;
     else if (!passwordMeetsRules(password)) pwMsg = COPY.passwordRules;
     if (!confirm) confirmMsg = 'Confirm your new password.';
     else if (confirm !== password) confirmMsg = "Passwords don't match.";
     setPasswordError(pwMsg);
     setConfirmError(confirmMsg);
-    setShowRuleErrors(Boolean(pwMsg && password));
+    setShowRuleErrors(pwMsg === COPY.passwordRules);
     if (pwMsg) return passwordRef.current?.focus();
     if (confirmMsg) return confirmRef.current?.focus();
 
@@ -68,6 +70,7 @@ export function NewPasswordPage() {
     try {
       const result = await completeNewPassword(password);
       if (result.status === 'SIGNED_IN') {
+        clearTempPassword();
         toast.show("Password saved. You're signed in.");
         navigate(returnPath(undefined), { replace: true });
       } else {

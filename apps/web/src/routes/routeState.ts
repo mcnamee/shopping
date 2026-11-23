@@ -9,15 +9,16 @@ export interface AuthRouteState {
 const RETURN_PATHS = new Set(['/search', '/templates']);
 
 /**
- * Where to land after signing in. Deep links to a tab are honoured; everything else
- * (including /settings, where sign-out happens) goes to Lists.
+ * Where to land after signing in. Deep links to a tab (and /settings and its sub-pages)
+ * are honoured; everything else goes to Lists.
  */
 export function returnPath(from: string | undefined): string {
-  if (from && RETURN_PATHS.has(from)) return from;
+  if (from && (RETURN_PATHS.has(from) || SETTINGS_PATH.test(from))) return from;
   if (from && CONNECT_PATH.test(from)) return from;
   return pendingConnectPath() ?? '/';
 }
 
+const SETTINGS_PATH = /^\/settings(\/[a-z-]+)*$/;
 const CONNECT_PATH = /^\/connect\?request=[\w-]{1,128}$/;
 const PENDING_KEY = 'trolley.connect.pending';
 const PENDING_TTL_MS = 10 * 60 * 1000;

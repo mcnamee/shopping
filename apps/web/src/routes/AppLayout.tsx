@@ -6,6 +6,8 @@ import { ApiError, getMe } from '../api';
 import { AppBarSlotContext } from '../components/appBar';
 import { StatusBanner, type StatusBannerVariant } from '../components/StatusBanner';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
+import { OfflineSync } from '../offline/OfflineSync';
+import { useTickQueue } from '../offline/tickQueue';
 import { getLastSearch } from '../search/lastSearch';
 import { NoHouseholdState } from './NoHouseholdState';
 
@@ -56,6 +58,7 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const title = titleFor(pathname);
   const { online, justReconnected } = useOnlineStatus();
+  const waiting = useTickQueue().length;
   const [errorDismissed, setErrorDismissed] = useState(false);
   const [barSlot, setBarSlot] = useState<HTMLElement | null>(null);
   const bare = isBareRoute(pathname);
@@ -89,9 +92,11 @@ export function AppLayout() {
       )}
 
       <div className={bare ? '' : 'pt-[calc(var(--safe-top)+56px)]'}>
+        <OfflineSync />
         {banner && (
           <StatusBanner
             variant={banner}
+            waiting={waiting}
             onRetry={() => {
               setErrorDismissed(false);
               void me.refetch();

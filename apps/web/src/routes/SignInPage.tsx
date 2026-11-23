@@ -6,6 +6,7 @@ import { Banner } from '../components/Banner';
 import { Button } from '../components/Button';
 import { PasswordField, TextField } from '../components/TextField';
 import { TrolleyGlyph } from '../components/TrolleyGlyph';
+import { rememberTempPassword } from '../auth/tempPassword';
 import { COPY, UNSUPPORTED_STEP_MESSAGE, signInErrorMessage, validateEmail } from '../lib/authCopy';
 import type { AuthRouteState } from './routeState';
 
@@ -60,6 +61,7 @@ export function SignInPage() {
           // PublicOnly routes into the app as soon as auth state flips.
           break;
         case 'NEW_PASSWORD_REQUIRED':
+          rememberTempPassword(password);
           navigate('/new-password');
           break;
         case 'RESET_PASSWORD_REQUIRED':

@@ -89,6 +89,17 @@ describe('NewPasswordPage', () => {
     expect(await screen.findByText("Password saved. You're signed in.")).toBeInTheDocument();
   });
 
+  it('shows a distinct message when the new password equals the temporary one (B-003)', async () => {
+    const { user, pathname } = await reachNewPassword();
+    await user.type(field('New password'), 'TempPass1');
+    await user.type(field('Confirm new password'), 'TempPass1');
+    await user.click(screen.getByRole('button', { name: 'Save password' }));
+    expect(
+      await screen.findByText('Choose a different password from your temporary one.'),
+    ).toBeInTheDocument();
+    expect(pathname()).toBe('/new-password');
+  });
+
   it('goes back to sign in', async () => {
     const { user, pathname } = await reachNewPassword();
     await user.click(screen.getByRole('link', { name: 'Back to sign in' }));
