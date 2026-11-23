@@ -10,7 +10,7 @@ import type { SearchableCatalogueProduct } from '../products/catalogue-cache';
 import { CustomProductRepo } from '../products/custom-products';
 import type { ProductDeps } from '../products/routes';
 import { createRouter, type ApiEvent } from '../router';
-import { createRoutes, stage2DepsFor, stage3DepsFor } from '../routes';
+import { createRoutes, stage2DepsFor, stage3DepsFor, stage4DepsFor } from '../routes';
 import type { AiTextModel } from '../suggestions/bedrock';
 import { fakeDynamo } from './fake-dynamo';
 
@@ -70,17 +70,34 @@ export interface CallOptions {
   /** Household id in the token; default home-1. Null sends no token. */
   hh?: string | null;
   user?: string;
+  /** Extra ID-token claims (e.g. name). */
+  claims?: Record<string, string>;
+  /** Request headers (lower-case names, as API Gateway sends them). */
+  headers?: Record<string, string>;
+  /** Raw body string (sent as is instead of JSON.stringify(body)). */
+  rawBody?: string;
+  /** Raw query string (API Gateway rawQueryString). */
+  rawQuery?: string;
+  /** Viewer address (requestContext.http.sourceIp). */
+  sourceIp?: string;
 }
 
 export interface CallResult<T = Record<string, unknown>> {
   status: number;
   body: T;
+  headers: Record<string, string>;
+  /** Unparsed body (HTML pages, empty bodies). */
+  raw: string;
 }
+
+export const ORIGIN = 'https://trolley.example.com';
 
 export interface SetupOptions {
   /** Suggestions AI model (default none: rules only). */
   ai?: AiTextModel | null;
   aiTimeoutMs?: number;
+  /** Extra catalogue products (Stage 4 resolution tests). */
+  extraProducts?: CatalogueProduct[];
 }
 
 export function setup(opts: SetupOptions = {}) {
@@ -89,11 +106,12 @@ export function setup(opts: SetupOptions = {}) {
   let clock = T0;
   const now = () => new Date(clock);
   const custom = new CustomProductRepo(table.doc, 'T', 0);
+  const products = [...CATALOGUE, ...(opts.extraProducts ?? [])];
   const productDeps: ProductDeps = {
     catalogue: {
       get: async () => ({
-        index: buildSearchIndex(CATALOGUE as SearchableCatalogueProduct[]),
-        bySku: new Map(CATALOGUE.map((p) => [p.sku, p])),
+        index: buildSearchIndex(products as SearchableCatalogueProduct[]),
+        bySku: new Map(products.map((p) => [p.sku, p])),
         loadedAt: 0,
       }),
     },
@@ -106,12 +124,17 @@ export function setup(opts: SetupOptions = {}) {
     ...stage3DepsFor(db, stage2, opts.ai ?? null, opts.aiTimeoutMs),
     warn: (e: Record<string, unknown>) => warnings.push(e),
   };
+  const logs: Array<Record<string, unknown>> = [];
+  const stage4 = stage4DepsFor(db, stage3, productDeps, ORIGIN);
+  stage4.oauth.log = (e) => logs.push(e);
+  stage4.mcp.log = (e) => logs.push(e);
   const handler = createHandler(
     createRouter(
       createRoutes(
         productDeps,
         () => stage2,
         () => stage3,
+        () => stage4,
       ),
     ),
   );
@@ -128,24 +151,35 @@ export function setup(opts: SetupOptions = {}) {
           email: 'a@example.com',
           token_use: 'id',
           'custom:householdId': hh,
+          ...opts.claims,
         }
       : null;
     const event = {
       version: '2.0',
       routeKey,
       rawPath: path,
-      rawQueryString: '',
-      headers: {},
+      rawQueryString: opts.rawQuery ?? '',
+      headers: opts.headers ?? {},
       isBase64Encoded: false,
       ...(opts.query ? { queryStringParameters: opts.query } : {}),
       ...(opts.path ? { pathParameters: opts.path } : {}),
-      ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
+      ...(opts.rawBody !== undefined
+        ? { body: opts.rawBody }
+        : opts.body !== undefined
+          ? { body: JSON.stringify(opts.body) }
+          : {}),
       requestContext: {
         accountId: '1',
         apiId: 'api',
         domainName: 'x',
         domainPrefix: 'x',
-        http: { method, path, protocol: 'HTTP/1.1', sourceIp: '127.0.0.1', userAgent: 't' },
+        http: {
+          method,
+          path,
+          protocol: 'HTTP/1.1',
+          sourceIp: opts.sourceIp ?? '127.0.0.1',
+          userAgent: 't',
+        },
         requestId: 'r',
         routeKey,
         stage: '$default',
@@ -155,9 +189,18 @@ export function setup(opts: SetupOptions = {}) {
       },
     } as ApiEvent;
     const res = await handler(event, context);
+    const raw = res.body ?? '';
+    let body: unknown = {};
+    try {
+      body = raw ? JSON.parse(raw) : {};
+    } catch {
+      body = {};
+    }
     return {
       status: res.statusCode as number,
-      body: (res.body ? JSON.parse(res.body) : {}) as T,
+      body: body as T,
+      headers: (res.headers ?? {}) as Record<string, string>,
+      raw,
     };
   }
 
@@ -166,6 +209,8 @@ export function setup(opts: SetupOptions = {}) {
     db,
     stage2,
     stage3,
+    stage4,
+    logs,
     warnings,
     call,
     custom,

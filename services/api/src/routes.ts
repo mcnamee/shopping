@@ -16,6 +16,10 @@ import { bedrockModel, type AiTextModel } from './suggestions/bedrock';
 import { AI_TIMEOUT_MS, createSuggestionRoutes, type Stage3Deps } from './suggestions/routes';
 import { SuggestionStore } from './suggestions/store';
 import { TemplateStore } from './templates/store';
+import { createMcpRoutes, type McpDeps } from './mcp/server';
+import { createTools } from './mcp/tools';
+import { createOAuthRoutes, originFromEnv, type OAuthDeps } from './oauth/routes';
+import { OAuthStore } from './oauth/store';
 
 export const baseRoutes: RouteTable = {
   'GET /api/health': {
@@ -120,10 +124,39 @@ export function stage3DepsFor(
   };
 }
 
+export interface Stage4Deps {
+  oauth: OAuthDeps;
+  mcp: McpDeps;
+}
+
+/** Stage 4 dependencies (OAuth shim + MCP tools), sharing the Stage 2/3 stores. */
+export function stage4DepsFor(
+  db: Db,
+  stage3: Stage3Deps,
+  productDeps: Pick<ProductDeps, 'catalogue' | 'custom'>,
+  origin: string,
+): Stage4Deps {
+  const store = new OAuthStore(db);
+  const callTool = createTools(() => ({
+    lists: stage3.lists,
+    settings: stage3.settings,
+    purchases: (hh) => stage3.suggestions.purchases(hh),
+    catalogue: () => productDeps.catalogue.get(),
+    customs: (hh) => productDeps.custom.list(hh),
+    resolveProduct: stage3.resolveProduct,
+    now: stage3.now,
+  }));
+  return {
+    oauth: { store, origin, now: stage3.now },
+    mcp: { store, origin, now: stage3.now, callTool },
+  };
+}
+
 export function createRoutes(
   productDeps?: ProductDeps,
   stage2?: () => Stage2Deps,
   stage3?: () => Stage3Deps,
+  stage4?: () => Stage4Deps,
 ): RouteTable {
   const prod = lazyProd();
   const products = productDeps ?? productDepsFrom(prod);
@@ -133,11 +166,16 @@ export function createRoutes(
   let s3: Stage3Deps | undefined;
   const getStage3 =
     stage3 ?? (() => (s3 ??= stage3DepsFor(prod().db, getStage2(), aiModelFromEnv())));
+  let s4: Stage4Deps | undefined;
+  const getStage4 =
+    stage4 ?? (() => (s4 ??= stage4DepsFor(prod().db, getStage3(), products, originFromEnv())));
   return {
     ...baseRoutes,
     ...createProductRoutes(products),
     ...createStage2Routes(getStage2),
     ...createSuggestionRoutes(getStage3),
+    ...createOAuthRoutes(() => getStage4().oauth),
+    ...createMcpRoutes(() => getStage4().mcp),
   };
 }
 
