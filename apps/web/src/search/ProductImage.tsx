@@ -10,6 +10,8 @@ interface ProductImageProps {
   letterClassName?: string;
   /** Padding inside the photo box. */
   padding?: string;
+  /** Draw the fallback letter as CSS content so it is not text (inside a labelled button). */
+  letterAsContent?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export function ProductImage({
   className = '',
   letterClassName = 'text-2xl',
   padding = 'p-2',
+  letterAsContent = false,
 }: ProductImageProps) {
   const [state, setState] = useState<'loading' | 'loaded' | 'error'>(src ? 'loading' : 'error');
   const img = useRef<HTMLImageElement>(null);
@@ -44,7 +47,15 @@ export function ProductImage({
         data-testid="image-fallback"
         className={`flex items-center justify-center bg-surface font-bold text-accent ${letterClassName} ${className}`}
       >
-        <span aria-hidden>{initialOf(name)}</span>
+        {letterAsContent ? (
+          <span
+            aria-hidden
+            data-letter={initialOf(name)}
+            className="before:content-[attr(data-letter)]"
+          />
+        ) : (
+          <span aria-hidden>{initialOf(name)}</span>
+        )}
       </div>
     );
   }

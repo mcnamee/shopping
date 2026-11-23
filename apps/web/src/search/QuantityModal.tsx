@@ -15,7 +15,17 @@ import {
   type ProductSummary,
   type UnitType,
 } from '@trolley/core';
-import { Check, ChevronDown, ChevronLeft, CircleAlert, Minus, Plus, Trash2, X } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  Minus,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
@@ -58,6 +68,8 @@ interface QuantityModalProps {
   onConfirm: (selection: QuantitySelection) => void | Promise<void>;
   /** Edit mode, list rows only: "Remove from list". */
   onRemove?: () => void;
+  /** When set, the product header is a button that closes the sheet and finds it in Search. */
+  onFindInSearch?: (product: ProductSummary) => void;
   onClose: () => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }
@@ -81,6 +93,7 @@ export function QuantityModal({
   fromTemplateIcon = false,
   onConfirm,
   onRemove,
+  onFindInSearch,
   onClose,
   returnFocusRef,
 }: QuantityModalProps) {
@@ -89,7 +102,7 @@ export function QuantityModal({
   const pickerHeadingId = useId();
   const errorId = useId();
   const fieldRef = useRef<HTMLInputElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const headingRef = useRef<HTMLElement>(null);
 
   const startUnit = initial?.unit ?? product.unitType;
   const startValue = initial?.quantity ?? quantityRules(startUnit).default;
@@ -279,6 +292,17 @@ export function QuantityModal({
     .filter(Boolean)
     .join(' · ');
 
+  const image = (
+    <ProductImage
+      letterAsContent={onFindInSearch !== undefined}
+      src={product.imageUrl}
+      name={product.name}
+      padding="p-1"
+      letterClassName={compact ? 'text-xl' : 'text-2xl'}
+      className={`shrink-0 rounded-sm ${compact ? 'h-10 w-10' : 'h-14 w-14'}`}
+    />
+  );
+
   const inPicker = view === 'picker' && !editing;
   const addLabel = `Add to ${targetView.name}`;
 
@@ -320,24 +344,51 @@ export function QuantityModal({
           </div>
         ) : (
           <div className="flex items-start gap-3 pb-3">
-            <ProductImage
-              src={product.imageUrl}
-              name={product.name}
-              padding="p-1"
-              letterClassName={compact ? 'text-xl' : 'text-2xl'}
-              className={`shrink-0 rounded-sm ${compact ? 'h-10 w-10' : 'h-14 w-14'}`}
-            />
-            <div className="min-w-0 flex-1">
-              <h2
-                id={headingId}
-                ref={headingRef}
-                tabIndex={-1}
-                className={`text-lg focus:outline-none ${compact ? 'truncate' : 'line-clamp-2'}`}
-              >
-                {product.name}
-              </h2>
-              {!compact && subline && <p className="truncate text-sm text-muted">{subline}</p>}
-            </div>
+            {onFindInSearch ? (
+              <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  aria-label={`Find ${product.name} in Search`}
+                  onClick={() => onFindInSearch(product)}
+                  className="-my-1 flex min-h-11 w-full min-w-0 items-start gap-3 rounded-sm py-1 text-left"
+                >
+                  <span aria-hidden className="shrink-0">
+                    {image}
+                  </span>
+                  <span
+                    id={headingId}
+                    ref={headingRef as RefObject<HTMLSpanElement>}
+                    role="heading"
+                    aria-level={2}
+                    tabIndex={-1}
+                    className={`block min-w-0 flex-1 self-center text-lg focus:outline-none ${compact ? 'truncate' : 'line-clamp-2'}`}
+                  >
+                    {product.name}
+                  </span>
+                  <ChevronRight aria-hidden className="h-5 w-5 shrink-0 self-center text-muted" />
+                </button>
+                {!compact && subline && (
+                  <p className={`truncate pt-1 text-sm text-muted ${compact ? '' : 'pl-[68px]'}`}>
+                    {subline}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                {image}
+                <div className="min-w-0 flex-1">
+                  <h2
+                    id={headingId}
+                    ref={headingRef as RefObject<HTMLHeadingElement>}
+                    tabIndex={-1}
+                    className={`text-lg focus:outline-none ${compact ? 'truncate' : 'line-clamp-2'}`}
+                  >
+                    {product.name}
+                  </h2>
+                  {!compact && subline && <p className="truncate text-sm text-muted">{subline}</p>}
+                </div>
+              </>
+            )}
             <button
               type="button"
               aria-label="Close"
