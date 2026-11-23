@@ -81,7 +81,7 @@ export function AppLayout() {
     <div className="min-h-dvh bg-bg [--nav-height:calc(64px+max(var(--safe-bottom),8px))]">
       {!bare && (
         <header className="fixed inset-x-0 top-0 z-30 border-b border-border-subtle bg-surface pt-safe-top">
-          <div className="flex h-14 items-center pl-[max(16px,var(--safe-left))] pr-[max(16px,var(--safe-right))]">
+          <div className="flex h-[56px] items-center pl-[max(16px,var(--safe-left))] pr-[max(16px,var(--safe-right))]">
             <h1 className="min-w-0 flex-1 truncate text-xl">{title}</h1>
             <div ref={setBarSlot} className="flex h-11 min-w-tap items-center justify-end" />
           </div>

@@ -168,3 +168,9 @@
     background: var(--surface);
   }
 }
+
+/* App-like behaviour: no double-tap zoom (pinch and focus zoom are blocked in main.tsx and the
+   viewport meta). */
+html {
+  touch-action: manipulation;
+}
