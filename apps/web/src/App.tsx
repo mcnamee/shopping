@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, RouterProvider, Routes, createBrowserRouter } from 'react-router';
 import { HistoryPage } from './lists/HistoryPage';
 import { ListPage } from './lists/ListPage';
 import { ListsPage } from './lists/ListsPage';
@@ -66,12 +66,13 @@ export function AppRoutes() {
   );
 }
 
+// A data router (not <BrowserRouter>) so screens can use useBlocker for unsaved-change guards.
+const router = createBrowserRouter([{ path: '*', element: <AppRoutes /> }]);
+
 export function App() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <AppRoutes />
-      </ToastProvider>
-    </BrowserRouter>
+    <ToastProvider>
+      <RouterProvider router={router} />
+    </ToastProvider>
   );
 }

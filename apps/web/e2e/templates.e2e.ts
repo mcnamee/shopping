@@ -49,6 +49,25 @@ test.describe('Templates tab', () => {
     await expectNoHorizontalScroll(page);
   });
 
+  test('unsaved name or type prompts before leaving via Search, back or tabs', async ({ page }) => {
+    await signInToShell(page);
+    await nav(page, 'Templates');
+    await page.getByRole('link', { name: /Tacos/ }).click();
+    await page.getByLabel('Name').fill('Taco Friday');
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Lists' })
+      .click();
+    const sheet = page.getByRole('alertdialog', { name: 'Discard changes?' });
+    await expect(sheet).toContainText("You've changed this template's name or type.");
+    await sheet.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(page.getByLabel('Name')).toHaveValue('Taco Friday');
+    await page.getByRole('link', { name: 'Back to templates' }).click();
+    await sheet.getByRole('button', { name: 'Save and continue' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Templates' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Taco Friday/ })).toBeVisible();
+  });
+
   test('type filter chips, rename, delete item with Undo, delete template', async ({ page }) => {
     await signInToShell(page);
     await nav(page, 'Templates');

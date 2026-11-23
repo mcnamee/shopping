@@ -135,13 +135,54 @@ describe('create and edit a template', () => {
     await user.type(screen.getByLabelText('Name'), ' x');
     await user.click(screen.getByRole('link', { name: 'Back to templates' }));
     const confirm = await screen.findByRole('alertdialog', { name: 'Discard changes?' });
+    expect(within(confirm).getByText("You've changed this template's name or type.")).toBeVisible();
     expect(within(confirm).getByRole('button', { name: 'Keep editing' })).toHaveFocus();
     await user.click(within(confirm).getByRole('button', { name: 'Keep editing' }));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toHaveValue('Tacos x');
     await user.click(screen.getByRole('link', { name: 'Back to templates' }));
     await user.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Discard' }),
     );
+    expect(await screen.findByRole('link', { name: /Weekly basics/ })).toBeVisible();
+  });
+
+  it('Save and continue saves then leaves; a failed save stays with the error', async () => {
+    const { user } = await editor();
+    await user.type(screen.getByLabelText('Name'), ' x');
+    failNext('PATCH /api/templates/', 500);
+    await user.click(screen.getByRole('link', { name: 'Back to templates' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Save and continue',
+      }),
+    );
+    expect(await screen.findByText(/Couldn't save that template/)).toBeVisible();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Back to templates' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Save and continue',
+      }),
+    );
+    expect(await screen.findByRole('link', { name: /Tacos x/ })).toBeVisible();
+  });
+
+  it('does not prompt when nothing has changed, and guards beforeunload only while dirty', async () => {
+    const { user } = await editor();
+    const ev = () => {
+      const e = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
+    expect(ev()).toBe(false);
+    await user.type(screen.getByLabelText('Name'), ' x');
+    expect(ev()).toBe(true);
+    await user.clear(screen.getByLabelText('Name'));
+    await user.type(screen.getByLabelText('Name'), 'Tacos');
+    expect(ev()).toBe(false);
+    await user.click(screen.getByRole('link', { name: 'Back to templates' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /Weekly basics/ })).toBeVisible();
   });
 

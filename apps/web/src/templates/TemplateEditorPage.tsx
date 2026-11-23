@@ -14,7 +14,7 @@ import {
 } from '@trolley/core';
 import { CircleAlert, ListPlus, Plus, ShoppingBasket, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   ApiError,
   addTemplateItem,
@@ -102,12 +102,29 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
     (edits.name !== undefined && edits.name !== baseline.name) ||
     (edits.type !== undefined && edits.type !== baseline.type);
 
+  // Unsaved name/type: block in-app navigation (confirm sheet) and tab close/reload.
+  const dirtyRef = useRef(false);
+  dirtyRef.current = dirty;
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirtyRef.current &&
+      currentLocation.pathname + currentLocation.search !==
+        nextLocation.pathname + nextLocation.search,
+  );
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
+
   const [nameError, setNameError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState<'failed' | 'stale' | null>(null);
-  const [sheet, setSheet] = useState<null | 'discard' | 'delete' | 'add-to-list' | 'new-list'>(
-    null,
-  );
+  const [sheet, setSheet] = useState<null | 'delete' | 'add-to-list' | 'new-list'>(null);
   const [editing, setEditing] = useState<{ item: TemplateItem; opener: HTMLElement | null } | null>(
     null,
   );
@@ -154,7 +171,7 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
   };
 
   /** Save name and type (creating the template first time). Returns the saved id, or null. */
-  const save = async (): Promise<string | null> => {
+  const save = async (stay = true): Promise<string | null> => {
     const err = validate(form.name);
     setNameError(err);
     if (err) {
@@ -170,7 +187,8 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
         setTemplateCache(created);
         toast.show(`Saved ${created.name}`);
         setEdits({});
-        navigate(`/templates/${created.id}`, { replace: true });
+        dirtyRef.current = false;
+        if (stay) navigate(`/templates/${created.id}`, { replace: true });
         return created.id;
       }
       const updated = await updateTemplate(tpl.id, {
@@ -180,6 +198,7 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
       });
       setTemplateCache(updated);
       setEdits({});
+      dirtyRef.current = false;
       toast.show(`Saved ${updated.name}`);
       return updated.id;
     } catch (e) {
@@ -291,6 +310,7 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
       qc.removeQueries({ queryKey: qk.template(tpl.id) });
       void qc.invalidateQueries({ queryKey: qk.templates });
       toast.show(`Deleted ${tpl.name}`);
+      dirtyRef.current = false;
       navigate('/templates', { replace: true });
     } catch {
       setSheet(null);
@@ -299,11 +319,16 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
   };
 
   const title = isNew ? 'New template' : (tpl?.name ?? 'Template');
-  const back = (e: React.MouseEvent) => {
-    if (dirty) {
-      e.preventDefault();
-      setSheet('discard');
-    }
+  const leaving = blocker.state === 'blocked';
+  const saveAndContinue = async () => {
+    if (blocker.state !== 'blocked') return;
+    if (await save(false)) blocker.proceed();
+    else blocker.reset();
+  };
+  const discardAndContinue = () => {
+    if (blocker.state !== 'blocked') return;
+    dirtyRef.current = false;
+    blocker.proceed();
   };
 
   if (!isNew && query.isPending) {
@@ -356,7 +381,6 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
         title={title}
         backTo="/templates"
         backLabel="Back to templates"
-        onBack={back}
         right={
           <button
             type="button"
@@ -587,14 +611,17 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
           returnFocusRef={{ current: editing.opener }}
         />
       )}
-      {sheet === 'discard' && (
+      {leaving && (
         <ConfirmSheet
           title="Discard changes?"
-          description="Your changes to this template haven't been saved."
-          confirm="Discard"
+          description="You've changed this template's name or type."
+          confirm={saving ? 'Saving...' : 'Save and continue'}
+          tone="primary"
+          extra={{ label: 'Discard', onClick: discardAndContinue }}
           cancel="Keep editing"
-          onConfirm={() => navigate('/templates')}
-          onCancel={() => setSheet(null)}
+          busy={saving}
+          onConfirm={() => void saveAndContinue()}
+          onCancel={() => blocker.reset?.()}
         />
       )}
       {sheet === 'delete' && tpl && (
