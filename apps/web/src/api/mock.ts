@@ -32,6 +32,7 @@ import {
   mockUnitOverrides,
   resetMockStage2,
 } from './mock-stage2';
+import { createStage4MockRoutes, resetMockStage4 } from './mock-stage4';
 
 type Claims = Record<string, string>;
 type MockHandler = (ctx: {
@@ -156,10 +157,11 @@ export function resetMockCustomProducts(): void {
   customSeq = 0;
 }
 
-/** Test helper: forget everything (custom products and Stage 2 lists/templates/settings). */
+/** Test helper: forget everything (custom products, Stage 2 lists/templates/settings, Stage 4 connected apps). */
 export function resetMockApi(): void {
   resetMockCustomProducts();
   resetMockStage2();
+  resetMockStage4();
 }
 
 /** Resolve a product id as the API does: catalogue SKU or this household's custom product. */
@@ -353,6 +355,7 @@ export const mockRoutes: Record<string, MockRoute> = {
     find: findProduct,
     customs: (hh) => customsFor(hh).map(customSummary),
   }),
+  ...createStage4MockRoutes(),
 };
 
 const PATTERNS = Object.keys(mockRoutes)
