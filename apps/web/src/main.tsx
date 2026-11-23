@@ -20,6 +20,11 @@ applyTextSize(readTextSize());
 
 const container = document.getElementById('root');
 if (!container) throw new Error('#root element missing from index.html');
+// Feel like an app: block iOS pinch-zoom (Safari ignores user-scalable=no for pinch).
+for (const type of ['gesturestart', 'gesturechange'] as const) {
+  document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+}
+
 const root = createRoot(container);
 
 async function start() {
