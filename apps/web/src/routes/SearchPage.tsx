@@ -3,7 +3,7 @@ import { DEFAULT_GROUPS, type GroupSummary, type ProductSummary } from '@trolley
 import { Loader2, Plus, ShoppingCart } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { ApiError, getGroups, searchProducts } from '../api';
+import { ApiError, getGroups, getProduct, searchProducts } from '../api';
 import { useListsQuery, useTemplatesQuery } from '../lists/data';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
 import { setLastSearch } from '../search/lastSearch';
@@ -138,7 +138,22 @@ export function SearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online]);
 
-  const items = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data]);
+  // A product pinned first (from "Find {name} in Search"): fetched by id so it shows even when
+  // it isn't on page 1 (and for custom products).
+  const pinId = params.get('pin');
+  const pinQuery = useQuery({
+    queryKey: ['products', 'detail', pinId],
+    queryFn: () => getProduct(pinId ?? ''),
+    enabled: pinId !== null && pinId !== '',
+    staleTime: 60_000,
+    retry: false,
+  });
+  const pinned: ProductSummary | null = pinQuery.data ?? null;
+  const items = useMemo(() => {
+    const rest = query.data?.pages.flatMap((p) => p.items) ?? [];
+    if (!pinned || pinned.sku !== pinId) return rest;
+    return [pinned, ...rest.filter((p) => p.sku !== pinned.sku)];
+  }, [query.data, pinned, pinId]);
   const total = query.data?.pages[query.data.pages.length - 1]?.total ?? 0;
   const loadingFirst = enabled && (query.isPending || query.isPlaceholderData);
   const showSkeleton = useDelayedFlag(loadingFirst, SKELETON_DELAY_MS);
@@ -210,6 +225,14 @@ export function SearchPage() {
   const onTemplateIcon = (product: ProductSummary, button: HTMLButtonElement) => {
     opener.current = button;
     openQuantity(product, true);
+  };
+
+  const findInSearch = (product: ProductSummary) => {
+    setModal(null);
+    setText(product.name);
+    flush(product.name);
+    setParams({ q: product.name, pin: product.sku }, { replace: true });
+    window.scrollTo?.(0, 0);
   };
 
   const onConfirm = async (selection: QuantitySelection) => {
@@ -374,7 +397,19 @@ export function SearchPage() {
           <SearchField
             ref={input}
             value={text}
-            onChange={setText}
+            onChange={(v) => {
+              setText(v);
+              if (pinId) {
+                setParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete('pin');
+                    return next;
+                  },
+                  { replace: true },
+                );
+              }
+            }}
             onSubmit={() => {
               flush(text);
               input.current?.blur();
@@ -413,6 +448,9 @@ export function SearchPage() {
           }
           startOnPicker={modal.startOnPicker}
           fromTemplateIcon={modal.fromTemplateIcon}
+          {...(pinId === modal.product.sku && !listContext && !templateContext
+            ? {}
+            : { onFindInSearch: findInSearch })}
           onConfirm={onConfirm}
           onClose={() => setModal(null)}
           returnFocusRef={returnFocus}

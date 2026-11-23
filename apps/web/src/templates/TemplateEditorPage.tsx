@@ -577,6 +577,12 @@ export function TemplateEditorPage({ isNew = false }: { isNew?: boolean }) {
             note: editing.item.note ?? '',
           }}
           onConfirm={(sel) => saveItem(editing.item, sel)}
+          onFindInSearch={(product) => {
+            setEditing(null);
+            navigate(
+              `/search?q=${encodeURIComponent(product.name)}&pin=${encodeURIComponent(product.sku)}`,
+            );
+          }}
           onClose={() => setEditing(null)}
           returnFocusRef={{ current: editing.opener }}
         />

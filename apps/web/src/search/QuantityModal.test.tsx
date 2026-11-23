@@ -269,3 +269,29 @@ describe('QuantityModal', () => {
     expect(await screen.findByText('Custom item')).toBeInTheDocument();
   });
 });
+
+describe('QuantityModal find in Search header', () => {
+  it('is a plain heading when no handler is given', async () => {
+    setup();
+    await screen.findByRole('dialog');
+    expect(screen.queryByRole('button', { name: /^Find .* in Search$/ })).toBeNull();
+  });
+
+  it('makes the product header a labelled button that calls onFindInSearch', async () => {
+    const onFindInSearch = vi.fn();
+    const p = product();
+    const { user } = renderWithProviders(
+      <QuantityModal
+        product={p}
+        onConfirm={vi.fn()}
+        onClose={vi.fn()}
+        onFindInSearch={onFindInSearch}
+      />,
+      auth,
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Potatoes' });
+    const btn = within(dialog).getByRole('button', { name: 'Find Potatoes in Search' });
+    await user.click(btn);
+    expect(onFindInSearch).toHaveBeenCalledWith(p);
+  });
+});

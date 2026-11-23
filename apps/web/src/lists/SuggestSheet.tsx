@@ -65,12 +65,34 @@ type Phase =
 export interface SuggestSheetProps {
   list: { id: string; name: string };
   /** `regulars`: review the household's Regulars templates, everything unticked to start. */
-  mode?: 'suggest' | 'regulars';
+  mode?: 'suggest' | 'regulars' | 'template';
+  /** `template` mode: the template to review, everything ticked to start. */
+  template?: { id: string; name: string };
   /** `added` is true when rows were added (the sheet then shows its own toast). */
   onClose: (added: boolean) => void;
   /** Ids of every row added or merged into, so the list can highlight them. */
   onAdded?: (itemIds: string[]) => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
+}
+
+/** Items of one template as review rows. */
+async function getTemplateSuggestions(
+  id: string,
+  signal: AbortSignal,
+): Promise<SuggestionsResponse> {
+  const t = await getTemplate(id);
+  if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+  const suggestions: Suggestion[] = t.items.map((i) => ({
+    productId: i.product.productId,
+    snapshot: i.product,
+    qty: i.qty,
+    unit: i.unit,
+    note: i.note,
+    reason: `On ${t.name}`,
+    fromTemplate: false,
+    fromHistory: false,
+  }));
+  return { source: 'rules', coldStart: false, note: null, suggestions };
 }
 
 /** Items of every Regulars template as review rows, one per product and unit. */
@@ -299,14 +321,26 @@ function Centered({
   );
 }
 
-function LoadingBody({ seconds, regulars }: { seconds: number; regulars: boolean }) {
+function LoadingBody({
+  seconds,
+  regulars,
+  template,
+}: {
+  seconds: number;
+  regulars: boolean;
+  template: boolean;
+}) {
   return (
     <div>
       <div className="flex items-center gap-3 py-2">
         <Loader2 aria-hidden className="h-6 w-6 shrink-0 animate-spin text-accent" />
         <div>
           <p className="text-lg font-semibold">
-            {regulars ? 'Loading your regulars...' : loadingCopy(seconds)}
+            {regulars
+              ? 'Loading your regulars...'
+              : template
+                ? 'Loading the template...'
+                : loadingCopy(seconds)}
           </p>
           {seconds >= 3 && <p className="text-sm text-muted">This can take a few seconds.</p>}
         </div>
@@ -339,11 +373,16 @@ function LoadingBody({ seconds, regulars }: { seconds: number; regulars: boolean
 export function SuggestSheet({
   list,
   mode = 'suggest',
+  template,
   onClose,
   onAdded,
   returnFocusRef,
 }: SuggestSheetProps) {
+  const fromTemplate = mode === 'template' && template !== undefined;
   const regulars = mode === 'regulars';
+  /** Reviewing saved items (Regulars or one template) rather than AI suggestions. */
+  const review = regulars || fromTemplate;
+  const templateId = template?.id;
   const qc = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
@@ -358,16 +397,24 @@ export function SuggestSheet({
   const [qtys, setQtys] = useState<ReadonlyMap<number, number>>(new Map());
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
-  const [live, setLive] = useState(regulars ? 'Loading your regulars' : 'Looking for suggestions');
+  const [live, setLive] = useState(
+    regulars
+      ? 'Loading your regulars'
+      : fromTemplate
+        ? 'Loading the template'
+        : 'Looking for suggestions',
+  );
 
   // ---- fetch (aborted on Cancel, Close or unmount)
   useEffect(() => {
     const ctrl = new AbortController();
     setPhase({ kind: 'loading' });
     setSeconds(0);
-    (regulars
-      ? getRegularsSuggestions(ctrl.signal)
-      : getListSuggestions(list.id, ctrl.signal)
+    (fromTemplate && templateId
+      ? getTemplateSuggestions(templateId, ctrl.signal)
+      : regulars
+        ? getRegularsSuggestions(ctrl.signal)
+        : getListSuggestions(list.id, ctrl.signal)
     ).then(
       (data) => {
         setOff(regulars ? new Set(data.suggestions.map((_, i) => i)) : new Set());
@@ -376,7 +423,7 @@ export function SuggestSheet({
         const n = data.suggestions.length;
         setLive(
           n > 0
-            ? `${regulars ? 'Regulars' : 'Suggestions'} ready, ${countItems(n)}`
+            ? `${regulars ? 'Regulars' : fromTemplate ? 'Template' : 'Suggestions'} ready, ${countItems(n)}`
             : data.coldStart
               ? 'Nothing to suggest yet'
               : "You're all set",
@@ -390,7 +437,7 @@ export function SuggestSheet({
       },
     );
     return () => ctrl.abort();
-  }, [list.id, attempt, regulars]);
+  }, [list.id, attempt, regulars, fromTemplate, templateId]);
 
   useEffect(() => {
     if (phase.kind !== 'loading') return;
@@ -484,7 +531,7 @@ export function SuggestSheet({
   let body;
   let footer;
   if (phase.kind === 'loading') {
-    body = <LoadingBody seconds={seconds} regulars={regulars} />;
+    body = <LoadingBody seconds={seconds} regulars={regulars} template={fromTemplate} />;
     footer = (
       <Button variant="secondary" onClick={close}>
         Cancel
@@ -510,7 +557,9 @@ export function SuggestSheet({
         <CircleAlert aria-hidden className="mt-0.5 h-5 w-5 shrink-0" />
         {regulars
           ? "Couldn't load your regulars right now."
-          : "Couldn't get suggestions right now."}
+          : fromTemplate
+            ? "Couldn't load that template right now."
+            : "Couldn't get suggestions right now."}
       </p>
     );
     footer = (
@@ -522,7 +571,14 @@ export function SuggestSheet({
       </>
     );
   } else if (suggestions.length === 0) {
-    body = regulars ? (
+    body = fromTemplate ? (
+      <Centered
+        tone="accent"
+        Icon={ListChecks}
+        title="Nothing in this template"
+        body="Add items to it from Templates and they will show up here to review."
+      />
+    ) : regulars ? (
       <Centered
         tone="accent"
         Icon={ListChecks}
@@ -547,7 +603,7 @@ export function SuggestSheet({
         body="Nothing else looks due this week."
       />
     );
-    footer = regulars ? (
+    footer = review ? (
       <Button onClick={close}>Done</Button>
     ) : coldStart ? (
       <>
@@ -575,7 +631,7 @@ export function SuggestSheet({
             {note}
           </p>
         )}
-        <div className="flex min-h-11 items-center justify-between gap-2">
+        <div className="sticky top-0 z-20 flex min-h-11 items-center justify-between gap-2 bg-bg">
           <p aria-live="polite" className="text-sm text-muted">
             {suggestions.length - off.size} of {suggestions.length} selected
           </p>
@@ -591,7 +647,7 @@ export function SuggestSheet({
           <section key={s.group.id} role="group" aria-labelledby={`${headingId}-${s.group.id}`}>
             <h3
               id={`${headingId}-${s.group.id}`}
-              className="sticky top-0 z-10 flex h-10 items-center justify-between bg-bg text-xs uppercase tracking-wide text-muted"
+              className="sticky top-11 z-10 flex h-10 items-center justify-between bg-bg text-xs uppercase tracking-wide text-muted"
             >
               {s.group.name}
               <span aria-hidden>{s.items.length}</span>
@@ -606,7 +662,7 @@ export function SuggestSheet({
                   onToggle={() => toggle(index)}
                   onQty={(next) => setQtys((m) => new Map(m).set(index, next))}
                   announce={setLive}
-                  showWeekly={!regulars}
+                  showWeekly={!review}
                 />
               ))}
             </ul>
@@ -650,7 +706,9 @@ export function SuggestSheet({
       header={
         <SheetHeader
           id={headingId}
-          title={regulars ? 'Review regulars' : 'Suggested items'}
+          title={
+            regulars ? 'Review regulars' : fromTemplate ? `Add ${template.name}` : 'Suggested items'
+          }
           headingRef={heading}
           onClose={close}
         />

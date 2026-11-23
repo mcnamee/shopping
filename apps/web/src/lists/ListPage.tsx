@@ -68,7 +68,15 @@ const ARCHIVE_UNDO_MS = 8000;
 const HIGHLIGHT_MS = 2000;
 
 type Sheet =
-  null | 'options' | 'rename' | 'template' | 'suggest' | 'regulars' | 'finish' | 'delete';
+  | null
+  | 'options'
+  | 'rename'
+  | 'template'
+  | 'templateReview'
+  | 'suggest'
+  | 'regulars'
+  | 'finish'
+  | 'delete';
 type ArchiveInfo = 'own' | 'other' | null;
 
 const progressOf = (items: readonly ListItem[]) => ({
@@ -124,6 +132,7 @@ export function ListPage() {
   const [archiveInfo, setArchiveInfo] = useState<ArchiveInfo>(null);
   const [announcement, setAnnouncement] = useState('');
   const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
+  const [pickedTemplate, setPickedTemplate] = useState<{ id: string; name: string } | null>(null);
   const optionsButton = useRef<HTMLButtonElement>(null);
   const createdForSuggest = useRef(false);
   const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -931,11 +940,37 @@ export function ListPage() {
       {sheet === 'rename' && (
         <RenameSheet list={list} onSave={rename} onClose={() => setSheet(null)} />
       )}
-      {sheet === 'template' && (
-        <AddFromTemplateSheet
+      {sheet === 'template' && templates.data?.templates.length === 1 && (
+        <SuggestSheet
           list={{ id, name: list.name }}
-          templates={templates.data?.templates ?? []}
+          mode="template"
+          template={{
+            id: (templates.data.templates[0] as { id: string }).id,
+            name: (templates.data.templates[0] as { name: string }).name,
+          }}
           onClose={() => setSheet(null)}
+          onAdded={suggestionsAdded}
+          returnFocusRef={optionsButton}
+        />
+      )}
+      {sheet === 'template' && templates.data?.templates.length !== 1 && (
+        <AddFromTemplateSheet
+          templates={templates.data?.templates ?? []}
+          onPick={(t) => {
+            setPickedTemplate({ id: t.id, name: t.name });
+            setSheet('templateReview');
+          }}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {sheet === 'templateReview' && pickedTemplate && (
+        <SuggestSheet
+          list={{ id, name: list.name }}
+          mode="template"
+          template={pickedTemplate}
+          onClose={() => setSheet(null)}
+          onAdded={suggestionsAdded}
+          returnFocusRef={optionsButton}
         />
       )}
       {sheet === 'suggest' && (
@@ -995,6 +1030,12 @@ export function ListPage() {
             note: editing.item.note ?? '',
           }}
           onConfirm={(sel) => saveEdit(editing.item, sel)}
+          onFindInSearch={(product) => {
+            setEditing(null);
+            navigate(
+              `/search?q=${encodeURIComponent(product.name)}&pin=${encodeURIComponent(product.sku)}`,
+            );
+          }}
           onRemove={() => {
             const item = editing.item;
             setEditing(null);

@@ -324,3 +324,19 @@ describe('Review regulars sheet', () => {
     expect(await toast()).toHaveTextContent(/Added|combined/);
   });
 });
+
+describe('Review template sheet', () => {
+  it('shows the template items grouped, all ticked, and adds the ticked ones', async () => {
+    const app = await renderMockApp(`/lists/${LIST_ID}`);
+    await screen.findByRole('heading', { level: 1, name: /Week of/ }, { timeout: 3000 });
+    await app.user.click(screen.getByRole('button', { name: 'List options' }));
+    await app.user.click(await screen.findByRole('button', { name: 'Add from template' }));
+    const picker = await screen.findByRole('dialog', { name: 'Add from template' });
+    await app.user.click(await within(picker).findByRole('button', { name: /Tacos/ }));
+    const s = await screen.findByRole('dialog', { name: 'Add Tacos' });
+    expect(await within(s).findByText('5 of 5 selected')).toBeVisible();
+    await app.user.click(within(s).getAllByRole('checkbox')[0] as HTMLElement);
+    await app.user.click(within(s).getByRole('button', { name: /^Add 4 items$/ }));
+    expect(await toast()).toHaveTextContent(/Added|combined/);
+  });
+});

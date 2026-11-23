@@ -1,4 +1,5 @@
 import type {
+  ProductDetailResponse,
   AddItemRequest,
   AddTemplatesToListResponse,
   AisleOrderResponse,
@@ -68,6 +69,9 @@ export const searchProducts = (params: SearchParams, signal?: AbortSignal) => {
     signal ? { signal } : {},
   );
 };
+
+export const getProduct = (sku: string) =>
+  api.get<ProductDetailResponse>(`/products/${encodeURIComponent(sku)}`);
 
 export const getGroups = () => api.get<GroupsResponse>('/groups');
 

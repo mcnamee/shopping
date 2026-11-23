@@ -1,5 +1,9 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { ENTITY_NAME_MAX_LENGTH, type ListDetail, type TemplateSummary } from '@trolley/core';
+import {
+  ENTITY_NAME_MAX_LENGTH,
+  sortTemplates,
+  type ListDetail,
+  type TemplateSummary,
+} from '@trolley/core';
 import {
   CircleAlert,
   CircleCheck,
@@ -14,11 +18,8 @@ import {
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
-import { useToast } from '../components/Toast';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
-import { TemplateChecklist } from './TemplateChecklist';
-import { ROLLBACK_MESSAGE } from './data';
-import { addTemplates } from './templateAdd';
+import { TypeBadge } from '../components/TypeBadge';
 
 export function SheetHeader({
   id,
@@ -256,46 +257,23 @@ export function RenameSheet({
   );
 }
 
-/** Add template(s) to this list (docs/ux/lists.md 3.7; same merge rule D-046). */
+/** Pick the template to review before adding it to this list (docs/ux/lists.md 3.7). */
 export function AddFromTemplateSheet({
-  list,
   templates,
+  onPick,
   onClose,
 }: {
-  list: { id: string; name: string };
   templates: readonly TemplateSummary[];
+  onPick: (template: TemplateSummary) => void;
   onClose: () => void;
 }) {
-  const qc = useQueryClient();
-  const toast = useToast();
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
-  const { online } = useOnlineStatus();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  const add = async () => {
-    if (!online || selected.size === 0) return;
-    setBusy(true);
-    setFailed(false);
-    try {
-      const { message, options } = await addTemplates(qc, list.id, list.name, [...selected], () =>
-        toast.show("Couldn't undo. Check your connection."),
-      );
-      toast.show(message, options);
-      onClose();
-    } catch {
-      setBusy(false);
-      setFailed(true);
-    }
-  };
 
   return (
     <BottomSheet
       labelledBy={headingId}
       initialFocusRef={heading}
-      busy={busy}
       onClose={onClose}
       header={
         <SheetHeader
@@ -306,49 +284,33 @@ export function AddFromTemplateSheet({
         />
       }
       footer={
-        <>
-          {failed && (
-            <p
-              role="alert"
-              className="flex items-start gap-2 rounded-sm bg-danger-soft px-3 py-3 text-sm font-semibold text-danger"
-            >
-              <CircleAlert aria-hidden className="mt-0.5 h-5 w-5 shrink-0" />
-              {ROLLBACK_MESSAGE}
-            </p>
-          )}
-          <Button
-            busy={busy}
-            busyLabel="Adding..."
-            aria-disabled={selected.size === 0 || !online}
-            onClick={() => void add()}
-          >
-            Add to list
-          </Button>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
-            Cancel
-          </Button>
-        </>
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
       }
     >
       {templates.length === 0 ? (
         <p className="py-2 text-base text-muted">You haven't made any templates yet.</p>
       ) : (
         <>
-          <TemplateChecklist
-            templates={templates}
-            selected={selected}
-            onToggle={(id) =>
-              setSelected((s) => {
-                const n = new Set(s);
-                if (n.has(id)) n.delete(id);
-                else n.add(id);
-                return n;
-              })
-            }
-          />
-          <p className="mt-1 text-sm text-muted">
-            Matching items are combined, so you won't get doubles.
-          </p>
+          <p className="pb-1 text-sm text-muted">Choose a template to review its items.</p>
+          <ul aria-label="Templates" className="space-y-1">
+            {sortTemplates(templates).map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  onClick={() => onPick(t)}
+                  className="flex min-h-14 w-full items-center gap-3 rounded-sm px-1 text-left active:bg-surface"
+                >
+                  <span className="min-w-0 flex-1 truncate text-lg">{t.name}</span>
+                  <TypeBadge type={t.type} />
+                  <span className="w-8 shrink-0 text-right text-sm font-bold tabular-nums text-muted">
+                    {t.itemCount}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </BottomSheet>

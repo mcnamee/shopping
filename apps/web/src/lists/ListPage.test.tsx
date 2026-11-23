@@ -397,14 +397,22 @@ describe('shop mode: list options', () => {
     expect(screen.getByText(/^Deleted Week of/)).toBeVisible();
   });
 
-  it('adds a template with the merge rule and reports the count', async () => {
+  it('Add from template picks a template, reviews its items all ticked, then bulk adds with Undo', async () => {
     const { user } = await shop();
     await user.click(screen.getByRole('button', { name: 'List options' }));
     await user.click(await screen.findByRole('button', { name: 'Add from template' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add from template' });
-    await user.click(await within(dialog).findByRole('checkbox', { name: /Tacos/ }));
-    await user.click(within(dialog).getByRole('button', { name: 'Add to list' }));
-    expect(await screen.findByText(/^Added 5 items \(\d combined\)$/)).toBeVisible();
+    const picker = await screen.findByRole('dialog', { name: 'Add from template' });
+    await user.click(await within(picker).findByRole('button', { name: /Tacos/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add Tacos' });
+    const boxes = await within(dialog).findAllByRole('checkbox');
+    expect(boxes).toHaveLength(5);
+    boxes.forEach((b) => expect(b).toHaveAttribute('aria-checked', 'true'));
+    await user.click(within(dialog).getByRole('button', { name: 'Select none' }));
+    expect(within(dialog).getAllByText('0 of 5 selected').length).toBeGreaterThan(0);
+    await user.click(within(dialog).getByRole('button', { name: 'Select all' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add 5 items' }));
+    expect(await screen.findByText(/^Added 5 items/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeVisible();
   });
 });
 
