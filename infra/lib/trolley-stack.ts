@@ -193,6 +193,8 @@ export class TrolleyStack extends Stack {
       environment: {
         TABLE_NAME: table.tableName,
         SUGGEST_MODEL_ID: suggestModelId,
+        // OAuth issuer and MCP resource URL (Stage 4, D-082/D-083): the configured domain.
+        PUBLIC_ORIGIN: `https://${props.domainName}`,
         NODE_OPTIONS: '--enable-source-maps',
       },
       bundling: LAMBDA_BUNDLING,
@@ -263,7 +265,32 @@ export class TrolleyStack extends Stack {
       methods: [apigw.HttpMethod.GET],
       integration,
     });
-    const { GET, POST, PUT, PATCH, DELETE } = apigw.HttpMethod;
+    const { GET, POST, PUT, PATCH, DELETE, OPTIONS } = apigw.HttpMethod;
+    // Stage 4 (D-082, D-083): OAuth metadata/endpoints and the MCP server are public at the
+    // gateway because OAuth clients call them; the Lambda authenticates with OAuth tokens
+    // (/mcp) or client credentials + PKCE (/oauth/token). Must match services/api/src/oauth
+    // and services/api/src/mcp.
+    const publicRoutes: Array<[string, apigw.HttpMethod]> = [
+      ['/.well-known/oauth-authorization-server', GET],
+      ['/.well-known/oauth-authorization-server', OPTIONS],
+      ['/.well-known/oauth-protected-resource', GET],
+      ['/.well-known/oauth-protected-resource', OPTIONS],
+      ['/.well-known/oauth-protected-resource/mcp', GET],
+      ['/.well-known/oauth-protected-resource/mcp', OPTIONS],
+      ['/oauth/register', POST],
+      ['/oauth/register', OPTIONS],
+      ['/oauth/authorize', GET],
+      ['/oauth/token', POST],
+      ['/oauth/token', OPTIONS],
+      ['/oauth/revoke', POST],
+      ['/oauth/revoke', OPTIONS],
+      ['/mcp', POST],
+      ['/mcp', GET],
+      ['/mcp', DELETE],
+    ];
+    for (const [routePath, method] of publicRoutes) {
+      httpApi.addRoutes({ path: routePath, methods: [method], integration });
+    }
     const authedRoutes: Array<[string, apigw.HttpMethod]> = [
       ['/api/me', GET],
       ['/api/products/search', GET],
@@ -303,6 +330,11 @@ export class TrolleyStack extends Stack {
       ['/api/suggestions', POST],
       ['/api/lists/{listId}/items/bulk', POST],
       ['/api/lists/{listId}/items/undo', POST],
+      // Stage 4: consent screen and Connected apps (SPA, Cognito ID token).
+      ['/api/oauth/requests/{requestId}', GET],
+      ['/api/oauth/consent', POST],
+      ['/api/connected-apps', GET],
+      ['/api/connected-apps/{grantId}', DELETE],
     ];
     for (const [routePath, method] of authedRoutes) {
       httpApi.addRoutes({
@@ -426,7 +458,7 @@ export class TrolleyStack extends Stack {
     });
 
     // SPA routing without masking API errors: rewrite extensionless paths to /index.html
-    // on the S3 behaviour only. /api/* never runs this function.
+    // on the S3 behaviour only. API paths (/api/*, /mcp, /oauth/*, /.well-known/*) never run it.
     const spaRewrite = new cloudfront.Function(this, 'SpaRewriteFunction', {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
       comment: 'Rewrite extensionless paths to /index.html for client-side routing',
@@ -486,6 +518,17 @@ export class TrolleyStack extends Stack {
       ? acm.Certificate.fromCertificateArn(this, 'Certificate', props.certificateArn)
       : undefined;
 
+    const apiBehavior: cloudfront.BehaviorOptions = {
+      origin: new origins.HttpOrigin(apiDomain, {
+        protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+      }),
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+      cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+      originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      responseHeadersPolicy: securityHeaders,
+    };
+
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       comment: 'Trolley',
       defaultRootObject: 'index.html',
@@ -509,18 +552,12 @@ export class TrolleyStack extends Stack {
           { function: spaRewrite, eventType: cloudfront.FunctionEventType.VIEWER_REQUEST },
         ],
       },
-      additionalBehaviors: {
-        '/api/*': {
-          origin: new origins.HttpOrigin(apiDomain, {
-            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
-          }),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-          responseHeadersPolicy: securityHeaders,
-        },
-      },
+      // API paths: uncached, all viewer headers (incl. Authorization) and query strings
+      // forwarded, and no SPA rewrite. /mcp, /oauth/* and /.well-known/* are Stage 4
+      // (D-082): same origin as the app so the connector URL is https://<domain>/mcp.
+      additionalBehaviors: Object.fromEntries(
+        ['/api/*', '/mcp', '/oauth/*', '/.well-known/*'].map((pattern) => [pattern, apiBehavior]),
+      ),
     });
 
     // ---------------------------------------------------------------- Web deployment
