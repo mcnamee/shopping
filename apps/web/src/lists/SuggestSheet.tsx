@@ -631,7 +631,7 @@ export function SuggestSheet({
             {note}
           </p>
         )}
-        <div className="sticky top-0 z-20 flex min-h-11 items-center justify-between gap-2 bg-bg">
+        <div className="sticky -top-1 z-20 -mt-1 flex min-h-12 items-center justify-between gap-2 bg-bg pt-1">
           <p aria-live="polite" className="text-sm text-muted">
             {suggestions.length - off.size} of {suggestions.length} selected
           </p>
