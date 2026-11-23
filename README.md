@@ -1,73 +1,87 @@
-# Trolley
+<p align="center">
+  <img src="apps/web/public/icons/icon-512.png" alt="Trolley logo" width="120" height="120" />
+</p>
 
-Household shopping list PWA for two people, tuned for shopping at ALDI Australia. Serverless
-on AWS (CloudFront + S3, Cognito, API Gateway HTTP API + Lambda, DynamoDB), deployed only by
-GitHub Actions.
+<h1 align="center">Trolley</h1>
 
-- Product spec and release stages: [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md)
-- One-off AWS/GitHub setup: [docs/SETUP.md](docs/SETUP.md)
+<p align="center"><b>The household shopping list that writes itself - built for shopping at ALDI.</b></p>
 
-## Layout
+<p align="center">
+  Mobile first &middot; Shared between two phones &middot; AI suggestions &middot; Works with Claude, ChatGPT and Siri
+</p>
 
-| Path | What |
+---
+
+## Why Trolley?
+
+Writing the weekly shopping list is a small job that never ends. You check the fridge, try to remember whether you're out of butter, scroll back through old lists, then still forget the bin bags.
+
+Trolley does the remembering for you. It knows what you buy, how much and how often, and it builds most of this week's list before you've opened the fridge. In the store, the list is sorted by aisle so you can shop top to bottom without doubling back, and both of you can tick things off from your own phones at the same time.
+
+## Features
+
+**Plan in under two minutes**
+- **Suggest items** - learns from your past shops and adds what's due: milk every week, butter once a month. You review everything before it's added.
+- **Templates** - a *Weekly* list, a *Meal* list for each dinner you cook often, and *Regulars* for the things you buy now and then and want to check each shop.
+- **Real ALDI products** - search the live ALDI Australia range for your store, with photos, prices and pack sizes. Products your store doesn't stock are hidden.
+- **Sensible quantities** - kilograms for bananas, litres for milk, packs for everything else, with quick presets.
+
+**Shop faster in the store**
+- **Sorted by aisle** - items are grouped by section and ordered to match your store's layout, which you can rearrange in Settings.
+- **One tap to tick** - big, one-handed tap targets; ticked items sink to the bottom.
+- **Shop together** - two phones, one list, kept in sync.
+- **Notes for the shopper** - "get white if red is out of stock".
+- **Done means done** - the list archives itself when everything's ticked, and becomes history for next week's suggestions.
+
+**Add things from anywhere**
+- **Claude and ChatGPT** - "add tissues to my shopping list" adds the tissues you actually buy, using your templates and history.
+- **Siri** - "Hey Siri, Add to Trolley... milk and eggs".
+
+**Made for your phone**
+- Installs to your home screen like an app, with light and dark mode and adjustable text size.
+
+## Benefits
+
+- **Less mental load** - stop trying to remember what's running low.
+- **Fewer forgotten items** - periodic buys like bin bags and dishwasher tablets come up when they're due.
+- **Quicker shops** - aisle order means no backtracking.
+- **Private** - runs in your own AWS account; your lists and history are yours alone.
+- **Practically free to run** - serverless on AWS for roughly $0-1 a month.
+
+## How it works
+
+| Part | Built with |
 |---|---|
-| `apps/web` | React + Vite + Tailwind PWA |
-| `services/api` | API Lambda (tiny router; routes in `src/routes.ts`, products in `src/products/`) |
-| `services/scraper` | ALDI AU catalogue scraper: library, Lambda handler and CLI |
-| `packages/core` | Domain logic and shared types (household context, DynamoDB keys, products, unit types, groups, search) |
-| `infra` | AWS CDK app (`TrolleyStack`, one-off `TrolleyGithubOidcStack`) |
-| `scripts` | Admin scripts (`create-user.sh`) |
-| `.github/workflows` | `ci.yml` (PR checks), `deploy.yml` (main -> AWS via OIDC), `scrape.yml` (Scrape now), `scrape-fallback.yml` (runner scrape if ALDI blocks AWS) |
+| App | React PWA served from Amazon S3 and CloudFront |
+| Sign-in | Amazon Cognito (invite only) |
+| Backend | API Gateway + AWS Lambda, DynamoDB |
+| Suggestions | Your purchase history plus Amazon Bedrock (Nova Micro) |
+| Product catalogue | Monthly scrape of ALDI Australia via GitHub Actions |
+| Chatbots | Remote MCP server with OAuth 2.1 |
+| Deployment | GitHub Actions only - no servers to patch |
 
-## Develop
+## Installation
 
-Requires Node 22 (`nvm use`).
+Trolley is designed to be self-hosted in your own AWS account. You'll need an AWS account, a GitHub account and (optionally) a domain name. Setup takes about 30 minutes, mostly in the AWS console.
 
-```bash
-npm ci
-npm run lint        # ESLint + Prettier check
-npm run typecheck
-npm test            # Vitest in every workspace (incl. CDK assertion tests)
-PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e2e -w @trolley/web  # Playwright E2E (mock auth); PW_CHROMIUM_PATH optional
-npm run build       # web build -> apps/web/dist
-npm run synth       # cdk synth (needs the web build first)
-npm run format      # Prettier write
-```
+1. **Fork or clone** this repository.
+2. **Prepare AWS** - bootstrap CDK and create the GitHub deploy role from AWS CloudShell.
+3. **Connect GitHub** - add the repository variables (account, deploy role, alert email, optional certificate).
+4. **Deploy** - push to `main`; GitHub Actions builds, tests and deploys everything.
+5. **Fill the catalogue** - run the scrape workflow once.
+6. **Invite your household** - create the two user accounts with `scripts/create-user.sh`.
+7. **Add to your home screen** - open the app on each phone and choose *Add to Home Screen*.
 
-Run the web app locally:
+Step-by-step instructions: **[docs/SETUP.md](docs/SETUP.md)**. To connect Claude, ChatGPT or Siri: **[docs/CONNECT.md](docs/CONNECT.md)**.
 
-```bash
-# No AWS needed: mock auth + in-browser mock API (see apps/web/src/auth/mock.ts)
-npm run dev:mock -w @trolley/web
+## Documentation
 
-# Against a deployed stack: copy apps/web/.env.example to apps/web/.env.local and fill in
-npm run dev -w @trolley/web
-```
-
-In mock mode the Search tab is backed by ~60 real ALDI products (`apps/web/src/api/fixtures/products.ts`)
-plus seeded custom products. Search for `__error` to see the error state, `__slow` for loading skeletons.
-
-## ALDI catalogue scraper
-
-Runs monthly in AWS (1st, 03:00 Sydney) and on demand via **Actions -> Scrape now**. Locally:
-
-```bash
-# Offline, against the recorded fixtures in services/scraper/test/fixtures (no network)
-npm run scrape -w @trolley/scraper -- --dry-run --fixtures
-
-# Live, polite sample: 12 products per top-level category (~23 requests, ~35 s)
-NODE_USE_ENV_PROXY=1 npm run scrape -w @trolley/scraper -- --dry-run --max-per-category 12 --out sample.json
-
-# Full live dry run (~75 requests at 1 request/second, ~2 minutes)
-npm run scrape -w @trolley/scraper -- --dry-run --out products.json
-```
-
-`--dry-run` never touches DynamoDB; it prints the run record (counts, unitType distribution,
-unmapped categories) and `--out` writes the mapped products. Other options: `--service-point
-G526|none` (ALDI store; default Casey ACT), `--categories <key,key>`, `--max-products N`,
-`--interval-ms N` (minimum 500). `NODE_USE_ENV_PROXY=1` is only needed behind an HTTPS proxy.
-Without `--dry-run` the CLI writes to `TABLE_NAME` with the same safety rules as the Lambda
-(used by the fallback workflow). How the ALDI API works: docs/DECISIONS.md D-030 to D-033.
-
-Deployment happens only via GitHub Actions on merge to `main`. Never run `cdk deploy
-TrolleyStack` by hand.
+| Doc | What's in it |
+|---|---|
+| [Setup](docs/SETUP.md) | One-off AWS and GitHub setup, custom domain, users |
+| [Connect assistants](docs/CONNECT.md) | Claude, ChatGPT and Siri |
+| [Development](docs/DEVELOPMENT.md) | Repo layout, local dev, tests, the ALDI scraper |
+| [API reference](docs/api.md) | Every endpoint, including OAuth and MCP |
+| [Product spec](docs/PRODUCT_SPEC.md) | Goals, requirements and release stages |
+| [Decisions](docs/DECISIONS.md) | Why things are the way they are |
+| [Status](docs/STATUS.md) and [Backlog](docs/BACKLOG.md) | Where things are up to and what's next |
