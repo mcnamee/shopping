@@ -11,6 +11,7 @@
  * connected app for the household; Deny adds nothing.
  */
 import type {
+  ShortcutKey,
   ConnectedApp,
   ConnectedAppsResponse,
   OAuthConsentResponse,
@@ -26,6 +27,7 @@ interface Ctx {
 }
 
 export const MOCK_MCP_URL = 'https://trolley.mcn.am/mcp';
+export const MOCK_MAX_SHORTCUT_KEYS = 5;
 export const MOCK_STAGE4_KEY = 'trolley.mock.stage4.v1';
 
 const REQUESTS: Record<string, { clientName: string; redirectUri: string }> = {
@@ -42,6 +44,7 @@ const REQUESTS: Record<string, { clientName: string; redirectUri: string }> = {
 
 interface State {
   apps: Record<string, ConnectedApp[]>;
+  shortcutKeys?: Record<string, ShortcutKey[]>;
 }
 
 let memory: State = { apps: {} };
@@ -74,7 +77,7 @@ function save(): void {
 
 /** Test helper: forget all Stage 4 mock state. */
 export function resetMockStage4(): void {
-  memory = { apps: {} };
+  memory = { apps: {}, shortcutKeys: {} };
   try {
     storage()?.removeItem(MOCK_STAGE4_KEY);
   } catch {
@@ -167,6 +170,45 @@ export function createStage4MockRoutes() {
         mcpUrl: MOCK_MCP_URL,
       } satisfies ConnectedAppsResponse),
     ),
+    'GET /api/shortcut-keys': authed(({ householdId }) =>
+      json(200, {
+        keys: load().shortcutKeys?.[householdId] ?? [],
+        max: MOCK_MAX_SHORTCUT_KEYS,
+      }),
+    ),
+    'POST /api/shortcut-keys': authed(({ body, householdId, claims }) => {
+      const name = String((body as { name?: unknown } | null)?.name ?? '').trim();
+      if (!name) return invalid('Give the key a name', 'name');
+      if (name.length > 40) return invalid('Keep the name to 40 characters or fewer', 'name');
+      const state = load();
+      const all = ((state.shortcutKeys ??= {})[householdId] ??= []);
+      if (all.length >= MOCK_MAX_SHORTCUT_KEYS) {
+        return json(409, {
+          code: 'CONFLICT',
+          reason: 'LIMIT',
+          message: `You can have up to ${MOCK_MAX_SHORTCUT_KEYS} keys. Revoke one first.`,
+        });
+      }
+      const shortcutKey: ShortcutKey = {
+        keyId: crypto.randomUUID().replace(/-/g, '').slice(0, 22),
+        name,
+        createdBy: claims.name || (claims.email ?? '').split('@')[0] || 'Someone',
+        createdAt: new Date().toISOString(),
+        lastUsedAt: null,
+      };
+      all.unshift(shortcutKey);
+      save();
+      return json(201, { key: `trl_${'MockKey0'.repeat(6)}abc`, shortcutKey });
+    }),
+    'DELETE /api/shortcut-keys/{keyId}': authed(({ householdId, params }) => {
+      const state = load();
+      const all = state.shortcutKeys?.[householdId] ?? [];
+      const next = all.filter((k) => k.keyId !== params.keyId);
+      if (next.length === all.length) return notFound();
+      (state.shortcutKeys ??= {})[householdId] = next;
+      save();
+      return json(204, null);
+    }),
     'DELETE /api/connected-apps/{grantId}': authed(({ householdId, params }) => {
       const state = load();
       const apps = state.apps[householdId] ?? [];

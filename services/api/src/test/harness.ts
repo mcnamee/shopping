@@ -128,6 +128,7 @@ export function setup(opts: SetupOptions = {}) {
   const stage4 = stage4DepsFor(db, stage3, productDeps, ORIGIN);
   stage4.oauth.log = (e) => logs.push(e);
   stage4.mcp.log = (e) => logs.push(e);
+  stage4.shortcuts.log = (e) => logs.push(e);
   const handler = createHandler(
     createRouter(
       createRoutes(

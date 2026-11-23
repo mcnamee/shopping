@@ -295,6 +295,16 @@ export class TrolleyStack extends Stack {
     for (const [routePath, method] of publicRoutes) {
       httpApi.addRoutes({ path: routePath, methods: [method], integration });
     }
+    // Siri & Shortcuts (D-096): the Shortcuts app cannot sign in with Cognito, so these two are
+    // public at the gateway and the Lambda checks the personal access key (`trl_...`). Must
+    // match services/api/src/shortcuts/routes.ts; the stack test pins this as the only
+    // public /api/* routes besides /api/health.
+    for (const [routePath, method] of [
+      ['/api/quick/add', POST],
+      ['/api/quick/list', GET],
+    ] as const) {
+      httpApi.addRoutes({ path: routePath, methods: [method], integration });
+    }
     const authedRoutes: Array<[string, apigw.HttpMethod]> = [
       ['/api/me', GET],
       ['/api/products/search', GET],
@@ -339,6 +349,10 @@ export class TrolleyStack extends Stack {
       ['/api/oauth/consent', POST],
       ['/api/connected-apps', GET],
       ['/api/connected-apps/{grantId}', DELETE],
+      // Siri & Shortcuts keys (SPA).
+      ['/api/shortcut-keys', POST],
+      ['/api/shortcut-keys', GET],
+      ['/api/shortcut-keys/{keyId}', DELETE],
     ];
     for (const [routePath, method] of authedRoutes) {
       httpApi.addRoutes({

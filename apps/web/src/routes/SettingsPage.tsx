@@ -1,4 +1,4 @@
-import { ArrowUpDown, ChevronRight, Loader2, LogOut, Plug, Tag } from 'lucide-react';
+import { ArrowUpDown, ChevronRight, Loader2, LogOut, Mic, Plug, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../auth';
@@ -79,6 +79,18 @@ export function SettingsPage() {
               {appsValue && (
                 <span className="block text-sm font-normal text-muted">{appsValue}</span>
               )}
+            </span>
+            <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-muted" />
+          </Link>
+        </li>
+        <li className="border-t border-border-subtle">
+          <Link
+            to="/settings/shortcuts"
+            className="flex min-h-16 items-center gap-3 px-4 active:bg-accent-soft"
+          >
+            <Mic aria-hidden className="h-6 w-6 shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-lg">Siri &amp; Shortcuts</span>
             </span>
             <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-muted" />
           </Link>

@@ -1,5 +1,7 @@
 import type {
   ConnectedAppsResponse,
+  CreateShortcutKeyResponse,
+  ShortcutKeysResponse,
   OAuthConsentResponse,
   OAuthRequestDetails,
   ProductDetailResponse,
@@ -178,3 +180,11 @@ export const getConnectedApps = () => api.get<ConnectedAppsResponse>('/connected
 /** Revokes every token of that connection; the chatbot must reconnect. */
 export const disconnectApp = (grantId: string) =>
   api.delete<undefined>(`/connected-apps/${enc(grantId)}`);
+
+// Siri & Shortcuts keys (docs/api.md). 409 LIMIT = already 5 keys.
+export const getShortcutKeys = () => api.get<ShortcutKeysResponse>('/shortcut-keys');
+/** The raw key is in the response once and never again. */
+export const createShortcutKey = (name: string) =>
+  api.post<CreateShortcutKeyResponse>('/shortcut-keys', { name });
+export const revokeShortcutKey = (keyId: string) =>
+  api.delete<undefined>(`/shortcut-keys/${enc(keyId)}`);

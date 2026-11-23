@@ -31,3 +31,23 @@ Custom connectors need a plan that allows them (for example Plus or Pro with dev
 - The chatbot can only see your lists, add or remove items on this week's list and search products. It can't tick items, change other lists or delete lists.
 - To disconnect, go to **Settings > Connected apps** in Trolley and choose **Disconnect**; the chatbot will ask you to connect again next time. Removing the connector in Claude or ChatGPT doesn't remove it from Trolley, so disconnect there too.
 - If connecting fails with "This connection link isn't valid", start again from Claude or ChatGPT (links last 10 minutes).
+
+## Siri
+
+Say "Hey Siri, Add to Trolley", answer "What should I add?" and it goes on this week's list, with no app open. It uses a personal key rather than a connector, and works on iPhone, iPad, Apple Watch and HomePod once the shortcut is built.
+
+1. In Trolley, open **Settings > Siri & Shortcuts**, type a name (for example "Matt's iPhone") and choose **Create key**. Copy the key straight away: it is shown once. Each person can make their own; up to 5 per household.
+2. In the **Shortcuts** app, tap **+** and name the shortcut **Add to Trolley** (that name is the Siri phrase).
+3. Add **Ask for Text** with the prompt "What should I add?".
+4. Add **Get Contents of URL**. URL: `https://trolley.mcn.am/api/quick/add` (Trolley shows your exact address with a Copy button). Tap **Show More**: Method **POST**, Headers: **Authorization** = `Bearer <your key>`, Request Body **JSON** with a Text field **text** set to **Provided Input**.
+5. Add **Get Dictionary Value** for the key **spoken** from Contents of URL.
+6. Add **Speak Text** (or **Show Result**) with the Dictionary Value.
+
+Optional: a second shortcut called **What's on my Trolley list** with **Get Contents of URL** (`https://trolley.mcn.am/api/quick/list`, Method GET, same Authorization header), **Get Dictionary Value** `spoken`, then **Speak Text**.
+
+Good to know:
+- "milk and eggs" adds both. Trolley adds your usual product; if it isn't sure (say "tissues" and you've never bought any) it adds nothing and says a few options. Say the one you want.
+- A key can only add to this week's list and read it. It can't tick, remove or see other lists.
+- Lost a phone or shared a key by mistake? **Revoke** it in Settings > Siri & Shortcuts. The shortcut then says "That Trolley key isn't valid any more."
+- Anyone with the key can add to your list, so keep it out of screenshots and chats.
+

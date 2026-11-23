@@ -483,3 +483,39 @@ export interface ConnectedAppsResponse {
   apps: ConnectedApp[];
   mcpUrl: string;
 }
+
+// ------------------------------------------------------------------ Siri & Shortcuts keys
+
+/** One personal access key for the Shortcuts app (the secret is never returned again). */
+export interface ShortcutKey {
+  keyId: string;
+  name: string;
+  /** Display name of the person who made it. */
+  createdBy: string;
+  /** ISO time. */
+  createdAt: string;
+  /** ISO time, updated at most every 15 minutes; null = never used. */
+  lastUsedAt: string | null;
+}
+
+export interface CreateShortcutKeyRequest {
+  name: string;
+}
+
+/** POST /api/shortcut-keys. `key` is shown once. */
+export interface CreateShortcutKeyResponse {
+  key: string;
+  shortcutKey: ShortcutKey;
+}
+
+/** GET /api/shortcut-keys: newest first. */
+export interface ShortcutKeysResponse {
+  keys: ShortcutKey[];
+  max: number;
+}
+
+/** What /api/quick/* return: `spoken` is read aloud by Siri. */
+export interface QuickResponse {
+  spoken: string;
+  added?: Array<{ name: string; qty: number; unit: string }>;
+}
