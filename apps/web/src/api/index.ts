@@ -1,4 +1,7 @@
 import type {
+  ConnectedAppsResponse,
+  OAuthConsentResponse,
+  OAuthRequestDetails,
   ProductDetailResponse,
   AddItemRequest,
   AddTemplatesToListResponse,
@@ -163,3 +166,15 @@ export const addListItemsBulk = (listId: string, items: AddItemRequest[]) =>
 /** Undo a bulk add (or add templates) in one request: pass the ok results' `change`s. */
 export const undoListItemsBulk = (listId: string, changes: LineChange[]) =>
   api.post<BulkUndoResponse>(`/lists/${enc(listId)}/items/undo`, { changes });
+
+// Stage 4 chatbot connections (docs/api.md). 404 = the connection link is invalid or expired.
+/** A pending connection for /connect?request=<id>. */
+export const getOAuthRequest = (requestId: string) =>
+  api.get<OAuthRequestDetails>(`/oauth/requests/${enc(requestId)}`);
+/** Allow or Deny; then send the browser to `redirectUrl` (window.location.assign). */
+export const sendOAuthConsent = (requestId: string, allow: boolean) =>
+  api.post<OAuthConsentResponse>('/oauth/consent', { requestId, allow });
+export const getConnectedApps = () => api.get<ConnectedAppsResponse>('/connected-apps');
+/** Revokes every token of that connection; the chatbot must reconnect. */
+export const disconnectApp = (grantId: string) =>
+  api.delete<undefined>(`/connected-apps/${enc(grantId)}`);

@@ -52,6 +52,7 @@ import type { ProductResolver } from './products/resolver';
 import type { AuthedRequest, RouteTable } from './router';
 import type { SettingsStore } from './settings/store';
 import type { TemplateRecord, TemplateStore } from './templates/store';
+import { addToThisWeek } from './this-week';
 
 export interface Stage2Deps {
   lists: ListStore;
@@ -305,32 +306,17 @@ export function createStage2Routes(getDeps: () => Stage2Deps): RouteTable {
 
   async function addThisWeekItem(req: AuthedRequest): Promise<HttpResult> {
     const hh = hhOf(req);
-    const { lists, now } = getDeps();
+    const deps = getDeps();
     const line = await lineFromBody(req);
-    let listId = await lists.thisWeekId(hh);
-    let listCreated = false;
-    if (listId && (await lists.getRecord(hh, listId))?.status !== 'active') listId = null;
-    if (!listId) {
-      // C2: no "this week" list, so create "Week of <Monday>" and flag it.
-      const rec = await lists.create(hh, req.household.userId, {
-        name: defaultListName(now()),
-        lines: [],
-        thisWeek: undefined,
-      });
-      const flagged = await lists.thisWeekId(hh);
-      if (flagged === rec.id) {
-        listId = rec.id;
-        listCreated = true;
-      } else {
-        // The other phone created one at the same moment: use theirs, drop ours.
-        await lists.deleteList(hh, rec.id);
-        listId = flagged ?? fail.conflict('STALE', 'Changed on another phone');
-      }
-    }
-    const { item, merged } = await lists.addItem(hh, req.household.userId, listId, line);
+    const { item, merged, listId, listCreated } = await addToThisWeek(
+      deps,
+      hh,
+      req.household.userId,
+      line,
+    );
     return json(merged ? 200 : 201, {
       item,
-      list: await lists.summaryOf(hh, listId),
+      list: await deps.lists.summaryOf(hh, listId),
       merged,
       addedQty: line.qty,
       listCreated,

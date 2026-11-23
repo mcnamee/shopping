@@ -9,7 +9,7 @@ import { PasswordField } from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { COPY, UNSUPPORTED_STEP_MESSAGE, newPasswordFailure } from '../lib/authCopy';
 import { passwordMeetsRules } from '../lib/password';
-import type { AuthRouteState } from './routeState';
+import { returnPath, type AuthRouteState } from './routeState';
 
 /** /new-password (docs/ux/auth.md section 2). Only reachable with a pending challenge. */
 export function NewPasswordPage() {
@@ -69,7 +69,7 @@ export function NewPasswordPage() {
       const result = await completeNewPassword(password);
       if (result.status === 'SIGNED_IN') {
         toast.show("Password saved. You're signed in.");
-        navigate('/', { replace: true });
+        navigate(returnPath(undefined), { replace: true });
       } else {
         setBanner(UNSUPPORTED_STEP_MESSAGE);
       }

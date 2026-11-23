@@ -103,6 +103,69 @@ describe('TrolleyStack', () => {
     expect(api?.FunctionAssociations).toBeUndefined();
   });
 
+  it('routes /mcp, /oauth/* and /.well-known/* to the API like /api/*, never the SPA rewrite (A1)', () => {
+    const dist = Object.values(
+      template.findResources('AWS::CloudFront::Distribution'),
+    )[0] as Resource;
+    const config = dist.Properties.DistributionConfig as {
+      CacheBehaviors: Array<Record<string, unknown>>;
+      Origins: Array<{ Id: string }>;
+    };
+    const api = config.CacheBehaviors.find((b) => b.PathPattern === '/api/*');
+    for (const pattern of ['/mcp', '/oauth/*', '/.well-known/*']) {
+      const b = config.CacheBehaviors.find((x) => x.PathPattern === pattern);
+      expect(b, pattern).toMatchObject({
+        TargetOriginId: api?.TargetOriginId,
+        AllowedMethods: ['GET', 'HEAD', 'OPTIONS', 'PUT', 'PATCH', 'POST', 'DELETE'],
+        CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', // CachingDisabled
+        OriginRequestPolicyId: 'b689b0a8-53d0-40ab-baf2-68738e2966ac', // AllViewerExceptHostHeader (forwards Authorization)
+        ViewerProtocolPolicy: 'https-only',
+      });
+      expect(b?.FunctionAssociations, pattern).toBeUndefined();
+    }
+    // One API origin shared by every API behaviour, plus S3.
+    expect(config.Origins).toHaveLength(2);
+  });
+
+  it('gives the API its public origin from the configured domain (Stage 4 issuer)', () => {
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      Environment: {
+        Variables: Match.objectLike({ PUBLIC_ORIGIN: 'https://trolley.example.com' }),
+      },
+    });
+  });
+
+  it('leaves the OAuth and MCP endpoints public at the gateway and JWT-protects the SPA ones', () => {
+    for (const routeKey of [
+      'GET /.well-known/oauth-authorization-server',
+      'GET /.well-known/oauth-protected-resource',
+      'GET /.well-known/oauth-protected-resource/mcp',
+      'POST /oauth/register',
+      'GET /oauth/authorize',
+      'POST /oauth/token',
+      'OPTIONS /oauth/token',
+      'POST /oauth/revoke',
+      'POST /mcp',
+    ]) {
+      template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+        RouteKey: routeKey,
+        AuthorizationType: 'NONE',
+      });
+    }
+    for (const routeKey of [
+      'GET /api/oauth/requests/{requestId}',
+      'POST /api/oauth/consent',
+      'GET /api/connected-apps',
+      'DELETE /api/connected-apps/{grantId}',
+    ]) {
+      template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+        RouteKey: routeKey,
+        AuthorizationType: 'JWT',
+        AuthorizerId: Match.anyValue(),
+      });
+    }
+  });
+
   it('sets security headers including a CSP that allows Cognito', () => {
     template.hasResourceProperties('AWS::CloudFront::ResponseHeadersPolicy', {
       ResponseHeadersPolicyConfig: {

@@ -440,3 +440,46 @@ export interface BulkUndoResponse {
   undone: number;
   failed: number;
 }
+
+// ---------------------------------------------------------------------------------------
+// Stage 4: chatbot connections (OAuth consent and Connected apps; docs/api.md, D-083/D-089)
+
+/** GET /api/oauth/requests/{requestId}: a pending connection for the /connect screen. */
+export interface OAuthRequestDetails {
+  requestId: string;
+  /** Self-declared by the app (untrusted): render as plain text, truncated. */
+  clientName: string;
+  /** Host the browser returns to, e.g. "claude.ai". */
+  redirectHost: string;
+  /** ISO time the request expires (10 minutes after the app started it). */
+  expiresAt: string;
+}
+
+/** POST /api/oauth/consent. */
+export interface OAuthConsentRequest {
+  requestId: string;
+  allow: boolean;
+}
+
+/** Send the browser here (window.location.assign) for both Allow and Deny. */
+export interface OAuthConsentResponse {
+  redirectUrl: string;
+}
+
+/** One connection (grant) of the household (E1). */
+export interface ConnectedApp {
+  grantId: string;
+  clientName: string;
+  /** Display name (or email name) of the person who connected it. */
+  connectedBy: string;
+  /** ISO time. */
+  connectedAt: string;
+  /** ISO time, updated at most every 15 minutes; null = never used. */
+  lastUsedAt: string | null;
+}
+
+/** GET /api/connected-apps: newest first. `mcpUrl` is the address to add as a connector. */
+export interface ConnectedAppsResponse {
+  apps: ConnectedApp[];
+  mcpUrl: string;
+}

@@ -34,7 +34,14 @@ export function createRouter(routes: RouteTable) {
     const route = routes[event.routeKey];
     if (!route) return errors.notFound();
 
-    if (!route.auth) return route.handler({ event });
+    if (!route.auth) {
+      try {
+        return await route.handler({ event });
+      } catch (err) {
+        if (err instanceof HttpFailure) return err.result;
+        throw err;
+      }
+    }
 
     const claims = event.requestContext.authorizer?.jwt?.claims;
     if (!claims) return errors.unauthorised();

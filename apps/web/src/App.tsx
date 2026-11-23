@@ -8,6 +8,8 @@ import { UnitsPage } from './settings/UnitsPage';
 import { TemplateEditorPage } from './templates/TemplateEditorPage';
 import { TemplatesPage } from './templates/TemplatesPage';
 import { AppLayout } from './routes/AppLayout';
+import { ConnectPage } from './routes/ConnectPage';
+import { ConnectedAppsPage } from './settings/ConnectedAppsPage';
 import { ForgotPasswordPage } from './routes/ForgotPasswordPage';
 import { NewPasswordPage } from './routes/NewPasswordPage';
 import { PublicOnly, RequireAuth } from './routes/RequireAuth';
@@ -43,6 +45,7 @@ export function AppRoutes() {
           </PublicOnly>
         }
       />
+      <Route path="/connect" element={<ConnectPage />} />
       <Route
         element={
           <RequireAuth>
@@ -60,6 +63,7 @@ export function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/aisle-order" element={<AisleOrderPage />} />
         <Route path="/settings/units" element={<UnitsPage />} />
+        <Route path="/settings/connected-apps" element={<ConnectedAppsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

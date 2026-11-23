@@ -1,4 +1,4 @@
-# Trolley API (Stages 2 and 3)
+# Trolley API (Stages 2 to 4)
 
 All routes are under `/api`, need the Cognito ID token (`Authorization: Bearer <id token>`, JWT authoriser) and are scoped to the token's household; ids from another household are 404. Never send a `householdId` (it is ignored). Types: `packages/core/src/api-types.ts`; rules: `packages/core/src/lists.ts`; server: `services/api/src/stage2.ts`; mock: `apps/web/src/api/mock-stage2.ts`; client calls: `apps/web/src/api/index.ts`.
 
@@ -67,6 +67,34 @@ Adding from the review sheet: send the ticked suggestions (with any edited qty/u
 
 `GET /groups` returns the household aisle order. `GET /products/search` and `GET /products/{sku}` return `unitType` with the household override applied and `defaultUnitType` (the product's own unit).
 
+## Chatbot connections (Stage 4)
+Decisions D-082 to D-095; server: `services/api/src/oauth/routes.ts`, `services/api/src/mcp/`; rules: `packages/core/src/assistant.ts`; mock: `apps/web/src/api/mock-stage4.ts` (request ids `mock-claude`, `mock-chatgpt`, `mock-long`); user steps: `docs/CONNECT.md`.
+
+SPA endpoints (Cognito ID token, like the rest of `/api`):
+
+| Method and path | Body | Response |
+|---|---|---|
+| GET `/oauth/requests/{requestId}` | | `OAuthRequestDetails` `{ requestId, clientName, redirectHost, expiresAt }`; 404 = link invalid, expired or already used ("This connection link isn't valid") |
+| POST `/oauth/consent` | `{ requestId, allow }` | `{ redirectUrl }`: send the browser there (`window.location.assign`) for Allow and Deny alike. 404 as above; 400 bad body |
+| GET `/connected-apps` | | `{ apps: ConnectedApp[], mcpUrl }` newest first. `ConnectedApp`: `{ grantId, clientName, connectedBy, connectedAt, lastUsedAt \| null }` |
+| DELETE `/connected-apps/{grantId}` | | 204; 404 if not this household's. The app's next MCP call is 401 |
+
+`clientName` is self-declared by the app (cleaned of markup, <= 60 chars): render as text. The `/connect?request=<id>` page is where `/oauth/authorize` sends the browser.
+
+Public endpoints (not under `/api`; same origin via CloudFront, no Cognito):
+
+| Method and path | Notes |
+|---|---|
+| GET `/.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp` | RFC 9728: `resource` = `https://<domain>/mcp`, `authorization_servers` = origin |
+| GET `/.well-known/oauth-authorization-server` | RFC 8414: issuer = origin; S256 only; `authorization_code`, `refresh_token`; auth methods `none` (default), `client_secret_basic`, `client_secret_post` |
+| POST `/oauth/register` | RFC 7591 JSON. `redirect_uris` 1-5, https or http loopback, no fragment. 201 `{ client_id, ... }` (+ `client_secret` only if a secret method was asked for). 20/hour per address; never-authorised clients expire after 24 h |
+| GET `/oauth/authorize` | `response_type=code`, `client_id`, `redirect_uri` (exact), `code_challenge` + `code_challenge_method=S256`, optional `state`, `scope`, `resource` (must be the `/mcp` URL). Bad client/redirect: 400 HTML page. Other errors: 302 to the client with `error`. Valid: 302 to `/connect?request=<id>` (10 min) |
+| POST `/oauth/token` | Form. `authorization_code` (`code`, `code_verifier`, `redirect_uri`, `client_id`) or `refresh_token` (rotates; reuse revokes the grant). Access 1 h, refresh 30 d, opaque, stored hashed. Code 5 min, single use; a replay revokes its grant |
+| POST `/oauth/revoke` | RFC 7009, always 200. A refresh token revokes its whole grant; an access token just itself |
+| POST `/mcp` | MCP Streamable HTTP, stateless JSON (GET/DELETE 405). Bearer access token or 401 `WWW-Authenticate: Bearer resource_metadata="https://<domain>/.well-known/oauth-protected-resource/mcp"` |
+
+MCP tools (all on the token's household, this week's list only): `add_item { text, quantity?, unit?, note? (<= 100), productId? }` -> usual product (D-086/D-094) added via the this-week path, or `structuredContent.options` (<= 5) and nothing added; `get_current_list {}`; `remove_item { text }` (single match only); `search_products { query }` (<= 10, bought first). 60 tool calls/min per grant, then a tool error.
+
 ## Data (spec 5.1)
 | Item | pk | sk |
 |---|---|---|
@@ -77,3 +105,7 @@ Adding from the review sheet: send the ticked suggestions (with any edited qty/u
 | This week | `HH#<hh>` | `THISWEEK` (listId) |
 | Purchase | `HH#<hh>` | `PURCHASE#<productId>#<YYYY-MM-DD>#<listId>#<unit>` |
 | Suggestion runs | `HH#<hh>` | `SUGGESTRUNS#<YYYY-MM-DD>` (runs, `ttl`; D-071) |
+| Connected app (grant) | `HH#<hh>` | `OAUTHGRANT#<grantId>` (D-090) |
+| OAuth client | `OAUTHCLIENT#<clientId>` | `CLIENT` (`ttl` until first authorised) |
+| Pending request / code / token | `OAUTHREQ#<id>` / `OAUTHCODE#<sha256>` / `OAUTHTOKEN#<sha256>` | `REQUEST` / `CODE` / `TOKEN` (`ttl`) |
+| OAuth rate counter | `OAUTHRL#<REG\|MCP>#<key>` | `<window>` (`ttl`) |

@@ -1,10 +1,11 @@
-import { ArrowUpDown, ChevronRight, Loader2, LogOut, Tag } from 'lucide-react';
+import { ArrowUpDown, ChevronRight, Loader2, LogOut, Plug, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../auth';
 import { Button } from '../components/Button';
 import { ConfirmSheet } from '../components/ConfirmSheet';
 import { saveTextSize, readTextSize, TEXT_SIZES, type TextSize } from '../settings/textSize';
+import { useConnectedAppsQuery } from '../settings/hooks';
 import { useAisleOrderQuery, useUnitOverridesQuery } from '../lists/data';
 
 /** /settings (docs/ux/app-shell.md section 3): account card + sign out with confirmation. */
@@ -15,6 +16,14 @@ export function SettingsPage() {
   const [textSize, setTextSize] = useState<TextSize>(readTextSize);
   const aisle = useAisleOrderQuery();
   const units = useUnitOverridesQuery();
+  const apps = useConnectedAppsQuery();
+  const appCount = apps.data?.apps.length;
+  const appsValue =
+    appCount === undefined
+      ? null
+      : appCount === 0
+        ? 'None'
+        : `${appCount} ${appCount === 1 ? 'app' : 'apps'}`;
   const unitCount = units.data?.overrides.length;
   const aisleValue = aisle.data ? (aisle.data.isDefault ? 'ALDI order' : 'Custom order') : null;
   const unitsValue =
@@ -55,6 +64,25 @@ export function SettingsPage() {
             </Link>
           </li>
         ))}
+      </ul>
+
+      <h2 className="mb-2 text-xs uppercase tracking-wide text-muted">Connected apps</h2>
+      <ul className="mb-6 overflow-hidden rounded-md bg-surface">
+        <li>
+          <Link
+            to="/settings/connected-apps"
+            className="flex min-h-16 items-center gap-3 px-4 active:bg-accent-soft"
+          >
+            <Plug aria-hidden className="h-6 w-6 shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-lg">Connected apps</span>
+              {appsValue && (
+                <span className="block text-sm font-normal text-muted">{appsValue}</span>
+              )}
+            </span>
+            <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-muted" />
+          </Link>
+        </li>
       </ul>
 
       <h2 id="display-heading" className="mb-2 text-xs uppercase tracking-wide text-muted">
