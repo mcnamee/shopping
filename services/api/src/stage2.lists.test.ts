@@ -306,7 +306,7 @@ describe('list items', () => {
     expect(res.body.item.product).toMatchObject({
       name: 'Farm eggs',
       imageUrl: null,
-      groupId: 'dairy-eggs',
+      groupId: 'eggs',
     });
   });
 

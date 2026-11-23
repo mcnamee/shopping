@@ -276,6 +276,16 @@ describe('suggestCandidates', () => {
     expect(r.candidates[0]).toMatchObject({ productId: 'apples', qty: 1.08, unit: 'kg' });
   });
 
+  it('reads egg products stored under Dairy as Eggs (D-081)', () => {
+    const eggs = [14, 7, 0].map((d) => ({
+      ...buy('eggs1', d + 7, 1, 'pack', `e${d}`, 'Free Range Eggs 12 Pack'),
+      groupId: 'dairy-eggs',
+    }));
+    const r = suggestCandidates({ purchases: [...WARM, ...eggs], templates: [], today: TODAY });
+    const c = r.candidates.find((x) => x.productId === 'eggs1');
+    expect(c?.groupId).toBe('eggs');
+  });
+
   it('A4: excludes products already on the list, in any unit', () => {
     const purchases = [...WARM, ...series('razors', 28, 3, 27)];
     const r = suggestCandidates({

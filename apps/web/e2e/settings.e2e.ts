@@ -21,6 +21,26 @@ async function openAisle(page: Page) {
 }
 
 test.describe('Settings', () => {
+  test('Text size applies to the root, persists across reload, and the header stays fixed on scroll', async ({
+    page,
+  }) => {
+    await signInToShell(page);
+    await page.goto('/settings');
+    const px = () => page.evaluate(() => document.documentElement.style.fontSize);
+    expect(await px()).toBe('15px');
+    await page.getByRole('radio', { name: 'Small' }).click();
+    expect(await px()).toBe('14px');
+    await page.reload();
+    expect(await px()).toBe('14px');
+    await page.getByRole('radio', { name: 'Large' }).click();
+    expect(await px()).toBe('16px');
+    const header = page.locator('header').first();
+    const top = async () => (await header.boundingBox())?.y;
+    const before = await top();
+    await page.evaluate(() => window.scrollTo(0, 400));
+    expect(await top()).toBe(before);
+  });
+
   test('Shopping section links show their values and pass axe, tap targets and scroll', async ({
     page,
   }) => {
@@ -42,7 +62,7 @@ test.describe('Settings', () => {
     await expectTapTargets(page);
     await expectNoHorizontalScroll(page);
     const before = await names(page);
-    expect(before).toHaveLength(15);
+    expect(before).toHaveLength(16);
     expect(before[0]).toBe('Fruit & Veg');
 
     await page.getByRole('button', { name: 'Move Bakery up' }).click();

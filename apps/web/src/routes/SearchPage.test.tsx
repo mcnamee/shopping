@@ -194,7 +194,7 @@ describe('Search tab: initial state and typing', () => {
     const radios = within(group).getAllByRole('radio');
     expect(radios[0]).toHaveAccessibleName('All');
     expect(radios[0]).toHaveAttribute('aria-checked', 'true');
-    expect(radios).toHaveLength(16);
+    expect(radios).toHaveLength(17);
     expect(within(group).getByRole('radio', { name: 'Fruit & Veg' })).toHaveAttribute(
       'aria-checked',
       'false',
@@ -279,24 +279,21 @@ describe('Search tab: categories', () => {
   it('browses a category with an empty query and shows "Group, N products"', async () => {
     api.searchProducts.mockResolvedValue(page([product(1)], 86));
     const { user } = await searchTab();
-    await user.click(screen.getByRole('radio', { name: 'Dairy & Eggs' }));
+    await user.click(screen.getByRole('radio', { name: 'Dairy' }));
     await screen.findByText('Milk number 1');
     expect(api.searchProducts.mock.calls[0]?.[0]).toMatchObject({
       q: '',
       category: 'dairy-eggs',
     });
-    expect(screen.getByText('Dairy & Eggs, 86 products')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Dairy & Eggs' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
+    expect(screen.getByText('Dairy, 86 products')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Dairy' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('tapping the selected chip again returns to All', async () => {
     api.searchProducts.mockResolvedValue(page([product(1)], 1));
     const { user } = await searchTab('/search?cat=dairy-eggs');
     await screen.findByText('Milk number 1');
-    await user.click(screen.getByRole('radio', { name: 'Dairy & Eggs' }));
+    await user.click(screen.getByRole('radio', { name: 'Dairy' }));
     expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'true');
     expect(
       await screen.findByRole('heading', { name: 'Find your ALDI items' }),
@@ -307,7 +304,7 @@ describe('Search tab: categories', () => {
     api.searchProducts.mockResolvedValue(page([product(1)], 1));
     const { user } = await searchTab('/search?q=milk');
     await screen.findByText('Milk number 1');
-    await user.click(screen.getByRole('radio', { name: 'Dairy & Eggs' }));
+    await user.click(screen.getByRole('radio', { name: 'Dairy' }));
     await waitFor(() =>
       expect(api.searchProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({ q: 'milk', category: 'dairy-eggs' }),

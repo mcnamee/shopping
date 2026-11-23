@@ -40,6 +40,19 @@ describe('mapProduct (real fixtures)', () => {
     });
   });
 
+  it('maps ALDI egg categories to the Eggs group', () => {
+    const milk = byName('Light Milk 2L');
+    const eggs = {
+      ...milk,
+      name: 'Free Range Eggs 12 Pack',
+      categories: [
+        { id: '960000000', name: 'Dairy, Eggs & Fridge', urlSlugText: 'dairy-eggs-fridge' },
+        { id: '1111111162', name: 'Eggs', urlSlugText: 'dairy-eggs-fridge/eggs' },
+      ],
+    } as AldiProduct;
+    expect(mapProduct(eggs, 'G526')).toMatchObject({ groupId: 'eggs', groupVia: 'leaf' });
+  });
+
   it('maps loose produce to kg with a per-kg price', () => {
     const m = mapProduct(byName('Cavendish Bananas per kg'), 'G526')!;
     expect(m).toMatchObject({

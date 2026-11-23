@@ -56,19 +56,40 @@ function useInertBackground(container: HTMLElement | null) {
   }, [container]);
 }
 
-/** Tracks the visual viewport so the sheet sits above the on-screen keyboard. */
-function useVisualViewport() {
+/** A visual viewport this much shorter than the layout viewport means a keyboard is open. */
+const KEYBOARD_MIN_PX = 120;
+
+/**
+ * Tracks the visual viewport so the sheet sits above the on-screen keyboard. Returns null
+ * (use 100dvh) unless a keyboard is actually open, so a stale or transient visualViewport
+ * reading (iOS reports short heights around focus changes and rotation) can never clip the
+ * sheet. Re-reads on mount, next frame, and on every viewport/window resize or scroll.
+ */
+export function useVisualViewport() {
   const [box, setBox] = useState<{ height: number; top: number } | null>(null);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setBox({ height: vv.height, top: vv.offsetTop });
+    const update = () => {
+      const keyboard = window.innerHeight - vv.height > KEYBOARD_MIN_PX;
+      setBox((prev) => {
+        if (!keyboard) return prev === null ? prev : null;
+        if (prev && prev.height === vv.height && prev.top === vv.offsetTop) return prev;
+        return { height: vv.height, top: vv.offsetTop };
+      });
+    };
     update();
+    const raf = requestAnimationFrame(update);
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
     return () => {
+      cancelAnimationFrame(raf);
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
     };
   }, []);
   return box;

@@ -653,7 +653,7 @@ export function ListPage() {
                 <Skeleton className="my-3 h-4 w-28" />
                 {[0, 1, 2, 3].map((r) => (
                   <div key={r} className="flex items-center gap-3 py-3">
-                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-[26px] w-[26px]" />
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-4 w-3/5" />
                       <Skeleton className="h-3 w-2/5" />

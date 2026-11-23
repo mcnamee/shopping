@@ -54,6 +54,9 @@ export default {
       minHeight: { tap: '44px', primary: '56px' },
       minWidth: { tap: '44px' },
       spacing: {
+        // Tap-target sizes stay in px so the Text size setting (root font size) never shrinks them.
+        11: '44px',
+        12: '48px',
         'safe-top': 'var(--safe-top)',
         'safe-bottom': 'var(--safe-bottom)',
         'safe-left': 'var(--safe-left)',

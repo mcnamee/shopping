@@ -6,6 +6,7 @@ import { AuthProvider, initAuth } from './auth';
 import { loadConfig } from './config';
 import { MOCK_AUTH } from './env';
 import { ConfigErrorScreen } from './routes/ConfigErrorScreen';
+import { applyTextSize, readTextSize } from './settings/textSize';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -13,6 +14,9 @@ const queryClient = new QueryClient({
     queries: { staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 },
   },
 });
+
+// Apply the saved text size before the first render (CSP forbids an inline script).
+applyTextSize(readTextSize());
 
 const container = document.getElementById('root');
 if (!container) throw new Error('#root element missing from index.html');

@@ -20,6 +20,20 @@ export const MOCK_CATALOGUE: ProductSummary[] = [
     custom: false,
   },
   {
+    sku: '000000000000790001',
+    name: 'Free Range Eggs 12 Pack 600g',
+    brand: 'The Egg Farm',
+    // Mock-only image (not a real ALDI asset); the card falls back if it does not load.
+    imageUrl:
+      'https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/400/mock-free-range-eggs-12-pack',
+    price: 549,
+    unitPrice: '$9.15 per 1 kg',
+    packSize: '12 pack',
+    unitType: 'pack',
+    groupId: 'eggs',
+    custom: false,
+  },
+  {
     sku: '000000000000398948',
     name: 'A2 Light Milk 2L',
     brand: 'A2 The A2 Milk Company',

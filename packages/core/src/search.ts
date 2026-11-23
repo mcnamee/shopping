@@ -14,11 +14,15 @@
  *     history (Stage 3: "usual product").
  */
 
+import { effectiveGroupId } from './groups';
+
 export interface SearchableProduct {
   sku: string;
   name: string;
   brand: string | null;
   groupId: string;
+  /** Store categories, when known (lets the Eggs split use the ALDI egg category key). */
+  categories?: readonly { key: string }[];
   discontinued?: boolean;
   /** Not stocked at the household's store (D-080); hidden unless `includeNotAtStore`. */
   notAtStore?: boolean;
@@ -167,7 +171,7 @@ export interface SearchOptions<T extends SearchableProduct> {
   includeNotAtStore?: boolean;
   /** Today as YYYY-MM-DD in the store's time zone; a product whose onSaleDate has arrived is shown. */
   today?: string;
-  /** Group resolver, for household category-map overrides. Defaults to item.groupId. */
+  /** Group resolver, for household category-map overrides. Defaults to effectiveGroupId(item). */
   groupOf?: (item: T) => string;
   /** Extra score, e.g. from purchase history (Stage 3). 0 = neutral. */
   boost?: (item: T) => number;
@@ -221,7 +225,7 @@ export function searchProducts<T extends SearchableProduct>(
 ): ScoredProduct<T>[] {
   const queryTokens = tokenise(query.slice(0, MAX_QUERY_LENGTH)).slice(0, MAX_QUERY_TOKENS);
   const queryStems = queryTokens.map(stem);
-  const groupOf = options.groupOf ?? ((item: T) => item.groupId);
+  const groupOf = options.groupOf ?? ((item: T) => effectiveGroupId(item));
   const results: ScoredProduct<T>[] = [];
 
   for (const entry of index.entries) {

@@ -12,7 +12,14 @@
  * - "Week of <Monday>" names (D-048).
  */
 import type { GroupSummary, LineChange, ProductSummary } from './api-types';
-import { DEFAULT_AISLE_ORDER, DEFAULT_GROUPS, OTHER_GROUP_ID } from './groups';
+import {
+  DAIRY_GROUP_ID,
+  DEFAULT_AISLE_ORDER,
+  DEFAULT_GROUPS,
+  EGGS_GROUP_ID,
+  OTHER_GROUP_ID,
+  effectiveGroupId,
+} from './groups';
 import { isUnitType, isValidSku, type UnitType } from './product';
 import { convertQuantity, roundQuantity } from './quantity';
 
@@ -781,7 +788,7 @@ const GROUP_BY_ID = new Map<string, GroupSummary>(
 
 /**
  * Make a stored order safe: drop unknown and duplicate ids, then append any missing group
- * (e.g. one added in a later release) before Other, with Other last if missing.
+ * (e.g. one added in a later release) before Other (Eggs goes right after Dairy, D-081), with Other last if missing.
  */
 export function normaliseAisleOrder(stored: readonly unknown[] | null | undefined): string[] {
   const out: string[] = [];
@@ -792,6 +799,10 @@ export function normaliseAisleOrder(stored: readonly unknown[] | null | undefine
     if (out.includes(id)) continue;
     if (id === OTHER_GROUP_ID) {
       out.push(id);
+      continue;
+    }
+    if (id === EGGS_GROUP_ID && out.includes(DAIRY_GROUP_ID)) {
+      out.splice(out.indexOf(DAIRY_GROUP_ID) + 1, 0, id);
       continue;
     }
     const otherAt = out.indexOf(OTHER_GROUP_ID);
@@ -810,6 +821,12 @@ export function isDefaultAisleOrder(order: readonly string[]): boolean {
 
 export function groupsInOrder(order: readonly string[]): GroupSummary[] {
   return normaliseAisleOrder(order).map((id) => GROUP_BY_ID.get(id) as GroupSummary);
+}
+
+/** Group a stored product snapshot is shown under (read-time Eggs split; unknown -> Other). */
+function shopGroupId(p: { groupId: string; name: string }): string {
+  const gid = effectiveGroupId(p);
+  return GROUP_BY_ID.has(gid) ? gid : OTHER_GROUP_ID;
 }
 
 const byName = (a: { product: { name: string } }, b: { product: { name: string } }) =>
@@ -840,7 +857,7 @@ export function groupForShop<T extends ListItem>(
   const order = normaliseAisleOrder(aisleOrder);
   const buckets = new Map<string, T[]>();
   for (const item of items) {
-    const gid = GROUP_BY_ID.has(item.product.groupId) ? item.product.groupId : OTHER_GROUP_ID;
+    const gid = shopGroupId(item.product);
     const bucket = buckets.get(gid);
     if (bucket) bucket.push(item);
     else buckets.set(gid, [item]);
@@ -874,7 +891,9 @@ export function sortTemplateItems<T extends Line>(
     return i === -1 ? order.length : i;
   };
   return [...items].sort(
-    (a, b) => rank(a.product.groupId) - rank(b.product.groupId) || compareLinesByName(a, b),
+    (a, b) =>
+      rank(effectiveGroupId(a.product)) - rank(effectiveGroupId(b.product)) ||
+      compareLinesByName(a, b),
   );
 }
 
@@ -901,7 +920,7 @@ export function groupTemplateItems<T extends Line>(
 ): TemplateSection<T>[] {
   const out: TemplateSection<T>[] = [];
   for (const item of sortTemplateItems(items, aisleOrder)) {
-    const gid = GROUP_BY_ID.has(item.product.groupId) ? item.product.groupId : OTHER_GROUP_ID;
+    const gid = shopGroupId(item.product);
     const last = out[out.length - 1];
     if (last && last.group.id === gid) last.items.push(item);
     else out.push({ group: GROUP_BY_ID.get(gid) as GroupSummary, items: [item] });

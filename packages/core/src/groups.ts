@@ -22,7 +22,9 @@ export const DEFAULT_GROUPS = [
   { id: 'bakery', name: 'Bakery', shortName: 'Bakery' },
   { id: 'meat-seafood', name: 'Meat & Seafood', shortName: 'Meat & Seafood' },
   { id: 'deli', name: 'Deli', shortName: 'Deli' },
-  { id: 'dairy-eggs', name: 'Dairy & Eggs', shortName: 'Dairy & Eggs' },
+  // Id kept as 'dairy-eggs' so stored data needs no migration; only the display name changed.
+  { id: 'dairy-eggs', name: 'Dairy', shortName: 'Dairy' },
+  { id: 'eggs', name: 'Eggs', shortName: 'Eggs' },
   { id: 'pantry', name: 'Pantry', shortName: 'Pantry' },
   { id: 'snacks', name: 'Snacks & Confectionery', shortName: 'Snacks' },
   { id: 'drinks', name: 'Drinks', shortName: 'Drinks' },
@@ -38,6 +40,36 @@ export const DEFAULT_GROUPS = [
 export type DefaultGroupId = (typeof DEFAULT_GROUPS)[number]['id'];
 
 export const OTHER_GROUP_ID: DefaultGroupId = 'other';
+export const DAIRY_GROUP_ID: DefaultGroupId = 'dairy-eggs';
+export const EGGS_GROUP_ID: DefaultGroupId = 'eggs';
+
+/** ALDI "Dairy, Eggs & Fridge > Eggs" leaf category key. */
+export const ALDI_EGG_CATEGORY_KEYS: ReadonlySet<string> = new Set(['1111111162']);
+
+const NOT_EGGS_RE =
+  /\b(?:easter|chocolate|creme|cadbury)\s+eggs?\b|\beggs?\s+(?:noodles?|nog|custard|tarts?|mayo\w*|wash|pasta|roll|free\s+mayo)\b/i;
+
+/** True when a product name clearly denotes eggs ("Free Range Eggs 12 Pack"); not "egg noodles", "Easter egg", "eggplant". */
+export function isEggName(name: string): boolean {
+  return /\beggs?\b/i.test(name) && !NOT_EGGS_RE.test(name);
+}
+
+/**
+ * Read-time group for a product, list item or template item (D-081). Data scraped before
+ * Eggs became its own group has egg products in Dairy: those with the ALDI Eggs category
+ * key (when categories are known), or failing that an egg-like name, are treated as Eggs.
+ * Anything not in Dairy is returned unchanged. Use this wherever a stored `groupId` is
+ * used for search, shop grouping, template grouping or suggestions.
+ */
+export function effectiveGroupId(p: {
+  groupId: string;
+  name: string;
+  categories?: readonly { key: string }[] | null;
+}): string {
+  if (p.groupId !== DAIRY_GROUP_ID) return p.groupId;
+  if (p.categories?.some((c) => ALDI_EGG_CATEGORY_KEYS.has(c.key))) return EGGS_GROUP_ID;
+  return isEggName(p.name) ? EGGS_GROUP_ID : p.groupId;
+}
 
 /** Default aisle order (group ids). */
 export const DEFAULT_AISLE_ORDER: readonly string[] = DEFAULT_GROUPS.map((g) => g.id);
@@ -86,6 +118,7 @@ export const ALDI_CATEGORY_GROUPS: Readonly<Record<string, DefaultGroupId>> = {
   '1588161408332092': 'other', // Front of Store (bags, flowers, utility)
 
   // Pantry leaves that ALDI also lists under Snacks & Confectionery
+  '1111111162': 'eggs', // Dairy, Eggs & Fridge > Eggs
   '1111111181': 'snacks', // Pantry > Confectionery
   '1111111182': 'snacks', // Pantry > Crackers & Crisp Breads
   '1111111183': 'snacks', // Pantry > Chips, Corn Chips & Other
@@ -131,12 +164,13 @@ const ALDI_SLUG_GROUPS: Readonly<Record<string, DefaultGroupId>> = {
 };
 
 /** Last resort: keyword match on a category name. Order matters. */
-const NAME_KEYWORDS: ReadonlyArray<[RegExp, DefaultGroupId]> = [
+const NAME_KEYWORDS: ReadonlyArray<[{ test(s: string): boolean }, DefaultGroupId]> = [
   [/fruit|veg|produce|salad|herb/i, 'fruit-veg'],
   [/frozen|freezer|ice cream/i, 'frozen'],
   [/meat|seafood|beef|pork|lamb|poultry|chicken|fish/i, 'meat-seafood'],
   [/deli|antipasto|dip/i, 'deli'],
-  [/dairy|milk|egg|cheese|yog|butter|fridge/i, 'dairy-eggs'],
+  [{ test: isEggName }, 'eggs'],
+  [/dairy|milk|cheese|yog|butter|fridge/i, 'dairy-eggs'],
   [/bakery|bread|roll|cake/i, 'bakery'],
   [/liquor|wine|beer|spirit|cider/i, 'liquor'],
   [/drink|juice|water|soft drink|coffee|tea/i, 'drinks'],

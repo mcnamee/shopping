@@ -148,11 +148,11 @@ export function ShopRow({
   const box = (
     <span
       aria-hidden
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border-[3px] ${
+      className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-sm border-[2.5px] ${
         ticked ? 'border-accent bg-accent text-accent-on' : 'border-border bg-bg'
       }`}
     >
-      {ticked && <Check className="h-[22px] w-[22px]" strokeWidth={3} />}
+      {ticked && <Check className="h-[18px] w-[18px]" strokeWidth={3} />}
     </span>
   );
 

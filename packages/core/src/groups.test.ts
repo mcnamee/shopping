@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALDI_CATEGORY_GROUPS,
+  effectiveGroupId,
+  isEggName,
   DEFAULT_AISLE_ORDER,
   DEFAULT_GROUPS,
   groupName,
@@ -23,13 +25,14 @@ const XMAS_KITCHEN = cat('1588161425467074', 'Kitchen & Tableware', 'christmas/k
 const NEW_LOW = cat('1588161425841179', 'New Low Price', 'new-low-price');
 
 describe('DEFAULT_GROUPS', () => {
-  it('seeds the 15 spec groups with unique ids, Other last', () => {
+  it('seeds the 16 groups with unique ids, Other last', () => {
     expect(DEFAULT_GROUPS.map((g) => g.name)).toEqual([
       'Fruit & Veg',
       'Bakery',
       'Meat & Seafood',
       'Deli',
-      'Dairy & Eggs',
+      'Dairy',
+      'Eggs',
       'Pantry',
       'Snacks & Confectionery',
       'Drinks',
@@ -49,8 +52,19 @@ describe('DEFAULT_GROUPS', () => {
     for (const g of Object.values(ALDI_CATEGORY_GROUPS)) expect(isDefaultGroupId(g)).toBe(true);
   });
 
+  it('puts Eggs right after Dairy by default', () => {
+    const i = DEFAULT_AISLE_ORDER.indexOf('dairy-eggs');
+    expect(DEFAULT_AISLE_ORDER[i + 1]).toBe('eggs');
+  });
+
+  it('maps the ALDI Eggs category to eggs, other dairy to dairy', () => {
+    const EGGS = cat('1111111162', 'Eggs', 'dairy-eggs-fridge/eggs');
+    expect(resolveGroup([DAIRY, EGGS]).groupId).toBe('eggs');
+    expect(resolveGroup([DAIRY, MILK]).groupId).toBe('dairy-eggs');
+  });
+
   it('groupName falls back to Other', () => {
-    expect(groupName('dairy-eggs')).toBe('Dairy & Eggs');
+    expect(groupName('dairy-eggs')).toBe('Dairy');
     expect(groupName('nope')).toBe('Other');
   });
 });
@@ -124,5 +138,41 @@ describe('resolveGroup', () => {
     expect(isPromoCategory(XMAS_CHOC)).toBe(true);
     expect(isPromoCategory(cat('1', 'x', 'super-savers'))).toBe(true);
     expect(isPromoCategory(MILK)).toBe(false);
+  });
+});
+
+describe('effectiveGroupId (read-time Eggs split)', () => {
+  const g = (name: string, groupId = 'dairy-eggs', categories?: { key: string }[]) =>
+    effectiveGroupId({ groupId, name, ...(categories ? { categories } : {}) });
+
+  it('uses the ALDI Eggs category key first', () => {
+    expect(
+      g('Barn Laid 12 Pack', 'dairy-eggs', [{ key: '960000000' }, { key: '1111111162' }]),
+    ).toBe('eggs');
+  });
+
+  it('falls back to egg-like names for dairy items', () => {
+    expect(g('Free Range Eggs 12 Pack')).toBe('eggs');
+    expect(g('Large egg 700g')).toBe('eggs');
+    expect(g('Full Cream Milk 2L')).toBe('dairy-eggs');
+    expect(g('Full Cream Milk 2L', 'dairy-eggs', [{ key: '1111111160' }])).toBe('dairy-eggs');
+  });
+
+  it('does not treat egg-adjacent products as eggs', () => {
+    for (const name of [
+      'Egg Noodles 500g',
+      'Easter Eggs 200g',
+      'Eggplant',
+      'Egg Nog 1L',
+      'Chocolate Eggs',
+    ]) {
+      expect(g(name)).toBe('dairy-eggs');
+    }
+  });
+
+  it('leaves non-dairy groups and eggs untouched', () => {
+    expect(g('Free Range Eggs', 'pantry')).toBe('pantry');
+    expect(g('Free Range Eggs', 'eggs')).toBe('eggs');
+    expect(isEggName('6 Eggs')).toBe(true);
   });
 });
