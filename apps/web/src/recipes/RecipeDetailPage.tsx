@@ -179,8 +179,14 @@ export function RecipeDetailPage() {
               role="switch"
               checked={awake}
               onChange={(e) => setAwake(e.target.checked)}
-              className="h-11 w-12 shrink-0"
+              className="peer sr-only"
             />
+            <span
+              aria-hidden
+              className="relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full bg-border-subtle transition-colors peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2 peer-checked:[&>span]:translate-x-5"
+            >
+              <span className="absolute left-1 h-6 w-6 rounded-full bg-white shadow transition-transform" />
+            </span>
           </label>
         )}
         {r.description && (
