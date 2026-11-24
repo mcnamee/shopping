@@ -811,6 +811,7 @@ describe('Stage 5 media', () => {
         'PATCH /api/recipes/{recipeId}',
         'DELETE /api/recipes/{recipeId}',
         'POST /api/recipes/{recipeId}/to-list',
+        'POST /api/recipes/{recipeId}/match',
       ]) {
         template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
           RouteKey: routeKey,

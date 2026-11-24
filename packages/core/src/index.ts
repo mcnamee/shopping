@@ -14,3 +14,5 @@ export * from './assistant';
 export * from './text-lines';
 export * from './ingredient-groups';
 export * from './recipes';
+export * from './ingredients';
+export * from './ingredient-match';

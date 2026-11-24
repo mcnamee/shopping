@@ -4,6 +4,7 @@ import type {
   ListDetail,
   ListItemUpdateResponse,
   Recipe,
+  RecipeMatchResponse,
   RecipePhotoUploadResponse,
   RecipesResponse,
   RecipeToListResponse,
@@ -270,5 +271,32 @@ describe('mock to-list and free-text lines (D-103)', () => {
     expect(sent).toEqual([id]);
     const after = (await call<ListDetail>('GET', `/lists/${res.body.listId}`)).body;
     expect(after.items.find((i) => i.id === id)?.ticked).toBe(true);
+  });
+});
+
+describe('POST /recipes/{id}/match (D-115)', () => {
+  it('runs the real matcher over the mock catalogue', async () => {
+    const res = await call<RecipeMatchResponse>(
+      'POST',
+      `/recipes/${MOCK_RECIPE_IDS.greekSalad}/match`,
+    );
+    expect(res.status).toBe(200);
+    const oil = res.body.rows.find((r) => r.line === '3 tbsp olive oil');
+    expect(oil).toMatchObject({
+      name: 'olive oil',
+      pantry: false,
+      match: { name: 'Extra Virgin Olive Oil 750ml', qty: 1, unit: 'each', source: 'catalogue' },
+    });
+    expect(res.body.rows.find((r) => r.line === '1 tsp dried oregano')?.match).toBeNull();
+    expect(res.body.rows).toHaveLength(
+      ingredientTexts(
+        (await call<Recipe>('GET', `/recipes/${MOCK_RECIPE_IDS.greekSalad}`)).body.ingredients,
+      ).length,
+    );
+  });
+
+  it('404s an unknown recipe', async () => {
+    const res = await call('POST', '/recipes/00000000-0000-4000-8000-00000000dead/match');
+    expect(res.status).toBe(404);
   });
 });

@@ -56,10 +56,7 @@ test.describe('Templates tab', () => {
     await nav(page, 'Templates');
     await page.getByRole('link', { name: /Tacos/ }).click();
     await page.getByLabel('Name').fill('Taco Friday');
-    await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Lists' })
-      .click();
+    await page.getByRole('link', { name: 'Back to templates' }).click();
     const sheet = page.getByRole('alertdialog', { name: 'Discard changes?' });
     await expect(sheet).toContainText("You've changed this template's name or type.");
     await sheet.getByRole('button', { name: 'Keep editing' }).click();
@@ -185,7 +182,8 @@ test.describe('Quantity modal targets', () => {
     );
 
     // 2. New list from that template.
-    await nav(page, 'Lists');
+    await page.getByRole('link', { name: 'Back to templates' }).click();
+    await page.getByRole('link', { name: 'Back to Lists' }).click();
     await page.getByRole('button', { name: 'New list' }).first().click();
     const sheet = page.getByRole('dialog', { name: 'New list' });
     await sheet.getByLabel('Name').fill('Journey list');

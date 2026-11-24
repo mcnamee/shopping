@@ -80,6 +80,11 @@ export const keys = {
     assertSegment('day', day);
     return `SUGGESTRUNS#${day}`;
   },
+  /** Daily recipe-match run counter (D-115), same shape as the suggestion counter. */
+  recipeMatchRunsSk(day: string): string {
+    assertSegment('day', day);
+    return `MATCHRUNS#${day}`;
+  },
   /** GSI2 partition of a household's lists by status (D-057). */
   listsGsi2Pk(householdId: string, status: 'active' | 'archived'): string {
     assertHousehold(householdId);

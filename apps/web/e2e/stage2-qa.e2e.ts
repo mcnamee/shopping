@@ -51,16 +51,8 @@ test.describe('Stage 2 QA exploratory', () => {
       .or(page.getByRole('button', { name: 'Add items' }))
       .last()
       .boundingBox())!;
-    const nav = (await page.getByRole('navigation', { name: 'Main' }).boundingBox())!;
-    console.log(
-      'LAST',
-      JSON.stringify(box),
-      'FAB',
-      JSON.stringify(fab),
-      'NAV',
-      JSON.stringify(nav),
-    );
-    expect(box.y + box.height).toBeLessThanOrEqual(Math.min(fab.y, nav.y) + 0.5);
+    console.log('LAST', JSON.stringify(box), 'FAB', JSON.stringify(fab));
+    expect(box.y + box.height).toBeLessThanOrEqual(fab.y + 0.5);
     await last.click();
     await expect(last).toHaveAttribute('aria-checked', 'true');
   });
@@ -166,7 +158,7 @@ test.describe('Stage 2 QA exploratory', () => {
       .click();
     const conf = page.getByRole('button', { name: /^(Delete|Remove)$/ });
     if (await conf.count()) await conf.first().click();
-    await page.getByRole('link', { name: 'Lists', exact: true }).click();
+    await page.getByRole('link', { name: 'Back to lists' }).click();
     await page.waitForTimeout(7000);
     await page.getByRole('link', { name: /Week of .*this week/ }).click();
     await expect(page.getByRole('checkbox')).toHaveCount(before - 1);

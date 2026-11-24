@@ -157,6 +157,8 @@ describe('Add ingredients to a list', () => {
 
   it('lists ingredients ticked with headings as labels, adds them to this week and undoes', async () => {
     const { user, dialog } = await open();
+    // Smart matching upgrades some rows to ALDI products; wait for it to settle.
+    await waitFor(() => expect(within(dialog).queryByText(/Finding ALDI products/)).toBeNull());
     const boxes = within(dialog).getAllByRole('checkbox');
     expect(boxes).toHaveLength(9);
     expect(boxes.every((b) => b.getAttribute('aria-checked') === 'true')).toBe(true);
@@ -176,18 +178,22 @@ describe('Add ingredients to a list', () => {
     await user.click(boxes[0] as HTMLElement);
     expect(within(dialog).getAllByText('8 of 9 selected').length).toBeGreaterThan(0);
 
+    const before = (await callMock<ListDetail>('GET', `/lists/${MOCK_SEED_IDS.thisWeekList}`)).body;
     await user.click(within(dialog).getByRole('button', { name: /^Add 8 to Week of/ }));
     expect(await screen.findByText(/^Added 8 to Week of/)).toBeVisible();
     const list = (await callMock<ListDetail>('GET', `/lists/${MOCK_SEED_IDS.thisWeekList}`)).body;
+    // Some rows are matched to ALDI products (merged into existing lines), the rest are text.
     const text = list.items.filter((i) => i.kind === 'text');
-    expect(text).toHaveLength(8);
+    expect(text.length).toBeGreaterThan(0);
     expect(text[0]?.note).toBe('From Lamb curry');
+    expect(list.items.length).toBeGreaterThanOrEqual(before.items.length + text.length);
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(async () => {
       const after = (await callMock<ListDetail>('GET', `/lists/${MOCK_SEED_IDS.thisWeekList}`))
         .body;
       expect(after.items.filter((i) => i.kind === 'text')).toHaveLength(0);
+      expect(after.items.length).toBe(before.items.length);
     });
   });
 });

@@ -465,6 +465,41 @@ export interface RecipeToListResponse extends BulkAddItemsResponse {
   listCreated: boolean;
 }
 
+/** Where a suggested product for an ingredient came from (D-115, order of D-099). */
+export type RecipeMatchSource = 'template' | 'history' | 'catalogue';
+
+/** A product offered for an ingredient line, with the amount to add by default. */
+export interface RecipeMatchProduct {
+  productId: string;
+  name: string;
+  imageUrl: string | null;
+  packSize: string | null;
+  unit: UnitType;
+  qty: number;
+  source: RecipeMatchSource;
+}
+
+/** One ingredient line of the recipe and what Trolley made of it. */
+export interface RecipeMatchRow {
+  /** The line as written in the recipe. */
+  line: string;
+  /** Core ingredient name the matcher searched for, e.g. "olive oil". */
+  name: string;
+  /** Null: no confident product, the line stays free text. */
+  match: RecipeMatchProduct | null;
+  /** Up to 3 other products the household could pick instead. */
+  alternatives: RecipeMatchProduct[];
+  /** Salt, pepper, water and the like: untick by default ("Probably have"). */
+  pantry: boolean;
+}
+
+/** POST /api/recipes/{id}/match: one row per ingredient line (headings excluded), in order. */
+export interface RecipeMatchResponse {
+  rows: RecipeMatchRow[];
+  /** True when the optional AI clean-up of unsure lines was used. */
+  ai: boolean;
+}
+
 // ---------------------------------------------------------------------------------------
 // Stage 4: chatbot connections (OAuth consent and Connected apps; docs/api.md, D-083/D-089)
 
