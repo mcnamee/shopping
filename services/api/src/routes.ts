@@ -11,6 +11,7 @@ import { productResolver } from './products/resolver';
 import { createProductRoutes, type ProductDeps } from './products/routes';
 import type { RouteTable } from './router';
 import { SettingsStore } from './settings/store';
+import { createRecipeMatchRoutes, MATCH_AI_TIMEOUT_MS, type MatchDeps } from './recipes/match';
 import { createRecipeRoutes, type Stage5Deps } from './recipes/routes';
 import { RecipeStore } from './recipes/store';
 import { s3PhotoStore } from './recipes/photos';
@@ -180,6 +181,27 @@ export function stage5DepsFor(
   };
 }
 
+/** Recipe ingredient matching (D-115): shares the suggestions model, stores and catalogue. */
+export function recipeMatchDepsFor(
+  stage3: Stage3Deps,
+  stage5: Stage5Deps,
+  productDeps: Pick<ProductDeps, 'catalogue' | 'custom'>,
+): MatchDeps {
+  return {
+    recipes: stage5.recipes,
+    settings: stage3.settings,
+    suggestions: stage3.suggestions,
+    templates: (hh) => stage3.templates.list(hh),
+    catalogue: () => productDeps.catalogue.get(),
+    customs: (hh) => productDeps.custom.list(hh),
+    resolveProduct: stage3.resolveProduct,
+    ai: stage3.ai,
+    aiTimeoutMs: Math.min(stage3.aiTimeoutMs, MATCH_AI_TIMEOUT_MS),
+    now: stage3.now,
+    ...(stage3.warn ? { warn: stage3.warn } : {}),
+  };
+}
+
 export function createRoutes(
   productDeps?: ProductDeps,
   stage2?: () => Stage2Deps,
@@ -206,6 +228,7 @@ export function createRoutes(
   return {
     ...baseRoutes,
     ...createRecipeRoutes(getStage5),
+    ...createRecipeMatchRoutes(() => recipeMatchDepsFor(getStage3(), getStage5(), products)),
     ...createProductRoutes(products),
     ...createStage2Routes(getStage2),
     ...createSuggestionRoutes(getStage3),

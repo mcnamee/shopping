@@ -80,15 +80,22 @@ describe('bottom navigation', () => {
     expect(await screen.findByText('No templates yet')).toBeInTheDocument();
   });
 
-  it('keeps Lists current on a list page and hides the shell app bar there', async () => {
-    await signedInApp('/lists/history');
-    const nav = await screen.findByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('link', { name: 'Lists' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(await screen.findByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  it.each(['/lists/history', '/templates', '/recipes/new', '/settings/units'])(
+    'hides the bottom nav on pushed screen %s, keeping a back button',
+    async (path) => {
+      await signedInApp(path);
+      expect(await screen.findByRole('link', { name: /^Back/ })).toBeInTheDocument();
+      expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+      expect(document.documentElement.style.getPropertyValue('--nav-height')).toBe(
+        'var(--safe-bottom)',
+      );
+    },
+  );
+
+  it('sets the full nav height on tab roots', async () => {
+    await signedInApp('/');
+    await screen.findByRole('navigation', { name: 'Main' });
+    expect(document.documentElement.style.getPropertyValue('--nav-height')).toContain('64px');
   });
 });
 

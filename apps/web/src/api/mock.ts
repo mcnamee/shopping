@@ -41,7 +41,7 @@ type MockHandler = (ctx: {
   body: unknown;
   url: URL;
   params: Record<string, string>;
-}) => Response;
+}) => Response | Promise<Response>;
 interface MockRoute {
   auth: boolean;
   handler: MockHandler;
@@ -358,7 +358,17 @@ export const mockRoutes: Record<string, MockRoute> = {
     customs: (hh) => customsFor(hh).map(customSummary),
   }),
   ...createStage4MockRoutes(),
-  ...createStage5MockRoutes(),
+  ...createStage5MockRoutes({
+    find: findProduct,
+    search: (householdId, query) =>
+      mergeRanked<MockSearchable>(
+        searchProducts(catalogueIndex, query),
+        searchProducts(
+          buildSearchIndex<MockSearchable>(customsFor(householdId).map(customSummary)),
+          query,
+        ),
+      ),
+  }),
 };
 
 const PATTERNS = Object.keys(mockRoutes)

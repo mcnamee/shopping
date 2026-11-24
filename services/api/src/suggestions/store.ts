@@ -7,6 +7,8 @@ import { ConditionFailed, type Db } from '../db';
 
 /** Runs per household per household-local day (D-066). */
 export const SUGGEST_DAILY_LIMIT = 20;
+/** Recipe match runs per household per local day (D-115). */
+export const RECIPE_MATCH_DAILY_LIMIT = 60;
 /** Counter rows expire (DynamoDB TTL) a couple of days after their day. */
 const COUNTER_TTL_SECONDS = 3 * 24 * 60 * 60;
 
@@ -45,9 +47,30 @@ export class SuggestionStore {
    * two phones racing for the last run cannot both get it.
    */
   async consumeRun(hh: string, day: string, nowMs: number): Promise<boolean> {
+    return this.consume(keys.suggestRunsSk(day), 'SuggestRuns', SUGGEST_DAILY_LIMIT, hh, nowMs);
+  }
+
+  /** Same counter for recipe matching (D-115): its own row and limit. */
+  async consumeMatchRun(hh: string, day: string, nowMs: number): Promise<boolean> {
+    return this.consume(
+      keys.recipeMatchRunsSk(day),
+      'RecipeMatchRuns',
+      RECIPE_MATCH_DAILY_LIMIT,
+      hh,
+      nowMs,
+    );
+  }
+
+  private async consume(
+    sk: string,
+    entity: string,
+    max: number,
+    hh: string,
+    nowMs: number,
+  ): Promise<boolean> {
     try {
       await this.db.update(
-        { pk: keys.householdPk(hh), sk: keys.suggestRunsSk(day) },
+        { pk: keys.householdPk(hh), sk },
         'SET runs = if_not_exists(runs, :zero) + :one, #ttl = :ttl, entity = :entity',
         {
           condition: 'attribute_not_exists(runs) OR runs < :max',
@@ -55,9 +78,9 @@ export class SuggestionStore {
           values: {
             ':zero': 0,
             ':one': 1,
-            ':max': SUGGEST_DAILY_LIMIT,
+            ':max': max,
             ':ttl': Math.floor(nowMs / 1000) + COUNTER_TTL_SECONDS,
-            ':entity': 'SuggestRuns',
+            ':entity': entity,
           },
         },
       );

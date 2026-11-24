@@ -18,6 +18,14 @@ export const TABS: readonly { to: string; label: string; Icon: LucideIcon }[] = 
   { to: '/settings', label: 'Settings', Icon: Settings },
 ];
 
+/** iOS pattern: the tab bar shows only on the four tab roots; pushed screens hide it. */
+export const isTabRoot = (pathname: string) =>
+  TABS.some((t) => t.to === (pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname));
+
+/** Nav height token: full bar on tab roots, just the safe-area inset when hidden. */
+const NAV_HEIGHT_SHOWN = 'calc(64px + max(var(--safe-bottom), 8px))';
+const NAV_HEIGHT_HIDDEN = 'var(--safe-bottom)';
+
 /** Pages that draw their own sticky header (shop mode, History, template editor, sub-settings). */
 export const isBareRoute = (pathname: string) =>
   pathname.startsWith('/lists/') ||
@@ -65,7 +73,17 @@ export function AppLayout() {
   const [errorDismissed, setErrorDismissed] = useState(false);
   const [barSlot, setBarSlot] = useState<HTMLElement | null>(null);
   const bare = isBareRoute(pathname);
+  const showNav = isTabRoot(pathname);
   useTabScrollRestoration(pathname);
+
+  // Set on <html> so the toast (outside this layout) and sheets share the same token.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--nav-height', showNav ? NAV_HEIGHT_SHOWN : NAV_HEIGHT_HIDDEN);
+    return () => {
+      root.style.removeProperty('--nav-height');
+    };
+  }, [showNav]);
 
   // Gate on /me: it is the server's view of the household (never trust client claims).
   const me = useQuery({
@@ -84,7 +102,7 @@ export function AppLayout() {
   else if (justReconnected) banner = 'online';
 
   return (
-    <div className="min-h-dvh bg-bg [--nav-height:calc(64px+max(var(--safe-bottom),8px))]">
+    <div className="min-h-dvh bg-bg">
       {!bare && (
         <header className="fixed inset-x-0 top-0 z-30 border-b border-border-subtle bg-surface pt-safe-top">
           <div className="flex h-[56px] items-center pl-[max(16px,var(--safe-left))] pr-[max(16px,var(--safe-right))]">
@@ -120,33 +138,35 @@ export function AppLayout() {
         </AppBarSlotContext.Provider>
       </div>
 
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border-subtle bg-surface pb-[max(var(--safe-bottom),8px)] pl-safe-left pr-safe-right"
-      >
-        {TABS.map(({ to, label, Icon }) => (
-          <Link
-            key={to}
-            to={to === '/search' ? `/search${getLastSearch()}` : to}
-            aria-current={tabActive(to, pathname) ? 'page' : undefined}
-            onClick={() => {
-              if (pathname === to) window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className={`flex min-h-primary flex-col items-center justify-center gap-1 pt-1 text-xs active:bg-accent-soft ${
-              tabActive(to, pathname) ? 'text-accent' : 'text-muted'
-            } focus-visible:outline-offset-[-2px]`}
-          >
-            <span
-              className={`flex h-7 w-12 items-center justify-center rounded-full ${
-                tabActive(to, pathname) ? 'bg-accent-soft' : ''
-              }`}
+      {showNav && (
+        <nav
+          aria-label="Main"
+          className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border-subtle bg-surface pb-[max(var(--safe-bottom),8px)] pl-safe-left pr-safe-right"
+        >
+          {TABS.map(({ to, label, Icon }) => (
+            <Link
+              key={to}
+              to={to === '/search' ? `/search${getLastSearch()}` : to}
+              aria-current={tabActive(to, pathname) ? 'page' : undefined}
+              onClick={() => {
+                if (pathname === to) window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`flex min-h-primary flex-col items-center justify-center gap-1 pt-1 text-xs active:bg-accent-soft ${
+                tabActive(to, pathname) ? 'text-accent' : 'text-muted'
+              } focus-visible:outline-offset-[-2px]`}
             >
-              <Icon aria-hidden size={24} strokeWidth={tabActive(to, pathname) ? 2.5 : 2} />
-            </span>
-            <span>{label}</span>
-          </Link>
-        ))}
-      </nav>
+              <span
+                className={`flex h-7 w-12 items-center justify-center rounded-full ${
+                  tabActive(to, pathname) ? 'bg-accent-soft' : ''
+                }`}
+              >
+                <Icon aria-hidden size={24} strokeWidth={tabActive(to, pathname) ? 2.5 : 2} />
+              </span>
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

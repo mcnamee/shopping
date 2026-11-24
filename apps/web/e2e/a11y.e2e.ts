@@ -51,7 +51,7 @@ test.describe('accessibility (axe) and tap targets at 390x844', () => {
 
   test('shell tabs', async ({ page }) => {
     await signInToShell(page);
-    for (const path of ['/', '/search', '/templates']) {
+    for (const path of ['/', '/search', '/recipes']) {
       await page.goto(path);
       await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
       await expectNoSeriousAxeViolations(page);

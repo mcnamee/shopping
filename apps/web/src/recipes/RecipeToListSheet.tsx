@@ -2,20 +2,33 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   RECIPE_LIMITS,
   defaultListName,
+  describeQuantity,
+  parseIngredient,
   parseIngredientLines,
+  roundQuantity,
   sortActiveLists,
+  type AddItemRequest,
   type LineChange,
   type Recipe,
+  type RecipeMatchProduct,
+  type RecipeMatchRow,
 } from '@trolley/core';
-import { Check, CircleAlert, Star } from 'lucide-react';
-import { useId, useMemo, useRef, useState } from 'react';
-import { addRecipeToList, undoListItemsBulk } from '../api';
+import { Check, ChevronDown, CircleAlert, Star } from 'lucide-react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  addListItemsBulk,
+  addRecipeToList,
+  createList,
+  matchRecipe,
+  undoListItemsBulk,
+} from '../api';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { qk, summaryOf, upsertListSummary, useListsQuery } from '../lists/data';
 import { SheetHeader } from '../lists/ListSheets';
 import { truncate } from '../search/format';
+import { ProductThumb } from '../search/ProductImage';
 
 const FAILED = "Couldn't add those ingredients. Please try again.";
 const UNDO_FAILED = "Couldn't undo. Check your connection.";
@@ -38,7 +51,58 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
   const lists = useListsQuery();
   const parsed = useMemo(() => parseIngredientLines(recipe.ingredients), [recipe.ingredients]);
   const total = parsed.filter((l) => l.kind === 'ingredient').length;
-  const [off, setOff] = useState<ReadonlySet<number>>(new Set());
+  // Pantry staples (salt, pepper, water...) start unticked: most households have them.
+  const pantry = useMemo(
+    () =>
+      new Set(
+        parsed.flatMap((l, i) =>
+          l.kind === 'ingredient' && parseIngredient(l.text).pantry ? [i] : [],
+        ),
+      ),
+    [parsed],
+  );
+  const [off, setOff] = useState<ReadonlySet<number>>(() => new Set(pantry));
+  // Smart matching (D-115): the sheet opens with free-text rows and upgrades when the
+  // matches arrive. A failed request silently leaves the rows as text.
+  const [matchRows, setMatchRows] = useState<readonly RecipeMatchRow[] | null>(null);
+  const [matching, setMatching] = useState(total > 0);
+  const [choice, setChoice] = useState<Readonly<Record<number, string>>>({});
+  const [openRow, setOpenRow] = useState<number | null>(null);
+  useEffect(() => {
+    if (total === 0) return;
+    let current = true;
+    matchRecipe(recipe.id)
+      .then((res) => {
+        if (!current) return;
+        setMatchRows(res.rows);
+        const n = res.rows.filter((r) => r.match).length;
+        if (n > 0) setLive(`${n} matched to ALDI products`);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (current) setMatching(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [recipe.id, total]);
+  const matchOf = useMemo(() => {
+    const byIndex = new Map<number, RecipeMatchRow>();
+    let k = 0;
+    parsed.forEach((l, i) => {
+      if (l.kind !== 'ingredient') return;
+      const row = matchRows?.[k++];
+      if (row && row.line === l.text) byIndex.set(i, row);
+    });
+    return byIndex;
+  }, [parsed, matchRows]);
+  /** The product this row will add, or null for free text. */
+  const productFor = (i: number): RecipeMatchProduct | null => {
+    const row = matchOf.get(i);
+    if (!row) return null;
+    const picked = choice[i] ?? row.match?.productId ?? 'text';
+    return [row.match, ...row.alternatives].find((p) => p?.productId === picked) ?? null;
+  };
   const [picked, setPicked] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
@@ -97,9 +161,27 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
       setLive('Tick at least one ingredient');
       return;
     }
-    const lines = parsed.flatMap((l, i) =>
-      l.kind === 'ingredient' && !off.has(i) ? [l.text] : [],
-    );
+    const lines: string[] = [];
+    // Product rows merge by product and unit (a bulk add rejects repeats in one request).
+    const products = new Map<string, AddItemRequest>();
+    const note = `From ${recipe.title}`.slice(0, 200);
+    parsed.forEach((l, i) => {
+      if (l.kind !== 'ingredient' || off.has(i)) return;
+      const p = productFor(i);
+      if (!p) {
+        lines.push(l.text);
+        return;
+      }
+      const key = `${p.productId}|${p.unit}`;
+      const prev = products.get(key);
+      products.set(key, {
+        productId: p.productId,
+        unit: p.unit,
+        qty: roundQuantity((prev?.qty ?? 0) + p.qty, p.unit),
+        note,
+      });
+    });
+    const productItems = [...products.values()];
     setBusy(true);
     setBanner(null);
     let listId: string | undefined = target?.id;
@@ -107,6 +189,14 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
     let added = 0;
     let full = false;
     const changes: LineChange[] = [];
+    const collect = (
+      results: Array<{ ok: true; change: LineChange } | { ok: false; code: string }>,
+    ) => {
+      for (const r of results) {
+        if (r.ok) changes.push(r.change);
+        else if (r.code === 'LIMIT') full = true;
+      }
+    };
     try {
       for (const part of chunk(lines, RECIPE_LIMITS.toListLines)) {
         const res = await addRecipeToList(recipe.id, {
@@ -116,11 +206,19 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
         listId = res.listId;
         created ||= res.listCreated;
         added += res.added;
-        for (const r of res.results) {
-          if (r.ok) changes.push(r.change);
-          else if (r.code === 'LIMIT') full = true;
-        }
+        collect(res.results);
         qc.setQueryData(qk.list(res.listId), res.list);
+        upsertListSummary(qc, summaryOf(res.list));
+      }
+      for (const part of chunk(productItems, 50)) {
+        if (!listId) {
+          listId = (await createList({})).list.id;
+          created = true;
+        }
+        const res = await addListItemsBulk(listId, part);
+        added += res.added;
+        collect(res.results);
+        qc.setQueryData(qk.list(listId), res.list);
         upsertListSummary(qc, summaryOf(res.list));
       }
     } catch {
@@ -137,7 +235,7 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
       return;
     }
     const name = created ? newName : targetName;
-    const missed = lines.length - added;
+    const missed = lines.length + productItems.length - added;
     const merged = changes.filter((c) => !c.created).length;
     const main = `Added ${added} to ${name}${merged ? ` (${merged} combined)` : ''}`;
     const notAdded = missed > 0 ? ` - ${missed} not added${full ? ' - list is full' : ''}` : '';
@@ -242,43 +340,126 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
           {allOn ? 'Select none' : 'Select all'}
         </button>
       </div>
+      {matching && (
+        <p role="status" className="flex items-center gap-2 pb-2 text-sm text-muted">
+          <span aria-hidden className="shimmer h-3 w-3 rounded-full" />
+          Finding ALDI products...
+        </p>
+      )}
       <ul aria-label="Ingredients">
-        {parsed.map((l, i) =>
-          l.kind === 'heading' ? (
-            <li
-              key={i}
-
-              className="flex h-10 items-center text-xs uppercase tracking-wide text-muted"
-            >
-              {l.text}
-            </li>
-          ) : (
+        {parsed.map((l, i) => {
+          if (l.kind === 'heading') {
+            return (
+              <li
+                key={i}
+                className="flex h-10 items-center text-xs uppercase tracking-wide text-muted"
+              >
+                {l.text}
+              </li>
+            );
+          }
+          const row = matchOf.get(i);
+          const product = productFor(i);
+          const options = row
+            ? [row.match, ...row.alternatives].filter((p): p is RecipeMatchProduct => p !== null)
+            : [];
+          const open = openRow === i && options.length > 0;
+          const ticked = !off.has(i);
+          return (
             <li key={i} className="border-b border-border-subtle">
               <button
                 type="button"
                 role="checkbox"
-                aria-checked={!off.has(i)}
+                aria-checked={ticked}
                 onClick={() => toggle(i)}
                 className="flex min-h-14 w-full items-center gap-1 rounded-sm text-left"
               >
                 <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center">
                   <span
                     className={`flex h-6 w-6 items-center justify-center rounded-[6px] border-2 ${
-                      !off.has(i) ? 'border-accent bg-accent text-accent-on' : 'border-border bg-bg'
+                      ticked ? 'border-accent bg-accent text-accent-on' : 'border-border bg-bg'
                     }`}
                   >
-                    {!off.has(i) && <Check className="h-4 w-4" strokeWidth={3} />}
+                    {ticked && <Check className="h-4 w-4" strokeWidth={3} />}
                   </span>
                 </span>
-                <span
-                  className={`min-w-0 flex-1 break-words py-2 text-lg ${off.has(i) ? 'text-muted' : ''}`}
-                >
-                  {l.text}
+                {product && (
+                  <ProductThumb src={product.imageUrl} name={product.name} dim={!ticked} />
+                )}
+                <span className={`min-w-0 flex-1 py-2 pl-1 ${ticked ? '' : 'text-muted'}`}>
+                  {product ? (
+                    <>
+                      <span className="block break-words text-lg">
+                        {describeQuantity(product.qty, product.unit, product.name)}
+                      </span>
+                      <span className="block break-words text-sm text-muted">{l.text}</span>
+                    </>
+                  ) : (
+                    <span className="block break-words text-lg">{l.text}</span>
+                  )}
+                  {pantry.has(i) && <span className="block text-sm text-muted">Probably have</span>}
                 </span>
               </button>
+              {options.length > 0 && (
+                <div className="pb-2 pl-12">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-label={`${product ? 'Change product' : 'Choose a product'} for ${l.text}`}
+                    onClick={() => setOpenRow(open ? null : i)}
+                    className="inline-flex min-h-tap items-center gap-1 rounded-full bg-accent-soft px-3 text-sm font-semibold text-accent"
+                  >
+                    {product ? 'Change' : 'Choose ALDI product'}
+                    <ChevronDown aria-hidden className={`h-4 w-4 ${open ? 'rotate-180' : ''}`} />
+                  </button>
+                  {open && (
+                    <div role="radiogroup" aria-label={`Product for ${l.text}`} className="mt-1">
+                      {[...options.map((o) => o.productId), 'text'].map((id) => {
+                        const o = options.find((x) => x.productId === id);
+                        const on = (product?.productId ?? 'text') === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => {
+                              setChoice((c) => ({ ...c, [i]: id }));
+                              setOpenRow(null);
+                            }}
+                            className={`flex min-h-12 w-full items-center gap-2 rounded-sm px-2 text-left ${
+                              on ? 'bg-accent-soft' : ''
+                            }`}
+                          >
+                            <span
+                              aria-hidden
+                              className="flex h-5 w-5 shrink-0 items-center justify-center"
+                            >
+                              {on && <Check className="h-5 w-5 text-accent" strokeWidth={3} />}
+                            </span>
+                            {o ? (
+                              <>
+                                <ProductThumb src={o.imageUrl} name={o.name} />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block break-words text-base">{o.name}</span>
+                                  {o.packSize && (
+                                    <span className="block text-sm text-muted">{o.packSize}</span>
+                                  )}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="flex-1 text-base">Keep as text</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </li>
-          ),
-        )}
+          );
+        })}
       </ul>
     </BottomSheet>
   );

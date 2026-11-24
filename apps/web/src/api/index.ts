@@ -42,6 +42,7 @@ import type {
   RecipePhotoUploadResponse,
   RecipesResponse,
   RecipeToListRequest,
+  RecipeMatchResponse,
   RecipeToListResponse,
   UpdateRecipeRequest,
 } from '@trolley/core';
@@ -223,6 +224,9 @@ export const deleteRecipe = (id: string) => api.delete<undefined>(`/recipes/${en
 /** Presigned POSTs for a new photo; send them with uploadRecipePhoto (./recipePhotos). */
 export const getRecipePhotoUpload = () =>
   api.post<RecipePhotoUploadResponse>('/recipes/photo-upload');
+/** Ingredient lines matched to the household's ALDI products (D-115); read-only. */
+export const matchRecipe = (id: string) =>
+  api.post<RecipeMatchResponse>(`/recipes/${enc(id)}/match`);
 /** Ingredient lines (no headings, <= 50) as free-text list lines; Undo via undoListItemsBulk. */
 export const addRecipeToList = (id: string, body: RecipeToListRequest) =>
   api.post<RecipeToListResponse>(`/recipes/${enc(id)}/to-list`, body);

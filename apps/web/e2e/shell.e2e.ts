@@ -43,9 +43,7 @@ test.describe('signed-in shell', () => {
     await page.reload();
     await expect(page).toHaveURL('/templates');
     await expect(page.getByRole('heading', { name: 'Templates', level: 1 })).toBeVisible();
-    await expect(
-      page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Lists' }),
-    ).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
   });
 
   test('unknown route falls back to Lists', async ({ page }) => {
@@ -54,7 +52,7 @@ test.describe('signed-in shell', () => {
   });
 
   test('no horizontal scroll on any tab', async ({ page }) => {
-    for (const path of ['/', '/search', '/templates', '/settings']) {
+    for (const path of ['/', '/search', '/recipes', '/settings']) {
       await page.goto(path);
       await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
       await expectNoHorizontalScroll(page);

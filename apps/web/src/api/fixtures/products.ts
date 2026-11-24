@@ -7,6 +7,20 @@ import type { ProductSummary } from '@trolley/core';
 
 export const MOCK_CATALOGUE: ProductSummary[] = [
   {
+    sku: '000000000000790002',
+    name: 'Extra Virgin Olive Oil 750ml',
+    brand: 'Remano',
+    // Mock-only image (not a real ALDI asset); the row falls back if it does not load.
+    imageUrl:
+      'https://dm.apac.cms.aldi.cx/is/image/aldiprodapac/product/jpg/scaleWidth/400/mock-extra-virgin-olive-oil-750ml',
+    price: 899,
+    unitPrice: '$11.99 per 1 L',
+    packSize: '750 mL',
+    unitType: 'each',
+    groupId: 'pantry',
+    custom: false,
+  },
+  {
     sku: '000000000000398949',
     name: 'A2 Full Cream Milk 2L',
     brand: 'A2 The A2 Milk Company',

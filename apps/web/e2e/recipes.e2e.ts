@@ -65,6 +65,7 @@ test.describe('Recipes', () => {
     await page.getByRole('button', { name: 'Add to list' }).click();
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByRole('checkbox')).toHaveCount(9);
+    await expect(sheet.getByText('Finding ALDI products...')).toBeHidden();
     await expectNoSeriousAxeViolations(page);
     await expectTapTargets(page);
     await page.screenshot({ path: `${SHOTS}/add-to-list-sheet.png` });
@@ -86,7 +87,7 @@ test.describe('Recipes', () => {
     await page.getByLabel('Categories').fill('Soup,');
     await page
       .getByLabel('Ingredients', { exact: true })
-      .fill('# Soup\n6 ripe tomatoes\n1 onion, diced\nFresh basil');
+      .fill('# Soup\n6 ripe heirloom tomatoes\n1 onion, diced\nFresh basil');
     await page
       .getByLabel('Method', { exact: true })
       .fill('Roast the tomatoes.\n\nBlend with the onion.');
@@ -97,8 +98,9 @@ test.describe('Recipes', () => {
     await page.getByRole('button', { name: 'Save' }).click();
 
     await expect(page.getByRole('heading', { level: 2, name: 'Tomato soup' })).toBeVisible();
-    await expect(page.getByText('6 ripe tomatoes')).toBeVisible();
+    await expect(page.getByText('6 ripe heirloom tomatoes')).toBeVisible();
     await page.getByRole('button', { name: 'Add to list' }).click();
+    await expect(page.getByText('Finding ALDI products...')).toBeHidden();
     await page
       .getByRole('dialog')
       .getByRole('button', { name: /^Add 3 to Week of/ })
@@ -107,7 +109,7 @@ test.describe('Recipes', () => {
 
     await page.goto('/');
     await page.getByRole('link', { name: /Week of .*this week/ }).click();
-    const tomatoes = page.getByRole('checkbox', { name: '6 ripe tomatoes' });
+    const tomatoes = page.getByRole('checkbox', { name: '6 ripe heirloom tomatoes' });
     await expect(tomatoes).toBeVisible();
     await expect(tomatoes).toContainText('From Tomato soup');
     await tomatoes.click();
@@ -115,6 +117,51 @@ test.describe('Recipes', () => {
     await expectNoSeriousAxeViolations(page);
     await expectTapTargets(page);
     await expectNoHorizontalScroll(page);
+  });
+
+  test('smart add to list: olive oil becomes an ALDI product, an odd ingredient stays text', async ({
+    page,
+  }) => {
+    await signInToShell(page);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Title').fill('Odd dressing');
+    await page
+      .getByLabel('Ingredients', { exact: true })
+      .fill(
+        '3 tbsp extra virgin olive oil, plus extra\n1 pinch dragon fruit foam\nSalt and pepper, to taste',
+      );
+    await page.getByLabel('Method', { exact: true }).fill('Whisk.');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Odd dressing' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Add to list' }).click();
+    const sheet = page.getByRole('dialog');
+    // Opens at once with text rows; salt and pepper is unticked ("Probably have").
+    await expect(sheet.getByRole('checkbox')).toHaveCount(3);
+    await expect(sheet.getByText('Probably have')).toBeVisible();
+    const oil = sheet.getByRole('checkbox', { name: /Extra Virgin Olive Oil 750ml/ });
+    await expect(oil).toBeVisible();
+    await expect(oil).toContainText('3 tbsp extra virgin olive oil, plus extra');
+    await expect(sheet.getByRole('checkbox', { name: '1 pinch dragon fruit foam' })).toBeVisible();
+    await expect(sheet.getByRole('checkbox', { name: /Salt and pepper/ })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    await expectNoSeriousAxeViolations(page);
+    await expectTapTargets(page);
+    await page.screenshot({ path: `${SHOTS}/smart-add-to-list.png` });
+
+    await sheet.getByRole('button', { name: /^Add 2 to Week of/ }).click();
+    await expect(page.getByText(/^Added 2 to Week of/)).toBeVisible();
+
+    await page.goto('/');
+    await page.getByRole('link', { name: /Week of .*this week/ }).click();
+    await expect(
+      page.getByRole('checkbox', { name: /Extra Virgin Olive Oil 750ml/ }),
+    ).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: '1 pinch dragon fruit foam' })).toContainText(
+      'From Odd dressing',
+    );
   });
 
   test('import a Mela zip: one new recipe with a photo, one duplicate skipped', async ({

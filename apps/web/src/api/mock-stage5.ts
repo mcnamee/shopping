@@ -11,6 +11,9 @@
  */
 import {
   defaultListName,
+  ingredientTexts,
+  matchIngredients,
+  parseIngredient,
   filterRecipes,
   isValidEntityId,
   parsePatchRecipeRequest,
@@ -28,6 +31,8 @@ import {
   type BulkAddItemResult,
   type LineInput,
   type Recipe,
+  type ProductSummary,
+  type RecipeMatchResponse,
   type RecipePhotoUploadResponse,
   type RecipesResponse,
   type RecipeToListResponse,
@@ -45,6 +50,7 @@ import {
   newId,
   notFound,
   nowIso,
+  mockUnitOverrides,
   read,
   unwrap,
   write,
@@ -231,8 +237,38 @@ function applyInput(r: Recipe, input: ParsedRecipe): void {
   });
 }
 
-export function createStage5MockRoutes() {
+/** What the mock matcher needs from the mock catalogue (set by mock.ts). */
+export interface MockMatchSource {
+  find: (householdId: string, productId: string) => ProductSummary | null;
+  search: (householdId: string, query: string) => Array<{ item: ProductSummary; score: number }>;
+}
+
+export function createStage5MockRoutes(source: MockMatchSource) {
   return {
+    // Read the household synchronously (the mock state rules), then match asynchronously.
+    'POST /api/recipes/{recipeId}/match': {
+      auth: true,
+      handler: (ctx: Parameters<ReturnType<typeof read>['handler']>[0]) => {
+        let work: (() => Promise<Response>) | null = null;
+        const res = read((hh, { params, householdId }) => {
+          const recipe = findRecipe(hh, params.recipeId);
+          const parsed = ingredientTexts(recipe.ingredients).map(parseIngredient);
+          const src = {
+            templates: clone(hh.templates),
+            purchases: Object.values(hh.purchases),
+            unitOverrides: mockUnitOverrides(householdId),
+            available: async (id: string) => source.find(householdId, id),
+            search: async (q: string) => source.search(householdId, q),
+          };
+          work = async () => {
+            const rows = await matchIngredients(parsed, src);
+            return json(200, { rows, ai: false } satisfies RecipeMatchResponse);
+          };
+          return json(204, null);
+        }).handler(ctx);
+        return work ? (work as () => Promise<Response>)() : res;
+      },
+    },
     'GET /api/recipes': read((hh, { url }) => {
       const all = recipesOf(hh).map((r) => recipeSummary(view(r)));
       return json(200, {

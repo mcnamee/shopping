@@ -402,6 +402,8 @@ export class TrolleyStack extends Stack {
       ['/api/recipes/{recipeId}', PATCH],
       ['/api/recipes/{recipeId}', DELETE],
       ['/api/recipes/{recipeId}/to-list', POST],
+      // Must match services/api/src/recipes/match.ts (D-115).
+      ['/api/recipes/{recipeId}/match', POST],
       // Stage 4: consent screen and Connected apps (SPA, Cognito ID token).
       ['/api/oauth/requests/{requestId}', GET],
       ['/api/oauth/consent', POST],

@@ -94,7 +94,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         role="status"
         aria-live="polite"
         style={{ marginBottom: lift }}
-        className="pointer-events-none fixed inset-x-0 bottom-[calc(64px+max(var(--safe-bottom),8px)+12px)] z-[60] flex justify-center px-4"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--nav-height)+12px)] z-[60] flex justify-center px-4"
       >
         {toast && (
           <p
