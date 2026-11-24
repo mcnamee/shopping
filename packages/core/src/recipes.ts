@@ -27,6 +27,15 @@ export const RECIPE_LIMITS = {
 export const RECIPE_PHOTO_MAX_BYTES = 3 * 1024 * 1024;
 export const RECIPE_THUMB_MAX_BYTES = 300 * 1024;
 
+/** Where an imported recipe came from (B-019): lets a re-import skip what is already here. */
+export interface RecipeSource {
+  app: 'mela';
+  /** The id the source app gave the recipe (<= 1000 chars). */
+  id: string;
+}
+
+export const RECIPE_SOURCE_ID_MAX = 1000;
+
 export interface Recipe {
   id: string;
   title: string;
@@ -50,6 +59,8 @@ export interface Recipe {
   /** http(s) URL or ''. */
   sourceUrl: string;
   favourite: boolean;
+  /** Import origin, or null for recipes typed in. */
+  source: RecipeSource | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -64,6 +75,9 @@ export interface RecipeSummary {
   totalTime: string;
   thumbUrl: string | null;
   favourite: boolean;
+  /** Web address and import origin, so an import can spot duplicates (B-019). */
+  sourceUrl: string;
+  source: RecipeSource | null;
   updatedAt: string;
 }
 
@@ -86,6 +100,8 @@ export interface RecipeInput {
   nutrition?: string;
   sourceUrl?: string;
   favourite?: boolean;
+  /** Import origin (B-019). Absent: unchanged (PUT) or none (POST); null: clear. */
+  source?: RecipeSource | null;
   /** From POST /recipes/photo-upload. Absent: unchanged (PUT); null: remove. */
   photoKey?: string | null;
 }
@@ -132,6 +148,8 @@ export interface ParsedRecipe {
   nutrition: string;
   sourceUrl: string;
   favourite: boolean | undefined;
+  /** undefined: leave as is. */
+  source: RecipeSource | null | undefined;
   /** undefined: leave as is. */
   photoKey: string | null | undefined;
 }
@@ -267,6 +285,19 @@ export function parseSourceUrl(value: unknown): Parsed<string> {
   return { ok: true, value: s };
 }
 
+export function parseRecipeSource(value: unknown): Parsed<RecipeSource | null | undefined> {
+  if (value === undefined) return { ok: true, value: undefined };
+  if (value === null) return { ok: true, value: null };
+  if (!isObject(value) || value.app !== 'mela' || typeof value.id !== 'string') {
+    return fail('source must be { app: "mela", id }', 'source');
+  }
+  const id = value.id.trim();
+  if (!id || id.length > RECIPE_SOURCE_ID_MAX || /[\p{Cc}]/u.test(id)) {
+    return fail(`source id must be 1 to ${RECIPE_SOURCE_ID_MAX} characters`, 'source');
+  }
+  return { ok: true, value: { app: 'mela', id } };
+}
+
 /** Non-blank lines of an ingredients/method text. */
 function nonBlankLines(text: string): string[] {
   return text.split('\n').filter((l) => l.trim() !== '');
@@ -308,6 +339,8 @@ export function parseRecipeInput(body: unknown, householdId: string): Parsed<Par
   if (body.favourite !== undefined && typeof body.favourite !== 'boolean') {
     return fail('favourite must be true or false', 'favourite');
   }
+  const source = parseRecipeSource(body.source);
+  if (!source.ok) return source;
   let photoKey: string | null | undefined;
   if (body.photoKey === null) photoKey = null;
   else if (body.photoKey !== undefined) {
@@ -330,6 +363,7 @@ export function parseRecipeInput(body: unknown, householdId: string): Parsed<Par
       nutrition: nutrition.value,
       sourceUrl: sourceUrl.value,
       favourite: body.favourite as boolean | undefined,
+      source: source.value,
       photoKey,
     },
   };
@@ -389,6 +423,8 @@ export function recipeSummary(r: Recipe): RecipeSummary {
     totalTime: r.totalTime,
     thumbUrl: r.thumbUrl,
     favourite: r.favourite,
+    sourceUrl: r.sourceUrl,
+    source: r.source,
     updatedAt: r.updatedAt,
   };
 }

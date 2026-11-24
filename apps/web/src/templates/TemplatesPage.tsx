@@ -7,7 +7,7 @@ import {
   type TemplateSummary,
   type TemplateType,
 } from '@trolley/core';
-import { AppBarAction } from '../components/appBar';
+import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/Button';
 import { EmptyView, ErrorView, Skeleton } from '../components/StateViews';
 import { useToast } from '../components/Toast';
@@ -29,7 +29,7 @@ const previewLine = (t: TemplateSummary) =>
     ? 'No items yet'
     : `${t.preview.join(', ')}${t.itemCount > t.preview.length ? `, +${t.itemCount - t.preview.length}` : ''}`;
 
-/** Templates tab (docs/ux/templates.md 1). */
+/** Templates page, reached from the Lists page (docs/ux/templates.md 1; D-113). */
 export function TemplatesPage() {
   const query = useTemplatesQuery();
   const [params, setParams] = useSearchParams();
@@ -162,18 +162,25 @@ export function TemplatesPage() {
 
   return (
     <div className={all && all.length > 0 ? 'pb-20' : ''}>
-      <AppBarAction>
-        <button
-          type="button"
-          aria-label="New template"
-          aria-disabled={!online}
-          onClick={() => newTemplate(newType)}
-          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-sm"
-        >
-          <Plus aria-hidden className="h-6 w-6" />
-        </button>
-      </AppBarAction>
-      {body}
+      <PageHeader
+        title="Templates"
+        backTo="/"
+        backLabel="Back to Lists"
+        right={
+          <button
+            type="button"
+            aria-label="New template"
+            aria-disabled={!online}
+            onClick={() => newTemplate(newType)}
+            className="flex h-11 w-11 items-center justify-center rounded-sm"
+          >
+            <Plus aria-hidden className="h-6 w-6" />
+          </button>
+        }
+      />
+      <div className="pl-[max(16px,var(--safe-left))] pr-[max(16px,var(--safe-right))] pt-4">
+        {body}
+      </div>
       {all && all.length > 0 && (
         <button
           type="button"

@@ -1,12 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  ChefHat,
-  LayoutTemplate,
-  ListChecks,
-  Search,
-  Settings,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChefHat, ListChecks, Search, Settings, type LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router';
 import { ApiError, getMe } from '../api';
@@ -22,14 +15,13 @@ export const TABS: readonly { to: string; label: string; Icon: LucideIcon }[] = 
   { to: '/', label: 'Lists', Icon: ListChecks },
   { to: '/search', label: 'Search', Icon: Search },
   { to: '/recipes', label: 'Recipes', Icon: ChefHat },
-  { to: '/templates', label: 'Templates', Icon: LayoutTemplate },
   { to: '/settings', label: 'Settings', Icon: Settings },
 ];
 
 /** Pages that draw their own sticky header (shop mode, History, template editor, sub-settings). */
 export const isBareRoute = (pathname: string) =>
   pathname.startsWith('/lists/') ||
-  pathname.startsWith('/templates/') ||
+  pathname.startsWith('/templates') ||
   pathname.startsWith('/recipes/') ||
   pathname.startsWith('/settings/');
 
@@ -37,9 +29,11 @@ export const isBareRoute = (pathname: string) =>
 const isShopRoute = (pathname: string) =>
   pathname.startsWith('/lists/') && pathname !== '/lists/history';
 
-/** The Lists tab also covers /lists/:id and History. */
+/** The Lists tab also covers /lists/:id, History and Templates (linked from Lists). */
 const tabActive = (to: string, pathname: string) =>
-  to === '/' ? pathname === '/' || pathname.startsWith('/lists/') : pathname.startsWith(to);
+  to === '/'
+    ? pathname === '/' || pathname.startsWith('/lists/') || pathname.startsWith('/templates')
+    : pathname.startsWith(to);
 
 /** Tab-title lookup for the app bar. Unknown paths fall back to Lists. */
 const titleFor = (pathname: string) =>
@@ -128,7 +122,7 @@ export function AppLayout() {
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border-subtle bg-surface pb-[max(var(--safe-bottom),8px)] pl-safe-left pr-safe-right"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border-subtle bg-surface pb-[max(var(--safe-bottom),8px)] pl-safe-left pr-safe-right"
       >
         {TABS.map(({ to, label, Icon }) => (
           <Link

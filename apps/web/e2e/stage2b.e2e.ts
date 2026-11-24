@@ -29,7 +29,7 @@ test.describe('Stage 2b', () => {
 
   test('Regulars is a template type with its own badge; rows show thumbnails', async ({ page }) => {
     await signInToShell(page);
-    await page.getByRole('link', { name: 'Templates' }).click();
+    await page.getByRole('link', { name: /^Templates/ }).click();
     await page.getByRole('button', { name: 'New template' }).first().click();
     await page.getByLabel('Name').fill('Top-ups');
     await page.getByRole('radio', { name: 'Regulars' }).click();

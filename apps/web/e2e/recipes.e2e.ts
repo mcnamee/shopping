@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import {
   expectNoHorizontalScroll,
@@ -22,7 +24,7 @@ test.describe('Recipes', () => {
       await page.setViewportSize({ width, height: 800 });
       await signInToShell(page);
       const links = nav(page).getByRole('link');
-      await expect(links).toHaveCount(5);
+      await expect(links).toHaveCount(4);
       const fit = await links.evaluateAll((els) =>
         els.map((a) => {
           const label = a.querySelector('span:last-child') as HTMLElement;
@@ -113,5 +115,55 @@ test.describe('Recipes', () => {
     await expectNoSeriousAxeViolations(page);
     await expectTapTargets(page);
     await expectNoHorizontalScroll(page);
+  });
+
+  test('import a Mela zip: one new recipe with a photo, one duplicate skipped', async ({
+    page,
+  }) => {
+    await signInToShell(page);
+    await nav(page).getByRole('link', { name: 'Recipes' }).click();
+    await page
+      .getByTestId('mela-file-input')
+      .setInputFiles(
+        fileURLToPath(new URL('../src/recipes/fixtures/two-recipes.melarecipes', import.meta.url)),
+      );
+    const sheet = page.getByRole('dialog');
+    await expect(sheet.getByText('Found 2 recipes')).toBeVisible();
+    await expect(sheet.getByText('Already in Trolley - will skip')).toBeVisible();
+    await expect(sheet.getByRole('checkbox', { name: /Fixture lemon pasta/ })).toBeChecked();
+    await expectTapTargets(page);
+    await page.screenshot({ path: `${SHOTS}/mela-preview.png` });
+    await sheet.getByRole('button', { name: 'Import 1' }).click();
+    await expect(sheet.getByText('1 recipe imported')).toBeVisible();
+    await expect(sheet.getByText('Skipped duplicates: 1')).toBeVisible();
+    await expect(sheet.getByText('Failed: 0')).toBeVisible();
+    await sheet.getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('link', { name: /Fixture lemon pasta/ }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Fixture lemon pasta' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('img[src*="/media/"], img[src^="data:"], img[src^="blob:"]').first(),
+    ).toBeVisible();
+  });
+
+  // Local-only check against a real Mela export (third-party content, never committed).
+  const REAL =
+    '/root/.claude/uploads/8e252ed6-4540-5359-9d43-d654ea5e1540/2da9fcaf-Aussie-style_beef_and_salad_tacos_recipe.melarecipe';
+  test('a real Mela export imports with its photo resized (skipped when absent)', async ({
+    page,
+  }) => {
+    test.skip(!existsSync(REAL), 'real export not present');
+    await signInToShell(page);
+    await nav(page).getByRole('link', { name: 'Recipes' }).click();
+    await page.getByTestId('mela-file-input').setInputFiles(REAL);
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('button', { name: 'Import 1' }).click();
+    await expect(sheet.getByText('1 recipe imported')).toBeVisible();
+    await expect(sheet.getByText("Photo couldn't be read")).toHaveCount(0);
+    await sheet.getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('link', { name: /Aussie-style beef/ }).click();
+    await expect(page.getByText('Serves 10')).toBeVisible();
+    await expect(page.getByText('**')).toHaveCount(0);
   });
 });

@@ -1,0 +1,12 @@
+{
+  "id": "fixture-toast",
+  "title": "Fixture toast",
+  "prepTime": 5,
+  "cookTime": 3,
+  "yield": 2,
+  "categories": "Breakfast, Quick",
+  "ingredients": "2 slices bread",
+  "instructions": "Toast it.",
+  "favorite": "true",
+  "link": "javascript:alert(1)"
+}

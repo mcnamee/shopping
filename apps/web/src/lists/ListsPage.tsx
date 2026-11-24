@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ListSummary } from '@trolley/core';
-import { Check, ChevronRight, History, ListChecks, Plus, ShoppingCart, Star } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  History,
+  LayoutTemplate,
+  ListChecks,
+  Plus,
+  ShoppingCart,
+  Star,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { getHistory } from '../api';
@@ -46,6 +55,11 @@ export function ListsPage() {
     enabled: empty,
     staleTime: 0,
   });
+  const templateTotal = templates.data?.templates.length;
+  const templateCount =
+    templateTotal === undefined
+      ? 'Saved shops'
+      : `${templateTotal} ${templateTotal === 1 ? 'template' : 'templates'}`;
   const hasHistory = (probe.data?.lists.length ?? 0) > 0;
 
   const openNew = () => {
@@ -96,6 +110,12 @@ export function ListsPage() {
             History
           </Link>
         )}
+        <Link
+          to="/templates"
+          className="flex min-h-primary items-center justify-center rounded-md border-2 border-border text-lg"
+        >
+          Templates
+        </Link>
       </EmptyView>
     );
   } else if (lists) {
@@ -213,6 +233,18 @@ export function ListsPage() {
           <span className="min-w-0 flex-1">
             <span className="block text-lg">History</span>
             <span className="block text-sm font-normal text-muted">Past shops</span>
+          </span>
+          <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-muted" />
+        </Link>
+
+        <Link
+          to="/templates"
+          className="flex min-h-14 items-center gap-3 rounded-md bg-surface px-4 active:bg-accent-soft"
+        >
+          <LayoutTemplate aria-hidden className="h-6 w-6 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg">Templates</span>
+            <span className="block text-sm font-normal text-muted">{templateCount}</span>
           </span>
           <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-muted" />
         </Link>

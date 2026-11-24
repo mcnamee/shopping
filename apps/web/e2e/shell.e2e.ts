@@ -1,10 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { EMAIL, expectNoHorizontalScroll, signInToShell } from './helpers';
 
-const TABS = [
-  { label: 'Lists', path: '/', link: /Week of/ },
-  { label: 'Templates', path: '/templates', link: /Weekly basics/ },
-] as const;
+const TABS = [{ label: 'Lists', path: '/', link: /Week of/ }] as const;
 
 test.describe('signed-in shell', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,14 +10,8 @@ test.describe('signed-in shell', () => {
 
   test('bottom nav has four links; the active tab carries aria-current', async ({ page }) => {
     const nav = page.getByRole('navigation', { name: 'Main' });
-    await expect(nav.getByRole('link')).toHaveText([
-      'Lists',
-      'Search',
-      'Recipes',
-      'Templates',
-      'Settings',
-    ]);
-    for (const name of ['Lists', 'Search', 'Recipes', 'Templates', 'Settings']) {
+    await expect(nav.getByRole('link')).toHaveText(['Lists', 'Search', 'Recipes', 'Settings']);
+    for (const name of ['Lists', 'Search', 'Recipes', 'Settings']) {
       await nav.getByRole('link', { name }).click();
       await expect(nav.getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
       await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
@@ -28,7 +19,7 @@ test.describe('signed-in shell', () => {
     }
   });
 
-  test('Lists and Templates tabs show the seeded mock data', async ({ page }) => {
+  test('Lists tab shows the seeded mock data', async ({ page }) => {
     for (const { label, path, link } of TABS) {
       await page
         .getByRole('navigation', { name: 'Main' })
@@ -53,7 +44,7 @@ test.describe('signed-in shell', () => {
     await expect(page).toHaveURL('/templates');
     await expect(page.getByRole('heading', { name: 'Templates', level: 1 })).toBeVisible();
     await expect(
-      page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Templates' }),
+      page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Lists' }),
     ).toHaveAttribute('aria-current', 'page');
   });
 

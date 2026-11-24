@@ -1,12 +1,13 @@
 import { filterRecipes, type RecipeSummary } from '@trolley/core';
-import { ChefHat, Plus, Search, Star, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ChefHat, FileUp, Plus, Search, Star, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { AppBarAction } from '../components/appBar';
 import { Button } from '../components/Button';
 import { EmptyView, ErrorView, Skeleton } from '../components/StateViews';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
 import { useDelayedFlag } from '../search/hooks';
+import { ImportMelaSheet } from './ImportMelaSheet';
 import { RecipeThumbCard } from './RecipeCard';
 import { useRecipesQuery } from './data';
 
@@ -20,6 +21,9 @@ export function RecipesPage() {
   const [category, setCategory] = useState<string | undefined>();
   const [favourite, setFavourite] = useState(false);
   const all = query.data?.recipes;
+  const picker = useRef<HTMLInputElement>(null);
+  const [importFiles, setImportFiles] = useState<File[] | null>(null);
+  const pickFiles = () => picker.current?.click();
 
   const categories = useMemo(() => {
     const seen = new Map<string, string>();
@@ -77,6 +81,10 @@ export function RecipesPage() {
         <Button onClick={add}>
           <Plus aria-hidden className="h-5 w-5" />
           Add recipe
+        </Button>
+        <Button variant="secondary" onClick={pickFiles}>
+          <FileUp aria-hidden className="h-5 w-5" />
+          Import from Mela
         </Button>
       </EmptyView>
     );
@@ -177,7 +185,30 @@ export function RecipesPage() {
 
   return (
     <div>
+      <input
+        ref={picker}
+        type="file"
+        multiple
+        hidden
+        data-testid="mela-file-input"
+        accept=".melarecipe,.melarecipes,application/zip,application/json"
+        aria-label="Choose Mela files"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = '';
+          if (files.length) setImportFiles(files);
+        }}
+      />
+      {importFiles && <ImportMelaSheet files={importFiles} onClose={() => setImportFiles(null)} />}
       <AppBarAction>
+        <button
+          type="button"
+          aria-label="Import from Mela"
+          onClick={pickFiles}
+          className="flex h-11 w-11 items-center justify-center rounded-sm"
+        >
+          <FileUp aria-hidden className="h-6 w-6" />
+        </button>
         <Link
           to="/recipes/new"
           aria-label="Add recipe"

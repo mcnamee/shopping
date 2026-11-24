@@ -7,7 +7,9 @@ import {
 } from './helpers';
 
 const nav = (page: Page, name: string) =>
-  page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name }).click();
+  name === 'Templates'
+    ? page.getByRole('link', { name: /^Templates/ }).click() // Lists page row
+    : page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name }).click();
 
 async function searchFor(page: Page, q: string) {
   const field = page.getByRole('searchbox', { name: 'Search products' });
