@@ -33,6 +33,7 @@ import {
   resetMockStage2,
 } from './mock-stage2';
 import { createStage4MockRoutes, resetMockStage4 } from './mock-stage4';
+import { createStage5MockRoutes, resetMockMedia } from './mock-stage5';
 
 type Claims = Record<string, string>;
 type MockHandler = (ctx: {
@@ -162,6 +163,7 @@ export function resetMockApi(): void {
   resetMockCustomProducts();
   resetMockStage2();
   resetMockStage4();
+  resetMockMedia();
 }
 
 /** Resolve a product id as the API does: catalogue SKU or this household's custom product. */
@@ -356,6 +358,7 @@ export const mockRoutes: Record<string, MockRoute> = {
     customs: (hh) => customsFor(hh).map(customSummary),
   }),
   ...createStage4MockRoutes(),
+  ...createStage5MockRoutes(),
 };
 
 const PATTERNS = Object.keys(mockRoutes)

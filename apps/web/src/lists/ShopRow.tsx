@@ -1,5 +1,5 @@
 import type { ListItem } from '@trolley/core';
-import { Check, Clock, MessageSquare, Pencil, Trash2 } from 'lucide-react';
+import { Check, Clock, MessageSquare, NotebookText, Pencil, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { ProductThumb } from '../search/ProductImage';
 import { qtyLabel } from './format';
@@ -31,6 +31,7 @@ export function shownPackSize(name: string, packSize?: string | null): string | 
 
 /** "2 L . Get lactose free" meta line: pack size then note (docs/ux/lists.md 3.4). */
 function metaLine(item: ListItem) {
+  if (item.kind === 'text') return item.note ? [item.note] : [];
   return [shownPackSize(item.product.name, item.product.packSize), item.note].filter(
     Boolean,
   ) as string[];
@@ -52,7 +53,8 @@ export function ShopRow({
   onSwipeChange,
 }: ShopRowProps) {
   const { product, qty, unit, ticked } = item;
-  const qtyText = qtyLabel(qty, unit);
+  const isText = item.kind === 'text'; // free-text line: no photo, quantity or unit (D-103)
+  const qtyText = isText ? '' : qtyLabel(qty, unit);
   const meta = metaLine(item);
   const li = useRef<HTMLLIElement>(null);
   const drag = useRef<{ x: number; y: number; base: number; swiping: boolean; id: number } | null>(
@@ -127,7 +129,7 @@ export function ShopRow({
         <span className="block whitespace-normal break-words text-sm font-normal text-muted">
           {readOnly && <span className="sr-only">{ticked ? 'Bought. ' : 'Not bought. '}</span>}
           {readOnly && !ticked && <span aria-hidden>Not bought{meta.length ? ' · ' : ''}</span>}
-          {!shownPackSize(product.name, product.packSize) && item.note && (
+          {(isText || !shownPackSize(product.name, product.packSize)) && item.note && (
             <MessageSquare aria-hidden className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
           )}
           {meta.join(' · ')}
@@ -136,7 +138,19 @@ export function ShopRow({
     </>
   );
 
-  const thumb = <ProductThumb src={product.imageUrl} name={product.name} dim={ticked} />;
+  const thumb = isText ? (
+    <span
+      aria-hidden
+      data-testid="text-line-icon"
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-surface text-accent ${
+        ticked ? 'opacity-50' : ''
+      }`}
+    >
+      <NotebookText className="h-6 w-6" />
+    </span>
+  ) : (
+    <ProductThumb src={product.imageUrl} name={product.name} dim={ticked} />
+  );
 
   const qtyEl = (
     <span className="flex shrink-0 items-center gap-2">
@@ -146,13 +160,15 @@ export function ShopRow({
           <span className="sr-only">Waiting to sync</span>
         </span>
       )}
-      <span
-        className={`max-w-24 whitespace-nowrap text-right text-lg font-bold tabular-nums ${
-          ticked ? 'text-muted line-through' : 'text-text'
-        }`}
-      >
-        {qtyText}
-      </span>
+      {!isText && (
+        <span
+          className={`max-w-24 whitespace-nowrap text-right text-lg font-bold tabular-nums ${
+            ticked ? 'text-muted line-through' : 'text-text'
+          }`}
+        >
+          {qtyText}
+        </span>
+      )}
     </span>
   );
 
@@ -225,7 +241,7 @@ export function ShopRow({
           type="button"
           role="checkbox"
           aria-checked={ticked}
-          aria-label={`${product.name}, ${qtyText}`}
+          aria-label={isText ? product.name : `${product.name}, ${qtyText}`}
           onClick={() => {
             if (swiped.current) return;
             if (open) {

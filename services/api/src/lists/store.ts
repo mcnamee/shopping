@@ -18,7 +18,12 @@ import {
   ITEM_QTY_MAX,
   keys,
   lineIdFor,
+  lineInputId,
   LIMITS,
+  isTextLineId,
+  normaliseLineText,
+  textLineId,
+  textSnapshot,
   listProgress,
   mergeNotes,
   parseLineId,
@@ -344,7 +349,8 @@ export class ListStore {
 
   private newItem(listId: string, l: LineInput, userId: string, at: string): ListItem {
     return {
-      id: lineIdFor(l.product.productId, l.unit),
+      id: lineInputId(l),
+      ...(l.kind === 'text' ? { kind: 'text' as const } : {}),
       listId,
       product: l.product,
       qty: l.qty,
@@ -473,7 +479,7 @@ export class ListStore {
     listId: string,
     input: LineInput,
   ): Promise<{ item: ListItem; merged: boolean }> {
-    const itemId = lineIdFor(input.product.productId, input.unit);
+    const itemId = lineInputId(input);
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
       const existing = await this.getItem(hh, listId, itemId);
       const at = this.now().toISOString();
@@ -491,7 +497,9 @@ export class ListStore {
         item = this.newItem(listId, input, userId, at);
         op = { put: this.itemToDb(hh, item), condition: 'attribute_not_exists(pk)' };
       } else {
-        const qty = sumQuantity(existing.qty, input.qty, input.unit);
+        // A text line is always one: merging only joins notes and unticks it (D-103).
+        const qty =
+          input.kind === 'text' ? existing.qty : sumQuantity(existing.qty, input.qty, input.unit);
         if (!qtyWithinMax(qty, input.unit))
           return fail.validation(tooMuchMessage(input.unit), 'qty');
         item = {
@@ -536,9 +544,7 @@ export class ListStore {
   ): Promise<LineChange[]> {
     await this.mustGetActive(hh, listId);
     const existing = new Map((await this.items(hh, listId)).map((i) => [i.id, i]));
-    const newCount = lines.filter(
-      (l) => !existing.has(lineIdFor(l.product.productId, l.unit)),
-    ).length;
+    const newCount = lines.filter((l) => !existing.has(lineInputId(l))).length;
     if (existing.size + newCount > LIMITS.listItems) {
       return fail.conflict(
         'LIMIT',
@@ -547,7 +553,7 @@ export class ListStore {
     }
     const at = this.now().toISOString();
     return inBatches(lines, BULK_CONCURRENCY, async (line): Promise<LineChange> => {
-      const id = lineIdFor(line.product.productId, line.unit);
+      const id = lineInputId(line);
       const prev = existing.get(id);
       try {
         if (!prev) {
@@ -600,7 +606,7 @@ export class ListStore {
     const existing = new Set((await this.items(hh, listId)).map((i) => i.id));
     let room = LIMITS.listItems - existing.size;
     const plan = lines.map((line) => {
-      const id = lineIdFor(line.product.productId, line.unit);
+      const id = lineInputId(line);
       if (existing.has(id)) return { line, fits: true };
       if (room > 0) {
         room -= 1;
@@ -648,6 +654,11 @@ export class ListStore {
           await this.deleteItem(hh, listId, c.itemId, c.version);
           return { ok: true as const };
         }
+        if (isTextLineId(c.itemId)) {
+          // A merged text line only had its note joined and was unticked: nothing to take
+          // back by quantity, so Undo leaves it as it is (D-103).
+          return { ok: true as const };
+        }
         const cur = await this.getItem(hh, listId, c.itemId);
         if (!cur || cur.version !== c.version) {
           return {
@@ -680,10 +691,14 @@ export class ListStore {
     itemId: string,
     edit: EditItemInput,
   ): Promise<{ item: ListItem; replacedItemId?: string }> {
-    const parsed = parseLineId(itemId);
-    if (!parsed) return fail.notFound();
+    const text = isTextLineId(itemId);
+    const parsed = text ? null : parseLineId(itemId);
+    if (!text && !parsed) return fail.notFound();
     const at = this.now().toISOString();
-    if (edit.unit !== undefined && edit.unit !== parsed.unit) {
+    if (text && edit.text !== undefined && textLineId(edit.text) !== itemId) {
+      return this.rekeyTextItem(hh, userId, listId, itemId, edit, at);
+    }
+    if (parsed && edit.unit !== undefined && edit.unit !== parsed.unit) {
       return this.rekeyItem(hh, userId, listId, itemId, edit, at);
     }
     const sets = ['#ver = #ver + :one', 'updatedAt = :at', 'updatedBy = :by'];
@@ -703,6 +718,12 @@ export class ListStore {
       sets.push('ticked = :t', 'tickedAt = :ta');
       values[':t'] = edit.ticked;
       values[':ta'] = edit.ticked ? at : null;
+    }
+    if (text && edit.groupId !== undefined) {
+      sets.push('#product.#gid = :g');
+      names['#product'] = 'product';
+      names['#gid'] = 'groupId';
+      values[':g'] = edit.groupId;
     }
     let condition = 'attribute_exists(pk)';
     if (edit.version !== undefined) {
@@ -729,6 +750,80 @@ export class ListStore {
     }
     const item = await this.getItem(hh, listId, itemId);
     return { item: item ?? fail.notFound() };
+  }
+
+  /**
+   * Edit a text line's words: the id is a hash of the text, so the line moves to a new row
+   * (and merges into an existing line with exactly that text, D-103) in one transaction.
+   */
+  private async rekeyTextItem(
+    hh: string,
+    userId: string,
+    listId: string,
+    itemId: string,
+    edit: EditItemInput,
+    at: string,
+  ): Promise<{ item: ListItem; replacedItemId: string }> {
+    const existing = await this.getItem(hh, listId, itemId);
+    if (!existing) return fail.notFound();
+    if (edit.version !== existing.version) {
+      return fail.conflict('STALE', 'Changed on another phone', existing);
+    }
+    const text = normaliseLineText(edit.text as string);
+    const newId = textLineId(text);
+    const target = await this.getItem(hh, listId, newId);
+    const note = edit.note !== undefined ? edit.note : existing.note;
+    let item: ListItem;
+    if (target) {
+      item = {
+        ...target,
+        note: mergeNotes(target.note, note),
+        ticked: edit.ticked ?? false,
+        tickedAt: edit.ticked ? at : null,
+        version: target.version + 1,
+        updatedAt: at,
+        updatedBy: userId,
+      };
+    } else {
+      const ticked = edit.ticked ?? existing.ticked;
+      item = {
+        ...existing,
+        id: newId,
+        product: textSnapshot(text, edit.groupId ?? existing.product.groupId),
+        note,
+        ticked,
+        tickedAt: ticked ? (existing.tickedAt ?? at) : null,
+        version: existing.version + 1,
+        updatedAt: at,
+        updatedBy: userId,
+      };
+    }
+    try {
+      await this.db.transact([
+        this.activeCheck(hh, listId),
+        {
+          delete: this.itemKey(hh, listId, itemId),
+          condition: '#ver = :v',
+          names: { '#ver': 'version' },
+          values: { ':v': existing.version },
+        },
+        target
+          ? {
+              put: this.itemToDb(hh, item),
+              condition: '#ver = :tv',
+              names: { '#ver': 'version' },
+              values: { ':tv': target.version },
+            }
+          : { put: this.itemToDb(hh, item), condition: 'attribute_not_exists(pk)' },
+      ]);
+    } catch (err) {
+      if (!(err instanceof ConditionFailed)) throw err;
+      if (err.failed[0]) await this.listNotActive(hh, listId);
+      const current = await this.getItem(hh, listId, itemId);
+      if (!current) return fail.notFound();
+      return fail.conflict('STALE', 'Changed on another phone', current);
+    }
+    return { item, replacedItemId: itemId };
   }
 
   private async rekeyItem(

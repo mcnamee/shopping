@@ -59,14 +59,17 @@ export const fail = {
 const MAX_BODY_BYTES = 16 * 1024;
 
 /** Parse a JSON body (base64-aware). Missing body is `undefined`; bad JSON is a 400. */
-export function readJsonBody(event: {
-  body?: string | undefined;
-  isBase64Encoded?: boolean;
-}): unknown {
+export function readJsonBody(
+  event: {
+    body?: string | undefined;
+    isBase64Encoded?: boolean;
+  },
+  maxChars = MAX_BODY_BYTES,
+): unknown {
   const raw = event.body;
   if (raw === undefined || raw === null || raw === '') return undefined;
   const text = event.isBase64Encoded ? Buffer.from(raw, 'base64').toString('utf8') : raw;
-  if (text.length > MAX_BODY_BYTES) return fail.validation('Body is too large');
+  if (text.length > maxChars) return fail.validation('Body is too large');
   try {
     return JSON.parse(text) as unknown;
   } catch {

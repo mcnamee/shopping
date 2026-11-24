@@ -10,6 +10,7 @@ import {
   clearMatchIndex,
   cleanText,
   customSummary,
+  describeItem,
   describeLine,
   formatListText,
   formatQuantity,
@@ -473,6 +474,7 @@ export function createTools(getDeps: () => ToolDeps) {
         unit: i.unit,
         note: i.note,
         ticked: i.ticked,
+        ...(i.kind === 'text' ? { text: true } : {}),
       })),
     }));
     return text(formatListText(rec.name, sections));
@@ -499,16 +501,14 @@ export function createTools(getDeps: () => ToolDeps) {
       return text(
         [
           `${matches.length} items match ${quoted(itemText)}, so nothing was removed. Call remove_item again with a more exact name:`,
-          ...matches.map((i) => `- ${describeLine(i.qty, i.unit, i.product.name)}`),
+          ...matches.map((i) => `- ${describeItem(i)}`),
         ].join('\n'),
       );
     }
     const target = matches[0] as (typeof matches)[number];
     await lists.deleteItem(hh, listId, target.id);
     const rec = await lists.mustGetRecord(hh, listId);
-    return text(
-      `Removed ${describeLine(target.qty, target.unit, target.product.name)} from ${quoted(rec.name)}.`,
-    );
+    return text(`Removed ${describeItem(target)} from ${quoted(rec.name)}.`);
   }
 
   // ------------------------------------------------------------------ search_products

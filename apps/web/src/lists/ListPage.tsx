@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   groupForShop,
   lineIdFor,
+  normaliseLineText,
+  textLineId,
   type ListDetail,
   type ListItem,
   type ProductSummary,
@@ -63,6 +65,7 @@ import { useNow, useSettledTicks } from './hooks';
 import { AddFromTemplateSheet, ListOptionsSheet, RenameSheet } from './ListSheets';
 import { SuggestSheet } from './SuggestSheet';
 import { ShopRow } from './ShopRow';
+import { TextLineSheet, type TextLineEdit } from './TextLineSheet';
 
 const DELETE_UNDO_MS = 5000;
 const ARCHIVE_UNDO_MS = 8000;
@@ -620,6 +623,70 @@ export function ListPage() {
     }
   };
 
+  /** Edit a free-text line: text (re-keys it), group and note (docs/api.md "Free-text lines"). */
+  const saveTextEdit = async (item: ListItem, edit: TextLineEdit) => {
+    const text = normaliseLineText(edit.text);
+    const note = edit.note || null;
+    const optimisticId = textLineId(text);
+    qc.setQueryData<ListDetail>(key, (old) =>
+      old
+        ? {
+            ...old,
+            items: old.items.map((i) =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    id: optimisticId,
+                    note,
+                    product: {
+                      ...i.product,
+                      name: text,
+                      productId: optimisticId,
+                      groupId: edit.groupId,
+                    },
+                  }
+                : i,
+            ),
+          }
+        : old,
+    );
+    try {
+      const res = await updateListItem(id, item.id, {
+        ...(text !== item.product.name ? { text } : {}),
+        ...(edit.groupId !== item.product.groupId ? { groupId: edit.groupId } : {}),
+        note,
+        version: item.version,
+      });
+      localIds.current.add(res.item.id);
+      qc.setQueryData<ListDetail>(key, (old) => {
+        if (!old) return old;
+        const drop = new Set([item.id, optimisticId, res.replacedItemId, res.item.id]);
+        const at = old.items.findIndex((i) => i.id === optimisticId || i.id === item.id);
+        const rest = old.items.filter((i) => !drop.has(i.id));
+        rest.splice(Math.max(0, at), 0, res.item);
+        return { ...old, items: rest };
+      });
+      void qc.invalidateQueries({ queryKey: key });
+      setEditing(null);
+    } catch (err) {
+      qc.setQueryData<ListDetail>(key, (old) =>
+        old ? { ...old, items: old.items.map((i) => (i.id === optimisticId ? item : i)) } : old,
+      );
+      if (isStale(err)) {
+        setEditing(null);
+        toast.show(STALE_MESSAGE);
+        void qc.invalidateQueries({ queryKey: key });
+        return;
+      }
+      if (err instanceof ApiError && err.status === 409) {
+        setEditing(null);
+        void qc.invalidateQueries({ queryKey: key });
+        throw new Error('This list has been archived, so it can no longer be changed.');
+      }
+      throw err;
+    }
+  };
+
   // ---- list level actions
   const rename = async (name: string) => {
     if (!list) return;
@@ -1082,7 +1149,19 @@ export function ListPage() {
           onCancel={() => setSheet(null)}
         />
       )}
-      {editing && overrides.isPending && !overrides.isError ? null : editing ? (
+      {editing?.item.kind === 'text' ? (
+        <TextLineSheet
+          item={editing.item}
+          onSave={(edit) => saveTextEdit(editing.item, edit)}
+          onRemove={() => {
+            const item = editing.item;
+            setEditing(null);
+            removeItem(item);
+          }}
+          onClose={() => setEditing(null)}
+          returnFocusRef={{ current: editing.opener }}
+        />
+      ) : editing && overrides.isPending && !overrides.isError ? null : editing ? (
         <QuantityModal
           mode="edit"
           product={productOf(

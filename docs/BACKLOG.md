@@ -22,3 +22,12 @@ Small items deferred from signed-off stages. Highest priority first. Pull into a
 | B-016 | Low | MCP: read-only grants / per-tool scopes. | Stage 4 cut | Two trusted users; one scope is enough. |
 | B-017 | Low | OAuth: pre-registered client id/secret (non-DCR clients). | Stage 4 cut | Claude and ChatGPT both use DCR. |
 | B-018 | Rate-limit /oauth/authorize and /oauth/token per client/IP (QA Stage 4 D-2) | Low | open |  **Done (D-101).**
+| B-019 | Medium | Mela import: `.melarecipe` / `.melarecipes` files (JSON, base64 images) into recipes. | Stage 5 cut | Manual entry first; import is its own parsing/upload job. |
+| B-020 | Medium | Meal planner: pick recipes (and meal templates) for the week, then send combined ingredients to this week's list. | Stage 5 cut / spec Stage 5 | Needs recipes in use first. |
+| B-021 | Low | Scale servings (adjust ingredient quantities). | Stage 5 cut | Needs ingredient quantity parsing. |
+| B-022 | Low | Match recipe ingredients to ALDI products (turn text lines into product lines). | Stage 5 cut (D-106) | Fuzzy; free text works in store. |
+| B-023 | Low | MCP/Siri recipe tools (find a recipe, add its ingredients). | Stage 5 cut | Prove recipes in the app first. |
+| B-024 | Low | Free-text lines typed straight onto a list, and on templates. | Stage 5 cut (D-103) | Recipe path only for now. |
+| B-025 | Low | Recipes in the offline read cache (cook without signal). | Stage 5 cut (D-110) | Kitchens have Wi-Fi. |
+| B-026 | Low | Sweep orphaned recipe photos; markdown/step highlight in cooking view. | Stage 5 cut (D-105, D-107) | Negligible cost; polish. |
+| B-027 | Low | Recipes: reject a photoKey already used by another recipe (QA Stage 5 D2; UI cannot produce it). | Stage 5 QA | open |

@@ -64,6 +64,12 @@ export const keys = {
     return `TEMPLATE#${templateId}`;
   },
   templateSkPrefix: 'TEMPLATE#',
+  /** Recipe row (all fields embedded, D-104): pk = householdPk. */
+  recipeSk(recipeId: string): string {
+    assertSegment('recipeId', recipeId);
+    return `RECIPE#${recipeId}`;
+  },
+  recipeSkPrefix: 'RECIPE#',
   /** Household settings: aisle order, unit overrides. */
   settingsSk: 'SETTINGS',
   /** Pointer to the "this week" list (D-056): one item, so flagging is one atomic write. */

@@ -37,6 +37,13 @@ import type {
   UnitType,
   UpdateListRequest,
   UpdateTemplateRequest,
+  Recipe,
+  RecipeInput,
+  RecipePhotoUploadResponse,
+  RecipesResponse,
+  RecipeToListRequest,
+  RecipeToListResponse,
+  UpdateRecipeRequest,
 } from '@trolley/core';
 import { getAuth } from '../auth/service';
 import { MOCK_AUTH } from '../env';
@@ -188,3 +195,34 @@ export const createShortcutKey = (name: string) =>
   api.post<CreateShortcutKeyResponse>('/shortcut-keys', { name });
 export const revokeShortcutKey = (keyId: string) =>
   api.delete<undefined>(`/shortcut-keys/${enc(keyId)}`);
+
+// Stage 5 recipes (docs/api.md). 409 STALE on PUT; 409 LIMIT at 500 recipes.
+export interface RecipeFilterParams {
+  q?: string | undefined;
+  category?: string | undefined;
+  favourite?: boolean | undefined;
+}
+/** Summaries, A-Z; the Recipes screen filters client-side, the API can filter too. */
+export const getRecipes = (params: RecipeFilterParams = {}) => {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set('q', params.q);
+  if (params.category) qs.set('category', params.category);
+  if (params.favourite) qs.set('favourite', 'true');
+  const q = qs.toString();
+  return api.get<RecipesResponse>(`/recipes${q ? `?${q}` : ''}`);
+};
+export const getRecipe = (id: string) => api.get<Recipe>(`/recipes/${enc(id)}`);
+export const createRecipe = (body: RecipeInput) => api.post<Recipe>('/recipes', body);
+export const updateRecipe = (id: string, body: UpdateRecipeRequest) =>
+  api.put<Recipe>(`/recipes/${enc(id)}`, body);
+/** Favourite toggle: no version needed. */
+export const setRecipeFavourite = (id: string, favourite: boolean) =>
+  api.patch<Recipe>(`/recipes/${enc(id)}`, { favourite });
+/** Also deletes the photo. */
+export const deleteRecipe = (id: string) => api.delete<undefined>(`/recipes/${enc(id)}`);
+/** Presigned POSTs for a new photo; send them with uploadRecipePhoto (./recipePhotos). */
+export const getRecipePhotoUpload = () =>
+  api.post<RecipePhotoUploadResponse>('/recipes/photo-upload');
+/** Ingredient lines (no headings, <= 50) as free-text list lines; Undo via undoListItemsBulk. */
+export const addRecipeToList = (id: string, body: RecipeToListRequest) =>
+  api.post<RecipeToListResponse>(`/recipes/${enc(id)}/to-list`, body);

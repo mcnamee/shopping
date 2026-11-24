@@ -1,10 +1,10 @@
-# Trolley API (Stages 2 to 4)
+# Trolley API (Stages 2 to 5)
 
 All routes are under `/api`, need the Cognito ID token (`Authorization: Bearer <id token>`, JWT authoriser) and are scoped to the token's household; ids from another household are 404. Never send a `householdId` (it is ignored). Types: `packages/core/src/api-types.ts`; rules: `packages/core/src/lists.ts`; server: `services/api/src/stage2.ts`; mock: `apps/web/src/api/mock-stage2.ts`; client calls: `apps/web/src/api/index.ts`.
 
 Errors: `400 { code: 'VALIDATION', message, field? }`, `404 { code: 'NOT_FOUND' }`, `409 { code: 'CONFLICT', reason, message, current? }` with reason `STALE` (send the latest `version`; `current` is the latest row/template/summary), `LIST_ARCHIVED`, `NOT_ARCHIVED`, `LIMIT`, `UNDO_EXPIRED` (D-058), `429 { code: 'RATE_LIMITED', message }` (suggestions, D-071).
 
-Ids: lists and templates are UUIDs. Items (list and template) are `<productId>~<unit>`, e.g. `000000000000398689~pack` (D-053); a unit change returns the new id.
+Ids: lists, templates and recipes are UUIDs. Items (list and template) are `<productId>~<unit>`, e.g. `000000000000398689~pack` (D-053); a unit change returns the new id. A list item can also be a free-text line, id `TEXT~<16 hex>` (D-103, see below).
 
 ## Templates
 | Method and path | Body | Response |
@@ -36,6 +36,34 @@ Ids: lists and templates are UUIDs. Items (list and template) are `<productId>~<
 | GET `/history?cursor=&limit=` | | `{ lists: ListSummary[], nextCursor }` archived, newest completed first; limit 1-50 (20) |
 
 `ListSummary`: id, name, status, thisWeek, itemCount, tickedCount (archived: bought), createdAt, updatedAt, completedAt, finishedBy (`auto`/`finish`), version. `ListItem`: id, listId, product snapshot (productId, name, brand, imageUrl, packSize, groupId, unitType), qty, unit, note, ticked, tickedAt, version, createdAt, updatedAt, updatedBy.
+
+### Free-text lines (Stage 5, D-103)
+A `ListItem` with `kind: 'text'` (absent on product lines) is a free-text line: `product.name` is the text as written (trimmed, whitespace collapsed, <= 200 chars), `product.productId` equals the item id `TEXT~<hash>` (hash of that text, case-sensitive, so only exactly the same text merges), `product.groupId` is the chosen group (default `guessGroup(text)`, else `other`), `qty` 1, `unit` `each`, `note` e.g. "From Lamb curry", no image or brand. Shop grouping, ticking, auto-archive, the offline tick queue and the item DELETE work unchanged. Differences:
+- Created only by `POST /recipes/{id}/to-list` (not by `/items` or `/items/bulk`, which reject `TEXT~` ids as unknown products). Templates never hold them (template item routes 404 a `TEXT~` id).
+- `PATCH /lists/{listId}/items/{itemId}` on a text line takes `{ ticked? }` and/or `{ text?, groupId?, note?, version }` (`version` required for text/groupId/note; `qty`/`unit` are 400, and `text`/`groupId` are 400 on a product line). A new `text` re-keys the line (response has `replacedItemId`); if a line with exactly that text exists they merge (note joined D-046, unticked, response `item` is the surviving line).
+- Archive writes no purchase row for them (they still count in `itemCount`/`tickedCount`); suggestions neither exclude nor use them; they are never resolved as a usual product.
+- Chat/Siri: `get_current_list` prints `- "2 cups plain flour" - note "From Lamb curry"` (quoted, no quantity); `remove_item` matches their text; `/quick/list` reads the text out; `add_item` is unchanged.
+- Undo (`/items/undo`): a created text line is deleted (version-checked); a merged one (`created: false`) is left as it is and reported ok (nothing to take back by quantity).
+
+## Recipes (Stage 5)
+Server: `services/api/src/recipes/`; rules, limits and the ingredient/method parsers: `packages/core/src/recipes.ts` (`parseIngredientLines`, `ingredientTexts`, `parseMethodBlocks`, `filterRecipes`), free-text and `guessGroup`: `text-lines.ts`, `ingredient-groups.ts`; mock: `apps/web/src/api/mock-stage5.ts`; client calls: `getRecipes ... addRecipeToList` in `apps/web/src/api/index.ts`, photo upload helper `uploadRecipePhoto` in `apps/web/src/api/recipePhotos.ts`. Decisions D-103 to D-107, D-111, D-112.
+
+| Method and path | Body | Response |
+|---|---|---|
+| GET `/recipes?q=&category=&favourite=true` | | `{ recipes: RecipeSummary[] }` A-Z by title; summaries only (id, title, categories, yield, totalTime, thumbUrl, favourite, updatedAt). Filters: accent/case-insensitive title substring, exact category (case-insensitive), favourites; combined |
+| POST `/recipes` | `RecipeInput` | 201 `Recipe`; 400 VALIDATION naming the field; 409 LIMIT at 500 |
+| GET `/recipes/{recipeId}` | | `Recipe` |
+| PUT `/recipes/{recipeId}` | `RecipeInput` + `version` | `Recipe`; 409 STALE (`current` = latest). Absent text fields become empty; absent `photoKey` keeps the photo, `null` removes it, a new key replaces it (old objects deleted); absent `favourite` keeps it |
+| PATCH `/recipes/{recipeId}` | `{ favourite }` | `Recipe`. No version needed and it does not bump `version` |
+| DELETE `/recipes/{recipeId}` | | 204; the photo objects are deleted too |
+| POST `/recipes/photo-upload` | none | `{ photoKey, full: PresignedPost, thumb: PresignedPost, expiresIn: 300 }` |
+| POST `/recipes/{recipeId}/to-list` | `{ lines: string[] (1-50), listId? }` | `{ list: ListDetail, results, added, failed, listId, listCreated }` |
+
+`RecipeInput` (all text plain; limits in `RECIPE_LIMITS`): `title` (required, <= 120), `description` (<= 2,000), `categories` (<= 10, each <= 30, trimmed, case-insensitive dedupe), `yield`, `prepTime`, `cookTime`, `totalTime` (free text, each <= 30), `ingredients` (<= 200 non-blank lines, <= 10,000 chars; `#` line = heading), `instructions` (<= 20,000; paragraphs are steps, `#` line = heading), `notes` (<= 5,000), `nutrition` (<= 1,000), `sourceUrl` (`http(s)` only, <= 2,000, or ''), `favourite?`, `photoKey?`. `Recipe` adds `id`, `photoUrl`, `thumbUrl` (same-origin `/media/recipes/<hh>/<uuid>[-thumb].jpg`, or null), `version`, `createdAt`, `updatedAt`. Bodies up to 96 KB are accepted on recipe routes (other routes: 16 KB).
+
+Photos (D-105, D-111): resize in the browser to <= 1600 px JPEG and a 400 px JPEG thumb, `POST /recipes/photo-upload`, then for each of `full` and `thumb` send a `multipart/form-data` POST to `post.url` with every `post.fields` entry first and the file last (`uploadRecipePhoto(upload, fullBlob, thumbBlob)` does this; in the mock it stores a data URL instead). S3 enforces key, `Content-Type: image/jpeg`, size (3 MB full, 300 KB thumb) and 5 minutes; success is 204. Then save the recipe with `photoKey: upload.photoKey`. `photoKey` must be `recipes/<your household>/<uuid>.jpg` from an upload (else 400 on `photoKey`); the thumb is `<uuid>-thumb.jpg` next to it. A failed upload leaves nothing on the recipe. Abandoned uploads are orphans (B-026); the API does not HEAD the object when saving.
+
+`to-list`: each line is trimmed and whitespace-collapsed (blank or > 200 chars is a VALIDATION result), becomes a free-text line (group `guessGroup`, note "From {recipe title}") and is added by the merge rule (D-046). Pass only ingredient lines (`ingredientTexts(recipe.ingredients)` minus unticked ones), in chunks of <= 50; reuse the first response's `listId` for later chunks so they land together. No `listId`: this week's list, created and flagged "Week of ..." when there is none (`listCreated: true`, D-048). `results` is one per request line in order, shaped as a bulk add (`productId` = the line's `TEXT~` id, `unit` `each`; `ok: false` codes `VALIDATION`, `LIMIT` "list is full" at 200 lines). Undo: POST the ok results' `change`s to `/lists/{listId}/items/undo`. 404 for another household's recipe or list, 409 LIST_ARCHIVED for an archived `listId`.
 
 ## Suggestions (Stage 3)
 Engine: `packages/core/src/suggestions.ts`; AI pass and routes: `services/api/src/suggestions/`; mock: `apps/web/src/api/mock-stage2.ts`; decisions D-061 to D-074.

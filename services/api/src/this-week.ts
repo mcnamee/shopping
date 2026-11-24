@@ -19,12 +19,12 @@ export async function activeThisWeekId(lists: ListStore, hh: string): Promise<st
   return (await lists.getRecord(hh, id))?.status === 'active' ? id : null;
 }
 
-export async function addToThisWeek(
+/** This week's active list id, creating and flagging "Week of <Monday>" when there is none. */
+export async function ensureThisWeekList(
   deps: ThisWeekDeps,
   hh: string,
   userId: string,
-  line: LineInput,
-): Promise<{ item: ListItem; merged: boolean; listId: string; listCreated: boolean }> {
+): Promise<{ listId: string; listCreated: boolean }> {
   const { lists, now } = deps;
   let listId = await activeThisWeekId(lists, hh);
   let listCreated = false;
@@ -44,6 +44,16 @@ export async function addToThisWeek(
       listId = flagged ?? fail.conflict('STALE', 'Changed on another phone');
     }
   }
-  const { item, merged } = await lists.addItem(hh, userId, listId, line);
+  return { listId, listCreated };
+}
+
+export async function addToThisWeek(
+  deps: ThisWeekDeps,
+  hh: string,
+  userId: string,
+  line: LineInput,
+): Promise<{ item: ListItem; merged: boolean; listId: string; listCreated: boolean }> {
+  const { listId, listCreated } = await ensureThisWeekList(deps, hh, userId);
+  const { item, merged } = await deps.lists.addItem(hh, userId, listId, line);
   return { item, merged, listId, listCreated };
 }

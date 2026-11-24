@@ -71,8 +71,8 @@ describe('TrolleyStack', () => {
     });
   });
 
-  it('serves S3 through CloudFront Origin Access Control (not OAI)', () => {
-    template.resourceCountIs('AWS::CloudFront::OriginAccessControl', 1);
+  it('serves S3 (site and media buckets) through CloudFront Origin Access Control (not OAI)', () => {
+    template.resourceCountIs('AWS::CloudFront::OriginAccessControl', 2);
     template.resourceCountIs('AWS::CloudFront::CloudFrontOriginAccessIdentity', 0);
     template.hasResourceProperties('AWS::CloudFront::Distribution', {
       DistributionConfig: Match.objectLike({
@@ -123,8 +123,8 @@ describe('TrolleyStack', () => {
       });
       expect(b?.FunctionAssociations, pattern).toBeUndefined();
     }
-    // One API origin shared by every API behaviour, plus S3.
-    expect(config.Origins).toHaveLength(2);
+    // One API origin shared by every API behaviour, plus the site and media buckets.
+    expect(config.Origins).toHaveLength(3);
   });
 
   it('gives the API its public origin from the configured domain (Stage 4 issuer)', () => {
@@ -206,9 +206,8 @@ describe('TrolleyStack', () => {
           FrameOptions: { FrameOption: 'DENY', Override: true },
           ReferrerPolicy: Match.objectLike({ ReferrerPolicy: 'strict-origin-when-cross-origin' }),
           ContentSecurityPolicy: {
-            ContentSecurityPolicy: Match.stringLikeRegexp(
-              "connect-src 'self' https://cognito-idp\\.ap-southeast-2\\.amazonaws\\.com",
-            ),
+            // Cognito plus the media bucket's regional host (token in the template).
+            ContentSecurityPolicy: Match.anyValue(),
             Override: true,
           },
         }),
@@ -323,6 +322,10 @@ describe('TrolleyStack', () => {
         // Covered in detail by the Bedrock tests below.
         expect(actions).toEqual(['bedrock:InvokeModel']);
         expect(json).toMatch(/nova-micro/);
+      } else if (actions.some((a) => a.startsWith('s3:'))) {
+        // Covered in detail by the recipe photo tests below.
+        expect(actions).toEqual(['s3:PutObject', 's3:DeleteObject']);
+        expect(json).toMatch(/MediaBucket/);
       } else {
         expect(actions.every((a) => a.startsWith('logs:'))).toBe(true);
         expect(json).toMatch(/ApiFunctionLogs/);
@@ -680,5 +683,145 @@ describe('API Lambda permissions', () => {
         'apigateway.amazonaws.com',
     );
     expect(perms.length).toBe(1);
+  });
+});
+
+describe('Stage 5 media', () => {
+  const { template } = synth();
+
+  describe('recipe photos (Stage 5, D-105)', () => {
+    const resources = () => Object.values(template.findResources('AWS::S3::Bucket')) as Resource[];
+    const mediaBucketId = () => {
+      const id = Object.keys(template.findResources('AWS::S3::Bucket')).find((k) =>
+        /^MediaBucket/.test(k),
+      );
+      if (!id) throw new Error('MediaBucket not found');
+      return id;
+    };
+
+    it('has a private, encrypted, SSL-only, retained media bucket allowing only a POST CORS rule from the app origin', () => {
+      const bucket = template.findResources('AWS::S3::Bucket')[mediaBucketId()] as Resource & {
+        DeletionPolicy?: string;
+      };
+      expect(bucket.Properties.PublicAccessBlockConfiguration).toEqual({
+        BlockPublicAcls: true,
+        BlockPublicPolicy: true,
+        IgnorePublicAcls: true,
+        RestrictPublicBuckets: true,
+      });
+      expect(JSON.stringify(bucket.Properties.BucketEncryption)).toContain('AES256');
+      expect(bucket.DeletionPolicy).toBe('Retain');
+      expect(bucket.Properties.CorsConfiguration).toEqual({
+        CorsRules: [
+          {
+            AllowedHeaders: ['*'],
+            AllowedMethods: ['POST'],
+            AllowedOrigins: ['https://trolley.example.com'],
+            MaxAge: 3000,
+          },
+        ],
+      });
+      expect(resources().length).toBe(2);
+      const policy = Object.values(template.findResources('AWS::S3::BucketPolicy')).find((p) =>
+        JSON.stringify((p as Resource).Properties.Bucket).includes('MediaBucket'),
+      ) as Resource;
+      const statements = (policy.Properties.PolicyDocument as { Statement: Statement[] }).Statement;
+      // SSL-only deny plus CloudFront OAC read; no public principal.
+      expect(JSON.stringify(statements)).toContain('aws:SecureTransport');
+      const allows = statements.filter((st) => st.Effect === 'Allow');
+      expect(allows).toHaveLength(1);
+      expect(allows[0]?.Principal).toEqual({ Service: 'cloudfront.amazonaws.com' });
+      expect(allows[0]?.Action).toBe('s3:GetObject');
+      expect(JSON.stringify(allows[0]?.Condition)).toContain('AWS:SourceArn');
+    });
+
+    it('serves /media/* from the media bucket through OAC: GET/HEAD, cached, no SPA rewrite', () => {
+      const dist = Object.values(
+        template.findResources('AWS::CloudFront::Distribution'),
+      )[0] as Resource;
+      const config = dist.Properties.DistributionConfig as {
+        CacheBehaviors: Array<Record<string, unknown>>;
+        Origins: Array<{ Id: string; DomainName: unknown; OriginAccessControlId?: unknown }>;
+      };
+      const media = config.CacheBehaviors.find((b) => b.PathPattern === '/media/*');
+      expect(media).toMatchObject({
+        AllowedMethods: ['GET', 'HEAD'],
+        CachePolicyId: '658327ea-f89d-4fab-a63d-7e88639e58f6', // CachingOptimized
+        ViewerProtocolPolicy: 'redirect-to-https',
+      });
+      expect(media?.FunctionAssociations).toBeUndefined();
+      const origin = config.Origins.find((o) => o.Id === media?.TargetOriginId);
+      expect(JSON.stringify(origin?.DomainName)).toContain('MediaBucket');
+      expect(origin?.OriginAccessControlId).toBeDefined();
+    });
+
+    it('lets the CSP connect to the media bucket host for uploads and show blob previews', () => {
+      const policy = Object.values(
+        template.findResources('AWS::CloudFront::ResponseHeadersPolicy'),
+      )[0] as Resource;
+      const csp = JSON.stringify(
+        (
+          policy.Properties.ResponseHeadersPolicyConfig as {
+            SecurityHeadersConfig: { ContentSecurityPolicy: { ContentSecurityPolicy: unknown } };
+          }
+        ).SecurityHeadersConfig.ContentSecurityPolicy.ContentSecurityPolicy,
+      );
+      expect(csp).toContain(
+        "connect-src 'self' https://cognito-idp.ap-southeast-2.amazonaws.com https://",
+      );
+      expect(csp).toMatch(/MediaBucket[0-9A-F]+","RegionalDomainName"/);
+      expect(csp).toContain("img-src 'self' data: blob: https:");
+    });
+
+    it('gives the API role PutObject and DeleteObject on media/recipes/* only (no read, list or bucket access)', () => {
+      const statements = statementsFor(template, roleIdOf(template, /^ApiFunctionRole/)).filter(
+        (st) =>
+          ([] as string[]).concat(st.Action as string | string[]).some((a) => a.startsWith('s3:')),
+      );
+      expect(statements).toHaveLength(1);
+      expect(statements[0]).toMatchObject({
+        Effect: 'Allow',
+        Action: ['s3:PutObject', 's3:DeleteObject'],
+      });
+      const resource = JSON.stringify(statements[0]?.Resource);
+      expect(resource).toContain('MediaBucket');
+      expect(resource).toContain('/media/recipes/*');
+      expect(resource).not.toContain('SiteBucket');
+    });
+
+    it('passes the bucket name to the API and keeps the scraper away from S3', () => {
+      const fn = Object.values(template.findResources('AWS::Lambda::Function')).find(
+        (r) =>
+          JSON.stringify((r as Resource).Properties.Environment).includes('TABLE_NAME') &&
+          JSON.stringify((r as Resource).Properties.Environment).includes('MEDIA_BUCKET'),
+      );
+      expect(fn).toBeDefined();
+      expect(
+        JSON.stringify(statementsFor(template, roleIdOf(template, /^ScraperFunctionRole/))),
+      ).not.toContain('s3:');
+    });
+
+    it('routes every recipe endpoint through the JWT authoriser and keeps one Lambda permission', () => {
+      for (const routeKey of [
+        'GET /api/recipes',
+        'POST /api/recipes',
+        'POST /api/recipes/photo-upload',
+        'GET /api/recipes/{recipeId}',
+        'PUT /api/recipes/{recipeId}',
+        'PATCH /api/recipes/{recipeId}',
+        'DELETE /api/recipes/{recipeId}',
+        'POST /api/recipes/{recipeId}/to-list',
+      ]) {
+        template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+          RouteKey: routeKey,
+          AuthorizationType: 'JWT',
+          AuthorizerId: Match.anyValue(),
+        });
+      }
+      const perms = Object.values(template.findResources('AWS::Lambda::Permission')).filter(
+        (p) => (p as Resource).Properties.Principal === 'apigateway.amazonaws.com',
+      );
+      expect(perms).toHaveLength(1);
+    });
   });
 });

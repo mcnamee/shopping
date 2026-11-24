@@ -37,6 +37,7 @@ export function toLine(v: unknown): Line | null {
   if (!id || !product || qty === null || !isUnitType(r.unit)) return null;
   return {
     id,
+    ...(r.kind === 'text' ? { kind: 'text' as const } : {}),
     product,
     qty,
     unit: r.unit,
@@ -64,6 +65,7 @@ export function toListItem(v: unknown): ListItem | null {
 export function lineFields(line: Line): Record<string, unknown> {
   return {
     id: line.id,
+    ...(line.kind === 'text' ? { kind: 'text' } : {}),
     product: line.product,
     qty: line.qty,
     unit: line.unit,

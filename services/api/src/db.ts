@@ -91,6 +91,32 @@ export class Db {
     return items;
   }
 
+  /**
+   * Like queryAll but returning only `attrs` (ProjectionExpression), e.g. recipe summaries
+   * without their long text (B2). Strongly consistent.
+   */
+  async queryProjected(pk: string, skPrefix: string, attrs: readonly string[]): Promise<DbItem[]> {
+    const names = Object.fromEntries(attrs.map((a, i) => [`#p${i}`, a]));
+    const items: DbItem[] = [];
+    let startKey: DbItem | undefined;
+    do {
+      const res = (await this.doc.send(
+        new QueryCommand({
+          TableName: this.tableName,
+          KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+          ExpressionAttributeValues: { ':pk': pk, ':sk': skPrefix },
+          ProjectionExpression: Object.keys(names).join(', '),
+          ExpressionAttributeNames: names,
+          ConsistentRead: true,
+          ExclusiveStartKey: startKey,
+        }),
+      )) as { Items?: DbItem[]; LastEvaluatedKey?: DbItem };
+      items.push(...(res.Items ?? []));
+      startKey = res.LastEvaluatedKey;
+    } while (startKey);
+    return items;
+  }
+
   /** Count items in a partition with a sort-key prefix (Select COUNT; no data returned). */
   async count(pk: string, skPrefix: string): Promise<number> {
     let total = 0;

@@ -3,14 +3,29 @@
  * in-memory DynamoDB fake, a small catalogue, and a controllable clock.
  */
 import type { Context } from 'aws-lambda';
-import { buildSearchIndex, type CatalogueProduct, type UnitType } from '@trolley/core';
+import {
+  buildSearchIndex,
+  RECIPE_PHOTO_MAX_BYTES,
+  RECIPE_THUMB_MAX_BYTES,
+  recipePhotoKey,
+  recipeThumbKey,
+  type CatalogueProduct,
+  type UnitType,
+} from '@trolley/core';
 import { Db } from '../db';
 import { createHandler } from '../handler';
 import type { SearchableCatalogueProduct } from '../products/catalogue-cache';
 import { CustomProductRepo } from '../products/custom-products';
 import type { ProductDeps } from '../products/routes';
 import { createRouter, type ApiEvent } from '../router';
-import { createRoutes, stage2DepsFor, stage3DepsFor, stage4DepsFor } from '../routes';
+import {
+  createRoutes,
+  stage2DepsFor,
+  stage3DepsFor,
+  stage4DepsFor,
+  stage5DepsFor,
+} from '../routes';
+import type { PhotoStore } from '../recipes/photos';
 import type { AiTextModel } from '../suggestions/bedrock';
 import { fakeDynamo } from './fake-dynamo';
 
@@ -129,6 +144,31 @@ export function setup(opts: SetupOptions = {}) {
   stage4.oauth.log = (e) => logs.push(e);
   stage4.mcp.log = (e) => logs.push(e);
   stage4.shortcuts.log = (e) => logs.push(e);
+  let photoSeq = 0;
+  const deletedPhotos: string[] = [];
+  const photos: PhotoStore = {
+    presign: async (householdId) => {
+      photoSeq += 1;
+      const id = `00000000-0000-4000-8000-${String(photoSeq).padStart(12, '0')}`;
+      const photoKey = recipePhotoKey(householdId, id);
+      const post = (key: string, maxBytes: number) => ({
+        url: 'https://media.example.s3.amazonaws.com/',
+        fields: { key: `media/${key}`, 'Content-Type': 'image/jpeg' },
+        key: `media/${key}`,
+        maxBytes,
+      });
+      return {
+        photoKey,
+        full: post(photoKey, RECIPE_PHOTO_MAX_BYTES),
+        thumb: post(recipeThumbKey(photoKey), RECIPE_THUMB_MAX_BYTES),
+        expiresIn: 300,
+      };
+    },
+    remove: async (key) => {
+      deletedPhotos.push(key);
+    },
+  };
+  const stage5 = stage5DepsFor(db, stage2, photos);
   const handler = createHandler(
     createRouter(
       createRoutes(
@@ -136,6 +176,7 @@ export function setup(opts: SetupOptions = {}) {
         () => stage2,
         () => stage3,
         () => stage4,
+        () => stage5,
       ),
     ),
   );
@@ -211,6 +252,8 @@ export function setup(opts: SetupOptions = {}) {
     stage2,
     stage3,
     stage4,
+    stage5,
+    deletedPhotos,
     logs,
     warnings,
     call,

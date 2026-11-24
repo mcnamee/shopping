@@ -17,7 +17,7 @@ import {
   parseCreateListRequest,
   parseCreateTemplateRequest,
   parseEditItemRequest,
-  parseLineId,
+  parseItemRef,
   parseTemplateIdsRequest,
   parseUnitOverrideRequest,
   parseUpdateListRequest,
@@ -78,10 +78,10 @@ function entityId(req: AuthedRequest, name: string): string {
 }
 
 /** Item id from the path (product~unit) and the unit it encodes; 404 if malformed. */
-function lineRef(req: AuthedRequest): { id: string; unit: UnitType } {
+function lineRef(req: AuthedRequest): { id: string; unit: UnitType; text: boolean } {
   const id = param(req, 'itemId');
-  const parsed = parseLineId(id);
-  return parsed && id ? { id, unit: parsed.unit } : fail.notFound();
+  const parsed = parseItemRef(id);
+  return parsed && id ? { id, unit: parsed.unit, text: parsed.text } : fail.notFound();
 }
 
 function lineId(req: AuthedRequest): string {
@@ -197,7 +197,8 @@ export function createStage2Routes(getDeps: () => Stage2Deps): RouteTable {
   async function editTemplateItem(req: AuthedRequest): Promise<HttpResult> {
     const hh = hhOf(req);
     const id = entityId(req, 'templateId');
-    const { id: itemId, unit: currentUnit } = lineRef(req);
+    const { id: itemId, unit: currentUnit, text } = lineRef(req);
+    if (text) return fail.notFound(); // templates stay product-only (B-024)
     const edit = unwrap(
       parseEditItemRequest(readJsonBody(req.event), { allowTicked: false, currentUnit }),
     );
@@ -326,10 +327,14 @@ export function createStage2Routes(getDeps: () => Stage2Deps): RouteTable {
   async function updateListItem(req: AuthedRequest): Promise<HttpResult> {
     const hh = hhOf(req);
     const id = entityId(req, 'listId');
-    const { id: itemId, unit: currentUnit } = lineRef(req);
+    const { id: itemId, unit: currentUnit, text } = lineRef(req);
     const { lists } = getDeps();
     const edit = unwrap(
-      parseEditItemRequest(readJsonBody(req.event), { allowTicked: true, currentUnit }),
+      parseEditItemRequest(readJsonBody(req.event), {
+        allowTicked: true,
+        currentUnit,
+        textLine: text,
+      }),
     );
     const { item, replacedItemId } = await lists.updateItem(
       hh,

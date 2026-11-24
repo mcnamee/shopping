@@ -5,6 +5,9 @@ import { ListsPage } from './lists/ListsPage';
 import { ToastProvider } from './components/Toast';
 import { AisleOrderPage } from './settings/AisleOrderPage';
 import { UnitsPage } from './settings/UnitsPage';
+import { RecipeDetailPage } from './recipes/RecipeDetailPage';
+import { RecipeEditorPage } from './recipes/RecipeEditorPage';
+import { RecipesPage } from './recipes/RecipesPage';
 import { TemplateEditorPage } from './templates/TemplateEditorPage';
 import { TemplatesPage } from './templates/TemplatesPage';
 import { AppLayout } from './routes/AppLayout';
@@ -58,6 +61,10 @@ export function AppRoutes() {
         <Route path="/lists/history" element={<HistoryPage />} />
         <Route path="/lists/:id" element={<ListPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/recipes" element={<RecipesPage />} />
+        <Route path="/recipes/new" element={<RecipeEditorPage isNew />} />
+        <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+        <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />
         <Route path="/templates" element={<TemplatesPage />} />
         <Route path="/templates/new" element={<TemplateEditorPage isNew />} />
         <Route path="/templates/:id" element={<TemplateEditorPage />} />
