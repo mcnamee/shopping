@@ -195,7 +195,10 @@ Each stage is sized to fit one working session and ends deployable. Each stage f
 - OAuth shim (metadata discovery, DCR, authorise via Cognito, token, refresh, revoke), MCP Lambda with tools, connected-apps settings.
 - **Done when:** "add tissues to my shopping list" in Claude and ChatGPT adds your usual tissues to this week's list.
 
-### Stage 5 - Polish (optional, pick and choose)
+### Stage 5 - Recipes
+- Mela-style household recipes (photo, tags, times, ingredients, method), cooking view with keep-screen-on, selected ingredients to a list as free-text lines. Criteria: docs/stages/stage-5.md (D-103 to D-110).
+
+### Later - Polish (optional, pick and choose)
 - Offline read cache for shop mode, install prompt, dark mode, list sharing link, price display/estimated total, meal planner (pick meals -> merge meal templates).
 
 ## 8. Open questions for you

@@ -35,3 +35,7 @@
 - [U] after deploy: connect from Claude (custom connector) and ChatGPT (developer mode), "add tissues to my shopping list".
 
 ## Stage 4 shipped (main 6d5c7ae, deploy green 23 Nov). Awaiting user [U]: connect Claude/ChatGPT per docs/CONNECT.md. Fix applied: single API-wide Lambda permission (policy size limit).
+
+## Stage 5 (Recipes) - criteria written (24 Nov)
+- PM criteria + UX notes: `docs/stages/stage-5.md` (D-103 to D-110; backlog B-019..B-026 incl. Mela import and meal planner). Next: build (senior engineer: S3/CloudFront photos + free-text line model; UI can be one engineer) -> QA -> merge.
+- New infra: private photo bucket + CloudFront `/media/*` behaviour. 5-tab nav (Recipes between Search and Templates).
