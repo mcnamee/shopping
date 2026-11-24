@@ -30,3 +30,4 @@ Small items deferred from signed-off stages. Highest priority first. Pull into a
 | B-024 | Low | Free-text lines typed straight onto a list, and on templates. | Stage 5 cut (D-103) | Recipe path only for now. |
 | B-025 | Low | Recipes in the offline read cache (cook without signal). | Stage 5 cut (D-110) | Kitchens have Wi-Fi. |
 | B-026 | Low | Sweep orphaned recipe photos; markdown/step highlight in cooking view. | Stage 5 cut (D-105, D-107) | Negligible cost; polish. |
+| B-027 | Low | Recipes: reject a photoKey already used by another recipe (QA Stage 5 D2; UI cannot produce it). | Stage 5 QA | open |

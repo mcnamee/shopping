@@ -172,14 +172,14 @@ export function RecipeDetailPage() {
           </ul>
         )}
         {supported && (
-          <label className="mt-4 flex min-h-tap cursor-pointer items-center justify-between gap-3 rounded-md bg-surface px-3">
+          <label className="relative mt-4 flex min-h-tap cursor-pointer items-center justify-between gap-3 rounded-md bg-surface px-3">
             <span className="text-base">Keep screen on</span>
             <input
               type="checkbox"
               role="switch"
               checked={awake}
               onChange={(e) => setAwake(e.target.checked)}
-              className="peer sr-only"
+              className="peer absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-md opacity-0"
             />
             <span
               aria-hidden
