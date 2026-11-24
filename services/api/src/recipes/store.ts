@@ -16,6 +16,7 @@ import {
 } from '@trolley/core';
 import { ConditionFailed, type Db, type DbItem } from '../db';
 import { fail } from '../http';
+import { MatchCacheStore } from './match-cache';
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 
@@ -79,11 +80,16 @@ const SUMMARY_ATTRS = [
 ] as const;
 
 export class RecipeStore {
+  /** Cached smart matches (D-116); removed with the recipe. */
+  readonly matchCache: MatchCacheStore;
+
   constructor(
     private readonly db: Db,
     private readonly now: () => Date = () => new Date(),
     private readonly newId: () => string = randomUUID,
-  ) {}
+  ) {
+    this.matchCache = new MatchCacheStore(db);
+  }
 
   private key(hh: string, id: string) {
     return { pk: keys.householdPk(hh), sk: keys.recipeSk(id) };
@@ -266,6 +272,7 @@ export class RecipeStore {
       if (err instanceof ConditionFailed) return fail.notFound();
       throw err;
     }
+    await this.matchCache.remove(hh, id);
     return read.photoKey;
   }
 }

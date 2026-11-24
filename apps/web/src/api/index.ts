@@ -42,6 +42,7 @@ import type {
   RecipePhotoUploadResponse,
   RecipesResponse,
   RecipeToListRequest,
+  RecipeMatchChoicesRequest,
   RecipeMatchResponse,
   RecipeToListResponse,
   UpdateRecipeRequest,
@@ -225,8 +226,11 @@ export const deleteRecipe = (id: string) => api.delete<undefined>(`/recipes/${en
 export const getRecipePhotoUpload = () =>
   api.post<RecipePhotoUploadResponse>('/recipes/photo-upload');
 /** Ingredient lines matched to the household's ALDI products (D-115); read-only. */
-export const matchRecipe = (id: string) =>
-  api.post<RecipeMatchResponse>(`/recipes/${enc(id)}/match`);
+export const matchRecipe = (id: string, refresh = false) =>
+  api.post<RecipeMatchResponse>(`/recipes/${enc(id)}/match${refresh ? '?refresh=1' : ''}`);
+/** Remember the user's per-line picks (productId or "text") for next time (D-116). */
+export const saveMatchChoices = (id: string, body: RecipeMatchChoicesRequest) =>
+  api.put<undefined>(`/recipes/${enc(id)}/match/choices`, body);
 /** Ingredient lines (no headings, <= 50) as free-text list lines; Undo via undoListItemsBulk. */
 export const addRecipeToList = (id: string, body: RecipeToListRequest) =>
   api.post<RecipeToListResponse>(`/recipes/${enc(id)}/to-list`, body);

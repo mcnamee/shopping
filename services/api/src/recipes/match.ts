@@ -25,13 +25,14 @@ import {
   type RecipeMatchResponse,
   type TemplateLike,
 } from '@trolley/core';
-import { fail, json, type HttpResult } from '../http';
+import { fail, json, readJsonBody, type HttpResult } from '../http';
 import type { CatalogueSnapshot } from '../products/catalogue-cache';
 import type { ProductResolver } from '../products/resolver';
 import type { AuthedRequest, RouteTable } from '../router';
 import type { SettingsStore } from '../settings/store';
 import type { AiTextModel } from '../suggestions/bedrock';
 import type { SuggestionStore } from '../suggestions/store';
+import { applyChoices, ingredientsHash, TEXT_CHOICE } from './match-cache';
 import { buildMatchPrompt, parseMatchReply, type UnsureLine } from './match-ai';
 import type { RecipeStore } from './store';
 
@@ -111,6 +112,20 @@ export function createRecipeMatchRoutes(getDeps: () => MatchDeps): RouteTable {
     const id = req.event.pathParameters?.recipeId;
     const recipe = await d.recipes.mustGet(hh, isValidEntityId(id) ? id : fail.notFound());
     const now = d.now();
+    const hash = ingredientsHash(recipe.ingredients);
+    const refresh = ['1', 'true'].includes(req.event.queryStringParameters?.refresh ?? '');
+    // A cache hit does no work and is not counted (D-116).
+    if (!refresh) {
+      const hit = await d.recipes.matchCache.get(hh, recipe.id, hash, now.getTime());
+      if (hit) {
+        return json(200, {
+          rows: applyChoices(hit.rows, hit.choices),
+          ai: hit.ai,
+          cached: true,
+          cachedAt: hit.cachedAt,
+        } satisfies RecipeMatchResponse);
+      }
+    }
     // Counted before any work, cold start included (like suggestions, D-066).
     if (!(await d.suggestions.consumeMatchRun(hh, localDate(now), now.getTime()))) {
       return fail.rateLimited(MATCH_RATE_LIMIT_MESSAGE);
@@ -159,8 +174,54 @@ export function createRecipeMatchRoutes(getDeps: () => MatchDeps): RouteTable {
       },
       (p) => names?.get(parsed.indexOf(p)) ?? p.name,
     );
-    return json(200, { rows, ai: names !== null } satisfies RecipeMatchResponse);
+    const ai = names !== null;
+    const cachedAt = await d.recipes.matchCache.put(hh, recipe.id, hash, rows, ai, now.getTime());
+    const kept = await d.recipes.matchCache.get(hh, recipe.id, hash, now.getTime());
+    return json(200, {
+      rows: applyChoices(rows, kept?.choices ?? {}),
+      ai,
+      cached: false,
+      cachedAt,
+    } satisfies RecipeMatchResponse);
   }
 
-  return { 'POST /api/recipes/{recipeId}/match': { auth: true, handler: match } };
+  /** Remember what the user picked per line, for next time (D-116). Not rate limited. */
+  async function saveChoices(req: AuthedRequest): Promise<HttpResult> {
+    const hh = req.household.householdId;
+    const d = getDeps();
+    const id = req.event.pathParameters?.recipeId;
+    const recipe = await d.recipes.mustGet(hh, isValidEntityId(id) ? id : fail.notFound());
+    const raw = readJsonBody(req.event) as { choices?: unknown } | null;
+    const list = raw?.choices;
+    if (!Array.isArray(list) || list.length === 0 || list.length > 100) {
+      return fail.validation('choices must be 1 to 100 items', 'choices');
+    }
+    const choices: Record<string, string> = {};
+    for (const c of list as Array<{ line?: unknown; choice?: unknown }>) {
+      if (
+        typeof c?.line !== 'string' ||
+        c.line.length === 0 ||
+        c.line.length > 500 ||
+        typeof c.choice !== 'string' ||
+        (c.choice !== TEXT_CHOICE && !isValidEntityId(c.choice) && !/^[\w-]{1,64}$/.test(c.choice))
+      ) {
+        return fail.validation('Invalid choice', 'choices');
+      }
+      choices[c.line] = c.choice;
+    }
+    const now = d.now().getTime();
+    await d.recipes.matchCache.saveChoices(
+      hh,
+      recipe.id,
+      ingredientsHash(recipe.ingredients),
+      choices,
+      now,
+    );
+    return { statusCode: 204, headers: { 'cache-control': 'no-store' } };
+  }
+
+  return {
+    'POST /api/recipes/{recipeId}/match': { auth: true, handler: match },
+    'PUT /api/recipes/{recipeId}/match/choices': { auth: true, handler: saveChoices },
+  };
 }

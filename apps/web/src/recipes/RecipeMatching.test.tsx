@@ -28,7 +28,12 @@ afterEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 200));
 });
 
-type Opts = { ingredients?: string; delayMatchMs?: number; failMatch?: boolean };
+type Opts = {
+  ingredients?: string;
+  delayMatchMs?: number;
+  failMatch?: boolean;
+  matchCalls?: string[];
+};
 
 /** Signed in against fresh mock data, optionally with a new recipe, at its detail page. */
 async function openSheet(recipeId: string | null, opts: Opts = {}) {
@@ -49,6 +54,15 @@ async function openSheet(recipeId: string | null, opts: Opts = {}) {
     });
   }
   if (opts.failMatch) failNext(`POST /api/recipes/${id}/match`);
+  if (opts.matchCalls) {
+    const real = globalThis.fetch;
+    const calls = opts.matchCalls;
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes('/match')) calls.push(url);
+      return real(input, init);
+    });
+  }
   const user = userEvent.setup();
   const router = createMemoryRouter([{ path: '*', element: <AppRoutes /> }], {
     initialEntries: [`/recipes/${id}`],
@@ -76,6 +90,26 @@ const settled = (dialog: HTMLElement) =>
   });
 
 describe('smart Add to list', () => {
+  it('reopens instantly from the session cache and refreshes on request (D-116)', async () => {
+    const matchCalls: string[] = [];
+    const { user, dialog } = await openSheet(MOCK_RECIPE_IDS.greekSalad, { matchCalls });
+    await settled(dialog);
+    expect(matchCalls).toHaveLength(1);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await user.click(screen.getByRole('button', { name: 'Add to list' }));
+    const again = await screen.findByRole('dialog');
+    // Matched at once: no loading hint, no second request.
+    expect(within(again).queryByText(/Finding ALDI products/)).toBeNull();
+    expect(within(again).getByRole('checkbox', { name: new RegExp(OLIVE_OIL) })).toBeVisible();
+    expect(matchCalls).toHaveLength(1);
+    await user.click(within(again).getByRole('button', { name: 'Refresh matches' }));
+    await waitFor(() => expect(matchCalls).toHaveLength(2));
+    expect(matchCalls[1]).toContain('refresh=1');
+    await settled(again);
+    expect(within(again).getByRole('checkbox', { name: new RegExp(OLIVE_OIL) })).toBeVisible();
+  });
+
   it('opens with free-text rows, then upgrades matches to ALDI products', async () => {
     const { dialog } = await openSheet(MOCK_RECIPE_IDS.greekSalad, { delayMatchMs: 1500 });
     // Immediately: the loading hint and plain text rows.

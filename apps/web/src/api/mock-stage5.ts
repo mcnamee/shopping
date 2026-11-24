@@ -269,6 +269,11 @@ export function createStage5MockRoutes(source: MockMatchSource) {
         return work ? (work as () => Promise<Response>)() : res;
       },
     },
+    // The mock has no match cache: choices are accepted and dropped (D-116).
+    'PUT /api/recipes/{recipeId}/match/choices': read((hh, { params }) => {
+      findRecipe(hh, params.recipeId);
+      return json(204, null);
+    }),
     'GET /api/recipes': read((hh, { url }) => {
       const all = recipesOf(hh).map((r) => recipeSummary(view(r)));
       return json(200, {

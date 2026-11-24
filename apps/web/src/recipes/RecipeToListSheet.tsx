@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   RECIPE_LIMITS,
   defaultListName,
@@ -20,6 +20,7 @@ import {
   addRecipeToList,
   createList,
   matchRecipe,
+  saveMatchChoices,
   undoListItemsBulk,
 } from '../api';
 import { BottomSheet } from '../components/BottomSheet';
@@ -30,6 +31,8 @@ import { SheetHeader } from '../lists/ListSheets';
 import { truncate } from '../search/format';
 import { ProductThumb } from '../search/ProductImage';
 
+/** Match results stay fresh for the session (D-116). */
+const MATCH_STALE_MS = 30 * 60 * 1000;
 const FAILED = "Couldn't add those ingredients. Please try again.";
 const UNDO_FAILED = "Couldn't undo. Check your connection.";
 
@@ -64,28 +67,36 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
   const [off, setOff] = useState<ReadonlySet<number>>(() => new Set(pantry));
   // Smart matching (D-115): the sheet opens with free-text rows and upgrades when the
   // matches arrive. A failed request silently leaves the rows as text.
-  const [matchRows, setMatchRows] = useState<readonly RecipeMatchRow[] | null>(null);
-  const [matching, setMatching] = useState(total > 0);
+  // The response is cached for the session (and 30 days on the server, D-116).
+  const matchKey = ['recipe-match', recipe.id, recipe.version] as const;
+  const matchQuery = useQuery({
+    queryKey: matchKey,
+    queryFn: () => matchRecipe(recipe.id),
+    enabled: total > 0,
+    staleTime: MATCH_STALE_MS,
+    gcTime: MATCH_STALE_MS,
+    retry: false,
+  });
+  const [refreshing, setRefreshing] = useState(false);
+  const matchRows = matchQuery.data?.rows ?? null;
+  const matching = (matchQuery.isPending && total > 0) || refreshing;
   const [choice, setChoice] = useState<Readonly<Record<number, string>>>({});
   const [openRow, setOpenRow] = useState<number | null>(null);
+  const matchCount = matchRows?.filter((r) => r.match).length ?? 0;
   useEffect(() => {
-    if (total === 0) return;
-    let current = true;
-    matchRecipe(recipe.id)
+    if (matchCount > 0) setLive(`${matchCount} matched to ALDI products`);
+  }, [matchCount]);
+  const refreshMatches = () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    matchRecipe(recipe.id, true)
       .then((res) => {
-        if (!current) return;
-        setMatchRows(res.rows);
-        const n = res.rows.filter((r) => r.match).length;
-        if (n > 0) setLive(`${n} matched to ALDI products`);
+        qc.setQueryData(matchKey, res);
+        setChoice({});
       })
-      .catch(() => undefined)
-      .finally(() => {
-        if (current) setMatching(false);
-      });
-    return () => {
-      current = false;
-    };
-  }, [recipe.id, total]);
+      .catch(() => setLive("Couldn't refresh matches"))
+      .finally(() => setRefreshing(false));
+  };
   const matchOf = useMemo(() => {
     const byIndex = new Map<number, RecipeMatchRow>();
     let k = 0;
@@ -244,6 +255,17 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
       durationMs: 8000,
       action: { label: 'Undo', onAction: () => undo(doneId, changes) },
     });
+    // Remember the picks for next time (best effort; the server applies them to the cache).
+    const picks = parsed.flatMap((l, i) =>
+      l.kind === 'ingredient' && matchOf.has(i) && !off.has(i)
+        ? [{ line: l.text, choice: productFor(i)?.productId ?? 'text' }]
+        : [],
+    );
+    if (picks.length > 0) {
+      saveMatchChoices(recipe.id, { choices: picks.slice(0, 100) })
+        .then(() => qc.invalidateQueries({ queryKey: matchKey }))
+        .catch(() => undefined);
+    }
     onClose();
   };
 
@@ -340,11 +362,21 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
           {allOn ? 'Select none' : 'Select all'}
         </button>
       </div>
-      {matching && (
+      {matching ? (
         <p role="status" className="flex items-center gap-2 pb-2 text-sm text-muted">
           <span aria-hidden className="shimmer h-3 w-3 rounded-full" />
           Finding ALDI products...
         </p>
+      ) : (
+        matchRows && (
+          <button
+            type="button"
+            onClick={refreshMatches}
+            className="mb-1 min-h-tap rounded-sm text-sm font-semibold text-accent underline"
+          >
+            Refresh matches
+          </button>
+        )
       )}
       <ul aria-label="Ingredients">
         {parsed.map((l, i) => {
