@@ -80,6 +80,7 @@ Step-by-step instructions: **[docs/SETUP.md](docs/SETUP.md)**. To connect Claude
 |---|---|
 | [Setup](docs/SETUP.md) | One-off AWS and GitHub setup, custom domain, users |
 | [Connect assistants](docs/CONNECT.md) | Claude, ChatGPT and Siri |
+| [Recipes](docs/RECIPES.md) | Import from Mela, cooking view |
 | [Development](docs/DEVELOPMENT.md) | Repo layout, local dev, tests, the ALDI scraper |
 | [API reference](docs/api.md) | Every endpoint, including OAuth and MCP |
 | [Product spec](docs/PRODUCT_SPEC.md) | Goals, requirements and release stages |

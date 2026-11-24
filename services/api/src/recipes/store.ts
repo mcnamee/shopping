@@ -11,6 +11,7 @@ import {
   recipeThumbKey,
   type ParsedRecipe,
   type Recipe,
+  type RecipeSource,
   type RecipeSummary,
 } from '@trolley/core';
 import { ConditionFailed, type Db, type DbItem } from '../db';
@@ -23,6 +24,12 @@ function urls(photoKey: string | null) {
     photoUrl: photoKey ? recipeMediaUrl(photoKey) : null,
     thumbUrl: photoKey ? recipeMediaUrl(recipeThumbKey(photoKey)) : null,
   };
+}
+
+function toSource(v: unknown): RecipeSource | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const { app, id } = v as Record<string, unknown>;
+  return app === 'mela' && typeof id === 'string' && id ? { app, id } : null;
 }
 
 export function toRecipe(row: DbItem): Recipe | null {
@@ -49,6 +56,7 @@ export function toRecipe(row: DbItem): Recipe | null {
     nutrition: str(row.nutrition),
     sourceUrl: str(row.sourceUrl),
     favourite: row.favourite === true,
+    source: toSource(row.source),
     version: typeof row.version === 'number' ? row.version : 1,
     createdAt: str(row.createdAt),
     updatedAt: str(row.updatedAt),
@@ -65,6 +73,8 @@ const SUMMARY_ATTRS = [
   'totalTime',
   'photoKey',
   'favourite',
+  'sourceUrl',
+  'source',
   'updatedAt',
 ] as const;
 
@@ -98,6 +108,7 @@ export class RecipeStore {
       nutrition: r.nutrition,
       sourceUrl: r.sourceUrl,
       favourite: r.favourite,
+      source: r.source,
       version: r.version,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
@@ -122,6 +133,8 @@ export class RecipeStore {
               totalTime: r.totalTime,
               thumbUrl: r.thumbUrl,
               favourite: r.favourite,
+              sourceUrl: r.sourceUrl,
+              source: r.source,
               updatedAt: r.updatedAt,
             },
           ]
@@ -165,6 +178,7 @@ export class RecipeStore {
       nutrition: input.nutrition,
       sourceUrl: input.sourceUrl,
       favourite: input.favourite ?? false,
+      source: input.source ?? null,
       version: 1,
       createdAt: at,
       updatedAt: at,
@@ -205,6 +219,7 @@ export class RecipeStore {
       nutrition: input.nutrition,
       sourceUrl: input.sourceUrl,
       favourite: input.favourite ?? read.favourite,
+      source: input.source === undefined ? read.source : input.source,
       version: read.version + 1,
       updatedAt: this.now().toISOString(),
     };

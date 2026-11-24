@@ -111,6 +111,8 @@ describe('recipes CRUD (B1, B2)', () => {
         'categories',
         'favourite',
         'id',
+        'source',
+        'sourceUrl',
         'thumbUrl',
         'title',
         'totalTime',
@@ -169,6 +171,30 @@ describe('recipes CRUD (B1, B2)', () => {
       },
     });
     expect(res.status).toBe(201);
+  });
+
+  it('stores an import source, returns it in lists, keeps it on PUT and validates it (B-019)', async () => {
+    const src = { app: 'mela', id: 'taste.com.au/x?utm=1' };
+    const r = await createRecipe({ title: 'Imported', source: src, sourceUrl: 'https://e.com/a' });
+    expect(r.source).toEqual(src);
+    expect((await createRecipe({ title: 'Typed' })).source).toBeNull();
+    const row = (await listRecipes()).body.recipes.find((x) => x.id === r.id);
+    expect(row).toMatchObject({ source: src, sourceUrl: 'https://e.com/a' });
+    const put = await h.call<Recipe>('PUT /api/recipes/{recipeId}', {
+      path: { recipeId: r.id },
+      body: { title: 'Imported 2', version: 1 },
+    });
+    expect(put.body.source).toEqual(src);
+    for (const bad of [
+      { app: 'other', id: 'x' },
+      { app: 'mela', id: '' },
+      { app: 'mela', id: 'x'.repeat(1001) },
+      'mela',
+    ]) {
+      const res = await h.call('POST /api/recipes', { body: { title: 'Bad', source: bad } });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ field: 'source' });
+    }
   });
 
   it('PUT replaces fields with the version: 409 STALE when old, bumps version, keeps favourite and photo when absent', async () => {
@@ -256,6 +282,7 @@ describe('recipes CRUD (B1, B2)', () => {
         nutrition: '',
         sourceUrl: '',
         favourite: undefined,
+        source: undefined,
         photoKey: undefined,
       });
     }

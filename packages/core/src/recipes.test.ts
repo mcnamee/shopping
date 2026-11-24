@@ -232,6 +232,8 @@ describe('filterRecipes (C2)', () => {
     totalTime: '',
     thumbUrl: null,
     favourite,
+    sourceUrl: '',
+    source: null,
     updatedAt: '',
   });
   const all = [

@@ -105,6 +105,7 @@ function seedRecipe(n: number, r: Partial<Recipe> & { title: string }): Recipe {
     nutrition: '',
     sourceUrl: '',
     favourite: false,
+    source: null,
     version: 1,
     createdAt: SEED_AT,
     updatedAt: SEED_AT,
@@ -225,6 +226,7 @@ function applyInput(r: Recipe, input: ParsedRecipe): void {
     nutrition: input.nutrition,
     sourceUrl: input.sourceUrl,
     favourite: input.favourite ?? r.favourite,
+    source: input.source === undefined ? r.source : input.source,
     photoKey,
   });
 }

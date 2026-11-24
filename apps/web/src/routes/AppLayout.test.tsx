@@ -37,18 +37,11 @@ describe('bottom navigation', () => {
     await signedInApp('/');
     const nav = await screen.findByRole('navigation', { name: 'Main' });
     const links = within(nav).getAllByRole('link');
-    expect(links.map((l) => l.textContent)).toEqual([
-      'Lists',
-      'Search',
-      'Recipes',
-      'Templates',
-      'Settings',
-    ]);
+    expect(links.map((l) => l.textContent)).toEqual(['Lists', 'Search', 'Recipes', 'Settings']);
     expect(links.map((l) => l.getAttribute('href'))).toEqual([
       '/',
       '/search',
       '/recipes',
-      '/templates',
       '/settings',
     ]);
   });
@@ -56,7 +49,7 @@ describe('bottom navigation', () => {
   it.each([
     ['/', 'Lists'],
     ['/search', 'Search'],
-    ['/templates', 'Templates'],
+    ['/recipes', 'Recipes'],
     ['/settings', 'Settings'],
   ])('marks only the %s tab as current', async (path, label) => {
     await signedInApp(path);

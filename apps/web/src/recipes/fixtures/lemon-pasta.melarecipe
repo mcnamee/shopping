@@ -1,0 +1,27 @@
+{
+  "id": "fixture-lemon-pasta",
+  "title": "Fixture lemon pasta",
+  "text": "A made-up test recipe.",
+  "images": [
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+  ],
+  "categories": [
+    "Dinner",
+    "Quick"
+  ],
+  "yield": "Serves 2",
+  "prepTime": "10 min",
+  "cookTime": "15 min",
+  "totalTime": "25 min",
+  "ingredients": "# Pasta\n200 g spaghetti\n1 lemon\n\n# Sauce\n2 tbsp olive oil\nSalt",
+  "instructions": "# Cook\nBoil the pasta.\n\nToss with oil and lemon.",
+  "notes": "Synthetic fixture.",
+  "nutrition": "400 kcal",
+  "link": "https://example.com/fixture-lemon-pasta",
+  "favorite": true,
+  "wantToCook": false,
+  "date": 700000000,
+  "futureField": {
+    "ignored": true
+  }
+}
