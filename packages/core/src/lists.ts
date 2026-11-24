@@ -22,6 +22,7 @@ import {
 } from './groups';
 import { isUnitType, isValidSku, type UnitType } from './product';
 import { convertQuantity, roundQuantity } from './quantity';
+import { isTextLineId, parseLineText, parseTextGroup } from './text-lines';
 
 // ---------------------------------------------------------------------------------------
 // Constants
@@ -109,6 +110,18 @@ export function isValidLineId(value: unknown): value is string {
   return parseLineId(value) !== null;
 }
 
+/** Id of the row a LineInput lands on: product + unit, or the text line's own id. */
+export function lineInputId(l: Pick<LineInput, 'kind' | 'product' | 'unit'>): string {
+  return l.kind === 'text' ? l.product.productId : lineIdFor(l.product.productId, l.unit);
+}
+
+/** Item id from a path or body: a product line (product~unit) or a text line (TEXT~hash). */
+export function parseItemRef(id: unknown): { unit: UnitType; text: boolean } | null {
+  if (isTextLineId(id)) return { unit: 'each', text: true };
+  const p = parseLineId(id);
+  return p ? { unit: p.unit, text: false } : null;
+}
+
 // ---------------------------------------------------------------------------------------
 // Product snapshot (D-047)
 
@@ -146,8 +159,13 @@ export function snapshotOf(
 
 /** Fields shared by list items and template items. */
 export interface Line {
-  /** lineIdFor(productId, unit). */
+  /** lineIdFor(productId, unit), or `TEXT~<hash>` for a free-text line. */
   id: string;
+  /**
+   * 'text': a free-text list line (D-103): `product.name` is the text, qty 1, unit each.
+   * Absent: a product line. Templates never hold text lines.
+   */
+  kind?: 'text';
   product: ProductSnapshot;
   qty: number;
   unit: UnitType;
@@ -170,6 +188,8 @@ export interface ListItem extends Line {
 
 /** What to add: product, quantity, unit and note. */
 export interface LineInput {
+  /** 'text': add free text (D-103); `product` is its synthetic snapshot (textLineInput). */
+  kind?: 'text';
   product: ProductSnapshot;
   qty: number;
   unit: UnitType;
@@ -466,6 +486,9 @@ export interface EditItemInput {
   note?: string | null;
   ticked?: boolean;
   version?: number;
+  /** Text lines only: new text (re-keys the line) and group. */
+  text?: string;
+  groupId?: string;
 }
 
 /**
@@ -476,10 +499,31 @@ export interface EditItemInput {
  */
 export function parseEditItemRequest(
   body: unknown,
-  opts: { allowTicked: boolean; currentUnit?: UnitType },
+  opts: { allowTicked: boolean; currentUnit?: UnitType; textLine?: boolean },
 ): Parsed<EditItemInput> {
   if (!isObject(body)) return fail('Body must be a JSON object');
   const out: EditItemInput = {};
+  if (opts.textLine) {
+    // Free-text lines (D-103): text, group, note and tick; no quantity or unit.
+    if (body.qty !== undefined || body.unit !== undefined) {
+      return fail('Text lines have no quantity or unit', body.qty !== undefined ? 'qty' : 'unit');
+    }
+    if (body.text !== undefined) {
+      const text = parseLineText(body.text);
+      if (!text.ok) return text;
+      out.text = text.value;
+    }
+    if (body.groupId !== undefined) {
+      const g = parseTextGroup(body.groupId);
+      if (!g.ok) return g;
+      out.groupId = g.value;
+    }
+  } else if (body.text !== undefined || body.groupId !== undefined) {
+    return fail(
+      'Only text lines have text and a group',
+      body.text !== undefined ? 'text' : 'groupId',
+    );
+  }
   if (body.unit !== undefined) {
     const unit = parseUnit(body.unit);
     if (!unit.ok) return unit;
@@ -502,7 +546,12 @@ export function parseEditItemRequest(
     if (typeof body.ticked !== 'boolean') return fail('ticked must be true or false', 'ticked');
     out.ticked = body.ticked;
   }
-  const contentChange = out.qty !== undefined || out.unit !== undefined || 'note' in out;
+  const contentChange =
+    out.qty !== undefined ||
+    out.unit !== undefined ||
+    out.text !== undefined ||
+    out.groupId !== undefined ||
+    'note' in out;
   if (!contentChange && out.ticked === undefined) return fail('Nothing to change');
   const version = parseVersion(body.version, contentChange);
   if (!version.ok) return version;
@@ -725,7 +774,7 @@ export function purchasesForList(
 ): PurchaseRecord[] {
   const date = localDate(completedAt);
   return items
-    .filter((i) => i.ticked)
+    .filter((i) => i.ticked && i.kind !== 'text') // free-text lines are never purchases (D-103)
     .map((i) => ({
       productId: i.product.productId,
       name: i.product.name,
@@ -1001,7 +1050,7 @@ export function parseUndoRequest(body: unknown, max: number): Parsed<LineChange[
   for (const c of body.changes as unknown[]) {
     if (!isObject(c)) return fail('Each change must be an object', 'changes');
     const { itemId, created, addedQty, version } = c;
-    const ref = parseLineId(itemId);
+    const ref = parseItemRef(itemId);
     if (!ref || typeof itemId !== 'string' || seen.has(itemId)) {
       return fail('Each change needs a distinct item id', 'changes');
     }

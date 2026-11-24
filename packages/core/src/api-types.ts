@@ -156,6 +156,9 @@ export interface EditItemRequest {
   /** Lists only. */
   ticked?: boolean;
   version?: number;
+  /** Free-text lines only (D-103): new text (re-keys the line; merges into an equal one) and group. */
+  text?: string;
+  groupId?: string;
 }
 
 // ---- Templates
@@ -439,6 +442,27 @@ export interface BulkUndoResponse {
   results: BulkUndoResult[];
   undone: number;
   failed: number;
+}
+
+// ---------------------------------------------------------------------------------------
+// Stage 5: recipes (docs/api.md, D-103 to D-107). Recipe types live in ./recipes.
+
+/** POST /api/recipes/{id}/to-list: free-text ingredient lines onto a list. */
+export interface RecipeToListRequest {
+  /** 1-50 ingredient texts (no headings). */
+  lines: string[];
+  /** Default: this week's list (created and flagged when there is none). */
+  listId?: string | null;
+}
+
+/**
+ * Same results as a bulk add (a result's `productId` is the text line's id, `unit` 'each';
+ * `change` feeds POST /lists/{listId}/items/undo), plus where the lines went.
+ */
+export interface RecipeToListResponse extends BulkAddItemsResponse {
+  listId: string;
+  /** True when this call created and flagged "Week of ..." (D-048). */
+  listCreated: boolean;
 }
 
 // ---------------------------------------------------------------------------------------

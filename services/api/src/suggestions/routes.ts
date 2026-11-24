@@ -131,7 +131,10 @@ export function createSuggestionRoutes(getDeps: () => Stage3Deps): RouteTable {
     let exclude: string[] = [];
     if (listId !== null) {
       await deps.lists.mustGetActive(hh, listId);
-      exclude = (await deps.lists.items(hh, listId)).map((i) => i.product.productId);
+      // Free-text lines are not products: they never exclude (or feed) a suggestion (D-103).
+      exclude = (await deps.lists.items(hh, listId))
+        .filter((i) => i.kind !== 'text')
+        .map((i) => i.product.productId);
     }
     const now = deps.now();
     const today = localDate(now);

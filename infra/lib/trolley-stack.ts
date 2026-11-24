@@ -53,6 +53,19 @@ const LAMBDA_BUNDLING = {
     'const require = __trolleyCreateRequire(import.meta.url);',
 };
 
+/**
+ * The API bundles @aws-sdk/client-s3 and @aws-sdk/s3-presigned-post itself (they must match
+ * each other); the DynamoDB and Bedrock clients come from the Lambda runtime.
+ */
+const API_BUNDLING = {
+  ...LAMBDA_BUNDLING,
+  externalModules: [
+    '@aws-sdk/client-dynamodb',
+    '@aws-sdk/lib-dynamodb',
+    '@aws-sdk/client-bedrock-runtime',
+  ],
+};
+
 export interface TrolleyStackProps extends StackProps {
   /** Directory containing the built web app (apps/web/dist). */
   webDistPath: string;
@@ -103,6 +116,31 @@ export class TrolleyStack extends Stack {
       indexName: 'GSI2',
       partitionKey: { name: 'gsi2pk', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'gsi2sk', type: dynamodb.AttributeType.STRING },
+    });
+
+    // ---------------------------------------------------------------- Recipe photos (D-105)
+    // Private bucket, read only through CloudFront (OAC) at /media/*; objects are written
+    // by browsers with presigned POSTs from the API (key, content type and size are pinned
+    // in the policy). Keys are media/recipes/<household>/<uuid>[-thumb].jpg, so the URL
+    // path equals the object key and no rewrite is needed. Browsers POST straight to the
+    // regional S3 host, which needs the CORS rule here and the CSP connect-src below; a
+    // same-origin upload through CloudFront would need a public write path or Lambda@Edge
+    // auth, and sending 3 MB through the API Lambda costs more and risks timeouts.
+    const mediaBucket = new s3.Bucket(this, 'MediaBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.POST],
+          allowedOrigins: [`https://${props.domainName}`],
+          allowedHeaders: ['*'],
+          maxAge: 3000,
+        },
+      ],
+      // User photos: never deleted by a stack change.
+      removalPolicy: RemovalPolicy.RETAIN,
     });
 
     // ---------------------------------------------------------------- Auth
@@ -192,14 +230,25 @@ export class TrolleyStack extends Stack {
       logGroup: apiLogGroup,
       environment: {
         TABLE_NAME: table.tableName,
+        MEDIA_BUCKET: mediaBucket.bucketName,
         SUGGEST_MODEL_ID: suggestModelId,
         // OAuth issuer and MCP resource URL (Stage 4, D-082/D-083): the configured domain.
         PUBLIC_ORIGIN: `https://${props.domainName}`,
         NODE_OPTIONS: '--enable-source-maps',
       },
-      bundling: LAMBDA_BUNDLING,
+      bundling: API_BUNDLING,
     });
     table.grantReadWriteData(apiFunction);
+
+    // Recipe photos: sign uploads (the signer needs PutObject) and delete replaced or
+    // orphaned photos. Only under the media prefix; no read, list or bucket-level access.
+    apiRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'RecipePhotoWriteDelete',
+        actions: ['s3:PutObject', 's3:DeleteObject'],
+        resources: [mediaBucket.arnForObjects('media/recipes/*')],
+      }),
+    );
 
     // Bedrock for suggestions (D-061, D-073): InvokeModel (used by Converse) on the
     // configured inference profile, and on its foundation model only when called through
@@ -344,6 +393,15 @@ export class TrolleyStack extends Stack {
       ['/api/suggestions', POST],
       ['/api/lists/{listId}/items/bulk', POST],
       ['/api/lists/{listId}/items/undo', POST],
+      // Stage 5 (docs/api.md). Must match services/api/src/recipes/routes.ts.
+      ['/api/recipes', GET],
+      ['/api/recipes', POST],
+      ['/api/recipes/photo-upload', POST],
+      ['/api/recipes/{recipeId}', GET],
+      ['/api/recipes/{recipeId}', PUT],
+      ['/api/recipes/{recipeId}', PATCH],
+      ['/api/recipes/{recipeId}', DELETE],
+      ['/api/recipes/{recipeId}/to-list', POST],
       // Stage 4: consent screen and Connected apps (SPA, Cognito ID token).
       ['/api/oauth/requests/{requestId}', GET],
       ['/api/oauth/consent', POST],
@@ -500,9 +558,10 @@ export class TrolleyStack extends Stack {
       "default-src 'self'",
       "script-src 'self'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
+      "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      `connect-src 'self' ${cognitoEndpoint}`,
+      // Cognito sign-in, and recipe photo uploads (presigned POST to the media bucket).
+      `connect-src 'self' ${cognitoEndpoint} https://${mediaBucket.bucketRegionalDomainName}`,
       "manifest-src 'self'",
       "worker-src 'self'",
       "frame-ancestors 'none'",
@@ -573,9 +632,22 @@ export class TrolleyStack extends Stack {
       // API paths: uncached, all viewer headers (incl. Authorization) and query strings
       // forwarded, and no SPA rewrite. /mcp, /oauth/* and /.well-known/* are Stage 4
       // (D-082): same origin as the app so the connector URL is https://<domain>/mcp.
-      additionalBehaviors: Object.fromEntries(
-        ['/api/*', '/mcp', '/oauth/*', '/.well-known/*'].map((pattern) => [pattern, apiBehavior]),
-      ),
+      additionalBehaviors: {
+        ...Object.fromEntries(
+          ['/api/*', '/mcp', '/oauth/*', '/.well-known/*'].map((pattern) => [pattern, apiBehavior]),
+        ),
+        // Recipe photos (D-105): private bucket via OAC, same origin as the app. Keys are
+        // unique and never rewritten, so they cache for a year (objects carry the same
+        // Cache-Control); GET/HEAD only, no SPA rewrite.
+        '/media/*': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(mediaBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          responseHeadersPolicy: securityHeaders,
+          compress: false,
+        },
+      },
     });
 
     // ---------------------------------------------------------------- Web deployment
@@ -674,6 +746,7 @@ export class TrolleyStack extends Stack {
     new CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
     new CfnOutput(this, 'ApiEndpoint', { value: httpApi.apiEndpoint });
     new CfnOutput(this, 'TableName', { value: table.tableName });
+    new CfnOutput(this, 'MediaBucketName', { value: mediaBucket.bucketName });
     new CfnOutput(this, 'ScraperFunctionName', { value: scraperFunction.functionName });
   }
 }

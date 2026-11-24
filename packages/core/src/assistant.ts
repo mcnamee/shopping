@@ -268,7 +268,19 @@ export function describeLine(
   return packSize ? `${base} (${quoted(packSize)})` : base;
 }
 
+/** A list row as chat text: free-text lines (D-103) have no quantity, just the quoted text. */
+export function describeItem(i: {
+  kind?: 'text' | undefined;
+  qty: number;
+  unit: UnitType;
+  product: { name: string };
+}): string {
+  return i.kind === 'text' ? quoted(i.product.name) : describeLine(i.qty, i.unit, i.product.name);
+}
+
 export interface ListTextItem {
+  /** True for a free-text line: shown as its quoted text without a quantity. */
+  text?: boolean;
   name: string;
   qty: number;
   unit: UnitType;
@@ -308,8 +320,9 @@ export function formatListText(
     let groupShown = false;
     for (const item of s.items) {
       const line =
-        `- ${item.ticked ? '[ticked] ' : ''}${describeLine(item.qty, item.unit, item.name)}` +
-        (item.note ? ` - note ${quoted(item.note)}` : '');
+        `- ${item.ticked ? '[ticked] ' : ''}${
+          item.text ? quoted(item.name) : describeLine(item.qty, item.unit, item.name)
+        }` + (item.note ? ` - note ${quoted(item.note)}` : '');
       const add = (groupShown ? 0 : groupLine.length + 1) + line.length + 1;
       // Leave room for the "...and N more" line.
       if (length + add > maxChars - 24) break outer;

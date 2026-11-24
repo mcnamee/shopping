@@ -25,11 +25,13 @@ import {
   isDefaultAisleOrder,
   isListComplete,
   isValidEntityId,
+  isTextLineId,
   isValidSku,
   ITEM_QTY_MAX,
   localDate,
   LIMITS,
   lineIdFor,
+  lineInputId,
   listProgress,
   mergeLines,
   mergeNotes,
@@ -39,7 +41,7 @@ import {
   parseCreateListRequest,
   parseCreateTemplateRequest,
   parseEditItemRequest,
-  parseLineId,
+  parseItemRef,
   parseTemplateIdsRequest,
   parseUndoRequest,
   parseUnitOverrideRequest,
@@ -57,6 +59,8 @@ import {
   sortUnitOverrides,
   suggestCandidates,
   sumQuantity,
+  textLineId,
+  textSnapshot,
   templatePreview,
   tooMuchMessage,
   type AisleOrderResponse,
@@ -75,6 +79,7 @@ import {
   type Suggestion,
   type SuggestionsResponse,
   type PurchaseRecord,
+  type Recipe,
   type Template,
   type TemplateItem,
   type TemplateType,
@@ -84,7 +89,7 @@ import {
 
 // ------------------------------------------------------------------ state
 
-interface MockList {
+export interface MockList {
   id: string;
   name: string;
   status: ListStatus;
@@ -108,7 +113,7 @@ interface MockTemplate {
   updatedAt: string;
 }
 
-interface MockHousehold {
+export interface MockHousehold {
   lists: MockList[];
   templates: MockTemplate[];
   thisWeekId: string | null;
@@ -116,6 +121,8 @@ interface MockHousehold {
   aisleVersion: number;
   overrides: Record<string, UnitOverride>;
   purchases: Record<string, PurchaseRecord>;
+  /** Recipes (Stage 5); missing in state saved before it, seeded on first use. */
+  recipes?: Recipe[];
   /** Suggestion runs today (D-066); missing in state saved before Stage 3. */
   suggestRuns?: { day: string; runs: number };
 }
@@ -164,30 +171,30 @@ export function resetMockStage2(): void {
   }
 }
 
-const nowIso = () => new Date().toISOString();
-const newId = () => crypto.randomUUID();
+export const nowIso = () => new Date().toISOString();
+export const newId = () => crypto.randomUUID();
 
 // ------------------------------------------------------------------ responses
 
-const json = (status: number, body: unknown) =>
+export const json = (status: number, body: unknown) =>
   new Response(status === 204 ? null : JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },
   });
 
-class MockFailure extends Error {
+export class MockFailure extends Error {
   constructor(public readonly response: Response) {
     super('mock failure');
   }
 }
 
-const notFound = (): never => {
+export const notFound = (): never => {
   throw new MockFailure(json(404, { code: 'NOT_FOUND', message: 'Not found' }));
 };
-const invalid = (message: string, field?: string): never => {
+export const invalid = (message: string, field?: string): never => {
   throw new MockFailure(json(400, { code: 'VALIDATION', message, ...(field ? { field } : {}) }));
 };
-const conflict = (
+export const conflict = (
   reason: 'STALE' | 'LIST_ARCHIVED' | 'NOT_ARCHIVED' | 'LIMIT' | 'UNDO_EXPIRED',
   message: string,
   current?: unknown,
@@ -202,11 +209,11 @@ const conflict = (
   );
 };
 
-function unwrap<T>(p: Parsed<T>): T {
+export function unwrap<T>(p: Parsed<T>): T {
   return p.ok ? p.value : invalid(p.message, p.field);
 }
 
-const clone = <T>(v: T): T => structuredClone(v);
+export const clone = <T>(v: T): T => structuredClone(v);
 
 // ------------------------------------------------------------------ seed data
 
@@ -524,7 +531,7 @@ function seedHousehold(householdId: string, source: MockProductSource): MockHous
 let products: MockProductSource = { find: () => null, customs: () => [] };
 const productLookup: ProductLookup = (hh, id) => products.find(hh, id);
 
-function household(householdId: string): MockHousehold {
+export function household(householdId: string): MockHousehold {
   const state = load();
   let hh = state.households[householdId];
   if (!hh) {
@@ -548,7 +555,7 @@ export function mockAisleOrder(householdId: string): string[] {
   return normaliseAisleOrder(household(householdId).aisleOrder);
 }
 
-function summary(hh: MockHousehold, l: MockList): ListSummary {
+export function summary(hh: MockHousehold, l: MockList): ListSummary {
   const p =
     l.status === 'archived' && l.itemCount !== null
       ? { total: l.itemCount, ticked: l.boughtCount ?? 0 }
@@ -568,7 +575,7 @@ function summary(hh: MockHousehold, l: MockList): ListSummary {
   };
 }
 
-const detail = (hh: MockHousehold, l: MockList): ListDetail => ({
+export const detail = (hh: MockHousehold, l: MockList): ListDetail => ({
   ...summary(hh, l),
   items: clone(l.items),
 });
@@ -591,7 +598,7 @@ function findList(hh: MockHousehold, id: string | undefined): MockList {
   return hh.lists.find((l) => l.id === id) ?? notFound();
 }
 
-function activeList(hh: MockHousehold, id: string | undefined): MockList {
+export function activeList(hh: MockHousehold, id: string | undefined): MockList {
   const l = findList(hh, id);
   if (l.status !== 'active') conflict('LIST_ARCHIVED', 'This list is archived and read-only.');
   return l;
@@ -602,9 +609,9 @@ function findTemplate(hh: MockHousehold, id: string | undefined): MockTemplate {
   return hh.templates.find((t) => t.id === id) ?? notFound();
 }
 
-function lineRef(itemId: string | undefined): { id: string; unit: UnitType } {
-  const parsed = parseLineId(itemId);
-  return parsed && itemId ? { id: itemId, unit: parsed.unit } : notFound();
+function lineRef(itemId: string | undefined): { id: string; unit: UnitType; text: boolean } {
+  const parsed = parseItemRef(itemId);
+  return parsed && itemId ? { id: itemId, unit: parsed.unit, text: parsed.text } : notFound();
 }
 
 function lineFromBody(householdId: string, body: unknown): LineInput {
@@ -638,7 +645,8 @@ function assertActiveLimit(hh: MockHousehold) {
 
 function newItem(listId: string, l: LineInput, userId: string, at: string): ListItem {
   return {
-    id: lineIdFor(l.product.productId, l.unit),
+    id: lineInputId(l),
+    ...(l.kind === 'text' ? { kind: 'text' as const } : {}),
     listId,
     product: l.product,
     qty: l.qty,
@@ -658,7 +666,7 @@ function flagIfNone(hh: MockHousehold, listId: string) {
   if (!current || current.status !== 'active') hh.thisWeekId = listId;
 }
 
-function createList(
+export function createList(
   hh: MockHousehold,
   userId: string,
   input: { name: string; lines: LineInput[]; thisWeek: boolean | undefined },
@@ -692,8 +700,8 @@ function createList(
 }
 
 /** Merge-add one line (D-046); a merge unticks the row (D-053). */
-function addItem(list: MockList, line: LineInput, userId: string) {
-  const id = lineIdFor(line.product.productId, line.unit);
+export function addItem(list: MockList, line: LineInput, userId: string) {
+  const id = lineInputId(line);
   const at = nowIso();
   const existing = list.items.find((i) => i.id === id);
   if (!existing) {
@@ -704,7 +712,8 @@ function addItem(list: MockList, line: LineInput, userId: string) {
     list.items.push(item);
     return { item, merged: false };
   }
-  const qty = sumQuantity(existing.qty, line.qty, line.unit);
+  // A text line is always one: merging only joins notes and unticks it (D-103).
+  const qty = line.kind === 'text' ? existing.qty : sumQuantity(existing.qty, line.qty, line.unit);
   if (!qtyWithinMax(qty, line.unit)) invalid(tooMuchMessage(line.unit), 'qty');
   Object.assign(existing, {
     qty,
@@ -768,7 +777,9 @@ function suggestionsFor(
   const result = suggestCandidates({
     purchases: noHistory ? [] : Object.values(hh.purchases),
     templates: mode === 'empty' ? [] : hh.templates,
-    exclude: list ? list.items.map((i) => i.product.productId) : [],
+    exclude: list
+      ? list.items.filter((i) => i.kind !== 'text').map((i) => i.product.productId)
+      : [],
     today,
     aisleOrder: normaliseAisleOrder(hh.aisleOrder),
   });
@@ -859,6 +870,8 @@ function bulkUndo(hh: MockHousehold, list: MockList, body: unknown): BulkUndoRes
   const results: BulkUndoResult[] = changes.map((c) => {
     const cur = list.items.find((i) => i.id === c.itemId);
     if (c.created && !cur) return { ok: true, itemId: c.itemId };
+    // A merged text line only had its note joined and was unticked: Undo leaves it (D-103).
+    if (!c.created && isTextLineId(c.itemId)) return { ok: true, itemId: c.itemId };
     if (!cur || cur.version !== c.version) {
       return { ok: false, itemId: c.itemId, code: 'CONFLICT', message: 'Changed on another phone' };
     }
@@ -880,7 +893,10 @@ interface Ctx {
   url: URL;
   params: Record<string, string>;
 }
-type Handler = (hh: MockHousehold, ctx: Ctx & { householdId: string; userId: string }) => Response;
+export type Handler = (
+  hh: MockHousehold,
+  ctx: Ctx & { householdId: string; userId: string },
+) => Response;
 
 function route(handler: Handler, mutates: boolean) {
   return {
@@ -910,8 +926,8 @@ function route(handler: Handler, mutates: boolean) {
   };
 }
 
-const read = (h: Handler) => route(h, false);
-const write = (h: Handler) => route(h, true);
+export const read = (h: Handler) => route(h, false);
+export const write = (h: Handler) => route(h, true);
 
 const aisleView = (hh: MockHousehold): AisleOrderResponse => {
   const order = normaliseAisleOrder(hh.aisleOrder);
@@ -1013,6 +1029,7 @@ export function createStage2MockRoutes(source: MockProductSource) {
     'PATCH /api/templates/{templateId}/items/{itemId}': write((hh, { params, body }) => {
       const t = findTemplate(hh, params.templateId);
       const ref = lineRef(params.itemId);
+      if (ref.text) return notFound(); // templates stay product-only (B-024)
       const edit = unwrap(
         parseEditItemRequest(body, { allowTicked: false, currentUnit: ref.unit }),
       );
@@ -1088,9 +1105,7 @@ export function createStage2MockRoutes(source: MockProductSource) {
       const ids = unwrap(parseTemplateIdsRequest(body));
       const merged = mergeLines(templateLines(hh, ids));
       const existing = new Set(list.items.map((i) => i.id));
-      const newCount = merged.lines.filter(
-        (l) => !existing.has(lineIdFor(l.product.productId, l.unit)),
-      ).length;
+      const newCount = merged.lines.filter((l) => !existing.has(lineInputId(l))).length;
       if (list.items.length + newCount > LIMITS.listItems) {
         conflict(
           'LIMIT',
@@ -1139,7 +1154,13 @@ export function createStage2MockRoutes(source: MockProductSource) {
     'PATCH /api/lists/{listId}/items/{itemId}': write((hh, { params, body, userId }) => {
       const list = findList(hh, params.listId);
       const ref = lineRef(params.itemId);
-      const edit = unwrap(parseEditItemRequest(body, { allowTicked: true, currentUnit: ref.unit }));
+      const edit = unwrap(
+        parseEditItemRequest(body, {
+          allowTicked: true,
+          currentUnit: ref.unit,
+          textLine: ref.text,
+        }),
+      );
       if (list.status !== 'active')
         conflict('LIST_ARCHIVED', 'This list is archived and read-only.');
       const existing = list.items.find((i) => i.id === ref.id) ?? notFound();
@@ -1149,7 +1170,39 @@ export function createStage2MockRoutes(source: MockProductSource) {
       const at = nowIso();
       let item: ListItem;
       let replacedItemId: string | undefined;
-      if (edit.unit !== undefined && edit.unit !== ref.unit) {
+      if (ref.text && edit.text !== undefined && textLineId(edit.text) !== ref.id) {
+        // New words re-key the line, merging into a line with exactly that text (D-103).
+        const newId = textLineId(edit.text);
+        const target = list.items.find((i) => i.id === newId);
+        const note = edit.note !== undefined ? edit.note : existing.note;
+        if (target) {
+          Object.assign(target, {
+            note: mergeNotes(target.note, note),
+            ticked: edit.ticked ?? false,
+            tickedAt: edit.ticked ? at : null,
+            version: target.version + 1,
+            updatedAt: at,
+            updatedBy: userId,
+          });
+          list.items = list.items.filter((i) => i !== existing);
+          item = target;
+        } else {
+          const ticked = edit.ticked ?? existing.ticked;
+          item = {
+            ...existing,
+            id: newId,
+            product: textSnapshot(edit.text, edit.groupId ?? existing.product.groupId),
+            note,
+            ticked,
+            tickedAt: ticked ? (existing.tickedAt ?? at) : null,
+            version: existing.version + 1,
+            updatedAt: at,
+            updatedBy: userId,
+          };
+          list.items = list.items.map((i) => (i === existing ? item : i));
+        }
+        replacedItemId = ref.id;
+      } else if (edit.unit !== undefined && edit.unit !== ref.unit) {
         let r: ReturnType<typeof editLine<ListItem>>;
         try {
           r = editLine(list.items, ref.id, edit, at);
@@ -1169,6 +1222,7 @@ export function createStage2MockRoutes(source: MockProductSource) {
       } else {
         if (edit.qty !== undefined) existing.qty = edit.qty;
         if (edit.note !== undefined) existing.note = edit.note;
+        if (ref.text && edit.groupId !== undefined) existing.product.groupId = edit.groupId;
         if (edit.ticked !== undefined) {
           existing.ticked = edit.ticked;
           existing.tickedAt = edit.ticked ? at : null;

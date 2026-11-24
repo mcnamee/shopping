@@ -11,3 +11,6 @@ export * from './quantity';
 export * from './lists';
 export * from './suggestions';
 export * from './assistant';
+export * from './text-lines';
+export * from './ingredient-groups';
+export * from './recipes';

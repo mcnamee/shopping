@@ -11,6 +11,9 @@ import { productResolver } from './products/resolver';
 import { createProductRoutes, type ProductDeps } from './products/routes';
 import type { RouteTable } from './router';
 import { SettingsStore } from './settings/store';
+import { createRecipeRoutes, type Stage5Deps } from './recipes/routes';
+import { RecipeStore } from './recipes/store';
+import { s3PhotoStore } from './recipes/photos';
 import { createStage2Routes, type Stage2Deps } from './stage2';
 import { bedrockModel, type AiTextModel } from './suggestions/bedrock';
 import { AI_TIMEOUT_MS, createSuggestionRoutes, type Stage3Deps } from './suggestions/routes';
@@ -163,11 +166,26 @@ export function stage4DepsFor(
   };
 }
 
+/** Stage 5 dependencies (recipes + photos), sharing the Stage 2 list store. */
+export function stage5DepsFor(
+  db: Db,
+  stage2: Stage2Deps,
+  photos: Stage5Deps['photos'],
+): Stage5Deps {
+  return {
+    recipes: new RecipeStore(db, stage2.now),
+    photos,
+    lists: stage2.lists,
+    now: stage2.now,
+  };
+}
+
 export function createRoutes(
   productDeps?: ProductDeps,
   stage2?: () => Stage2Deps,
   stage3?: () => Stage3Deps,
   stage4?: () => Stage4Deps,
+  stage5?: () => Stage5Deps,
 ): RouteTable {
   const prod = lazyProd();
   const products = productDeps ?? productDepsFrom(prod);
@@ -180,8 +198,14 @@ export function createRoutes(
   let s4: Stage4Deps | undefined;
   const getStage4 =
     stage4 ?? (() => (s4 ??= stage4DepsFor(prod().db, getStage3(), products, originFromEnv())));
+  let s5: Stage5Deps | undefined;
+  const getStage5 =
+    stage5 ??
+    (() =>
+      (s5 ??= stage5DepsFor(prod().db, getStage2(), s3PhotoStore(requiredEnv('MEDIA_BUCKET')))));
   return {
     ...baseRoutes,
+    ...createRecipeRoutes(getStage5),
     ...createProductRoutes(products),
     ...createStage2Routes(getStage2),
     ...createSuggestionRoutes(getStage3),
@@ -189,6 +213,12 @@ export function createRoutes(
     ...createMcpRoutes(() => getStage4().mcp),
     ...createShortcutRoutes(() => getStage4().shortcuts),
   };
+}
+
+function requiredEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`${name} is not set`);
+  return v;
 }
 
 export const routes: RouteTable = createRoutes();
