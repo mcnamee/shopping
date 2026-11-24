@@ -498,6 +498,14 @@ export interface RecipeMatchResponse {
   rows: RecipeMatchRow[];
   /** True when the optional AI clean-up of unsure lines was used. */
   ai: boolean;
+  /** True when served from the 30-day cache (D-116); then `cachedAt` is when it was computed. */
+  cached?: boolean;
+  cachedAt?: string;
+}
+
+/** PUT /api/recipes/{id}/match/choices: what the user picked per line ("text" = keep as text). */
+export interface RecipeMatchChoicesRequest {
+  choices: Array<{ line: string; choice: string }>;
 }
 
 // ---------------------------------------------------------------------------------------

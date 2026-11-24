@@ -158,7 +158,7 @@ describe('POST /api/recipes/{id}/match', () => {
 
   it('returns no rows for a recipe without ingredients', async () => {
     const r = await recipe('');
-    expect((await match(r.id)).body).toEqual({ rows: [], ai: false });
+    expect((await match(r.id)).body).toMatchObject({ rows: [], ai: false });
   });
 
   it("is household-scoped: another household's recipe is 404 and its data is never used", async () => {
@@ -187,9 +187,9 @@ describe('POST /api/recipes/{id}/match', () => {
   it('rate-limits per household per day, separately from suggestions', async () => {
     const r = await recipe('1 egg');
     for (let i = 0; i < RECIPE_MATCH_DAILY_LIMIT; i++) {
-      expect((await match(r.id)).status).toBe(200);
+      expect((await matchRaw(r.id, true)).status).toBe(200);
     }
-    const limited = await match(r.id);
+    const limited = await matchRaw(r.id, true);
     expect(limited.status).toBe(429);
     expect(limited.body).toMatchObject({ code: 'RATE_LIMITED' });
     // Another household and the suggestions budget are unaffected.
@@ -197,7 +197,134 @@ describe('POST /api/recipes/{id}/match', () => {
     expect((await match(other.id, 'home-2')).status).toBe(200);
     expect((await h.call('POST /api/suggestions')).status).toBe(200);
     h.advance(24 * 60 * 60 * 1000);
-    expect((await match(r.id)).status).toBe(200);
+    expect((await matchRaw(r.id, true)).status).toBe(200);
+  });
+});
+
+const matchRaw = (id: string, refresh = false, hh?: string) =>
+  h.call<RecipeMatchResponse>('POST /api/recipes/{recipeId}/match', {
+    path: { recipeId: id },
+    ...(refresh ? { query: { refresh: '1' } } : {}),
+    ...(hh ? { hh } : {}),
+  });
+
+const choose = (id: string, choices: Array<{ line: string; choice: string }>, hh?: string) =>
+  h.call('PUT /api/recipes/{recipeId}/match/choices', {
+    path: { recipeId: id },
+    body: { choices },
+    ...(hh ? { hh } : {}),
+  });
+
+describe('match cache (D-116)', () => {
+  const OIL = '2 tbsp extra virgin olive oil';
+  const runsOf = async () =>
+    (
+      (await h.db.get({
+        pk: keys.householdPk('home-1'),
+        sk: keys.recipeMatchRunsSk('2026-11-22'),
+      })) as { runs?: number } | null
+    )?.runs ?? 0;
+
+  it('misses then hits; a hit costs no run and returns cachedAt', async () => {
+    const r = await recipe(OIL);
+    const first = await matchRaw(r.id);
+    expect(first.body).toMatchObject({ cached: false });
+    expect(await runsOf()).toBe(1);
+    h.advance(60_000);
+    const second = await matchRaw(r.id);
+    expect(second.body).toMatchObject({ cached: true, cachedAt: first.body.cachedAt });
+    expect(second.body.rows).toEqual(first.body.rows);
+    expect(await runsOf()).toBe(1);
+  });
+
+  it('serves hits when the daily limit is exhausted', async () => {
+    const r = await recipe(OIL);
+    await matchRaw(r.id);
+    for (let i = 0; i < RECIPE_MATCH_DAILY_LIMIT; i++) await matchRaw(r.id, true);
+    expect((await matchRaw(r.id, true)).status).toBe(429);
+    expect((await matchRaw(r.id)).body).toMatchObject({ cached: true });
+  });
+
+  it('recomputes when the ingredients change', async () => {
+    const r = await recipe(OIL);
+    await matchRaw(r.id);
+    const put = await h.call('PUT /api/recipes/{recipeId}', {
+      path: { recipeId: r.id },
+      body: { title: r.title, ingredients: '1 tin diced tomatoes', version: r.version },
+    });
+    expect(put.status).toBe(200);
+    const res = await matchRaw(r.id);
+    expect(res.body.cached).toBe(false);
+    expect(res.body.rows[0]?.line).toBe('1 tin diced tomatoes');
+    expect(await runsOf()).toBe(2);
+  });
+
+  it('expires after 30 days', async () => {
+    const r = await recipe(OIL);
+    await matchRaw(r.id);
+    h.advance(29 * 86_400_000);
+    expect((await matchRaw(r.id)).body.cached).toBe(true);
+    h.advance(2 * 86_400_000);
+    const res = await matchRaw(r.id);
+    expect(res.body.cached).toBe(false);
+  });
+
+  it('?refresh=1 recomputes and counts against the limit', async () => {
+    const r = await recipe(OIL);
+    await matchRaw(r.id);
+    h.advance(1000);
+    const res = await matchRaw(r.id, true);
+    expect(res.body.cached).toBe(false);
+    expect(await runsOf()).toBe(2);
+  });
+
+  it('remembers choices over the computed match, survives refresh, drops on edit', async () => {
+    const r = await recipe('1 tin tomatoes');
+    const first = await matchRaw(r.id);
+    const row = first.body.rows[0]!;
+    const alt = row.alternatives[0] ?? row.match!;
+    expect((await choose(r.id, [{ line: row.line, choice: 'text' }])).status).toBe(204);
+    const text = await matchRaw(r.id);
+    expect(text.body).toMatchObject({ cached: true });
+    expect(text.body.rows[0]?.match).toBeNull();
+    expect((await matchRaw(r.id, true)).body.rows[0]?.match).toBeNull();
+    expect((await choose(r.id, [{ line: row.line, choice: alt.productId }])).status).toBe(204);
+    expect((await matchRaw(r.id)).body.rows[0]?.match?.productId).toBe(alt.productId);
+    // Editing the ingredients starts over.
+    await h.call('PUT /api/recipes/{recipeId}', {
+      path: { recipeId: r.id },
+      body: { title: r.title, ingredients: '1 tin tomatoes\n1 onion', version: r.version },
+    });
+    const after = await matchRaw(r.id);
+    expect(after.body.cached).toBe(false);
+    expect(after.body.rows[0]?.match?.productId).toBe(row.match?.productId);
+  });
+
+  it('rejects malformed choices', async () => {
+    const r = await recipe(OIL);
+    await matchRaw(r.id);
+    expect((await choose(r.id, [])).status).toBe(400);
+    expect((await choose(r.id, [{ line: OIL, choice: 'bad id!' }])).status).toBe(400);
+  });
+
+  it('delete removes the cache item', async () => {
+    const r = await recipe(OIL);
+    await matchRaw(r.id);
+    const key = { pk: keys.householdPk('home-1'), sk: keys.recipeMatchCacheSk(r.id) };
+    expect(await h.db.get(key)).not.toBeNull();
+    expect(
+      (await h.call('DELETE /api/recipes/{recipeId}', { path: { recipeId: r.id } })).status,
+    ).toBe(204);
+    expect(await h.db.get(key)).toBeNull();
+  });
+
+  it('is isolated per household', async () => {
+    const r = await recipe(OIL);
+    await matchRaw(r.id);
+    expect((await matchRaw(r.id, false, 'home-2')).status).toBe(404);
+    expect((await choose(r.id, [{ line: OIL, choice: 'text' }], 'home-2')).status).toBe(404);
+    const other = await recipe(OIL, 'home-2');
+    expect((await matchRaw(other.id, false, 'home-2')).body.cached).toBe(false);
   });
 });
 

@@ -85,6 +85,11 @@ export const keys = {
     assertSegment('day', day);
     return `MATCHRUNS#${day}`;
   },
+  /** Cached smart-match result of a recipe (D-116): pk = householdPk, TTL 30 days. */
+  recipeMatchCacheSk(recipeId: string): string {
+    assertSegment('recipeId', recipeId);
+    return `MATCHCACHE#${recipeId}`;
+  },
   /** GSI2 partition of a household's lists by status (D-057). */
   listsGsi2Pk(householdId: string, status: 'active' | 'archived'): string {
     assertHousehold(householdId);
