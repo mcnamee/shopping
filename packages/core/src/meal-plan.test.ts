@@ -8,6 +8,7 @@ import {
   parsePlanRange,
   parseUpdatePlanEntry,
   sortPlanEntries,
+  rangeDates,
   weekDates,
   weekStart,
 } from './meal-plan';
@@ -19,6 +20,8 @@ describe('week arithmetic', () => {
     expect(weekStart('2026-11-23')).toBe('2026-11-23'); // Monday
     expect(weekStart('2026-11-22')).toBe('2026-11-16'); // Sunday belongs to the week before
     expect(weekStart('2026-11-25')).toBe('2026-11-23');
+    expect(rangeDates('2026-11-25')[6]).toBe('2026-12-01');
+    expect(rangeDates('2026-11-25')).toHaveLength(7);
     expect(weekDates('2026-11-23')).toHaveLength(7);
     expect(weekDates('2026-11-23')[6]).toBe('2026-11-29');
   });

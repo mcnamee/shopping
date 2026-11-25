@@ -3,7 +3,6 @@ import {
   addDays,
   MEAL_PLAN_LIMITS,
   storeToday,
-  weekStart,
   type MealPlanEntry,
   type MealPlanResponse,
 } from '@trolley/core';
@@ -26,7 +25,7 @@ async function call<T = Record<string, unknown>>(method: string, path: string, b
   return { status: res.status, body: (text ? JSON.parse(text) : {}) as T };
 }
 
-const mon = () => weekStart(storeToday());
+const mon = () => storeToday();
 const range = () => `/plan?from=${mon()}&to=${addDays(mon(), 6)}`;
 
 beforeEach(() => {

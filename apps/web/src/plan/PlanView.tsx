@@ -2,8 +2,8 @@ import {
   addDays,
   PLAN_MEALS,
   storeToday,
-  weekDates,
-  weekStart,
+  PLAN_RANGE_DAYS,
+  rangeDates,
   type MealPlanEntry,
   type PlanMeal,
   type RecipeSummary,
@@ -20,17 +20,17 @@ import { useRecipesQuery } from '../recipes/data';
 import { AddToPlanSheet } from './AddToPlanSheet';
 import { EntrySheet } from './EntrySheet';
 import { PlanIngredientsSheet } from './PlanIngredientsSheet';
-import { MEAL_LABELS, dayLabel, entriesFor, usePlanQuery, weekLabel, weekdayName } from './data';
+import { MEAL_LABELS, dayLabel, entriesFor, rangeLabel, usePlanQuery, weekdayName } from './data';
 
 type AddTarget = { date: string; meal: PlanMeal | null };
 
-/** The Plan view of the Recipes tab (docs/stages/stage-6.md B): a Monday-Sunday week. */
+/** The Plan view of the Recipes tab (docs/stages/stage-6.md B): a rolling 7 days starting today. */
 export function PlanView() {
   const today = storeToday();
-  const [monday, setMonday] = useState(() => weekStart(today));
-  const days = useMemo(() => weekDates(monday), [monday]);
-  const sunday = days[6] as string;
-  const plan = usePlanQuery(monday, sunday);
+  const [start, setStart] = useState(today);
+  const days = useMemo(() => rangeDates(start), [start]);
+  const last = days[PLAN_RANGE_DAYS - 1] as string;
+  const plan = usePlanQuery(start, last);
   const recipes = useRecipesQuery();
   const { online } = useOnlineStatus();
   const toast = useToast();
@@ -51,7 +51,7 @@ export function PlanView() {
         .map((e) => e.recipeId as string),
     ),
   ];
-  const isThisWeek = monday === weekStart(today);
+  const isDefaultRange = start === today;
 
   const shop = (title: string, dates: string[]) => {
     if (!online) {
@@ -66,33 +66,33 @@ export function PlanView() {
       <div className="mb-3 flex items-center gap-1">
         <button
           type="button"
-          aria-label="Previous week"
-          onClick={() => setMonday(addDays(monday, -7))}
+          aria-label="Previous 7 days"
+          onClick={() => setStart(addDays(start, -PLAN_RANGE_DAYS))}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm"
         >
           <ChevronLeft aria-hidden className="h-6 w-6" />
         </button>
         <h2 className="min-w-0 flex-1 text-center text-lg" aria-live="polite">
-          <span className="sr-only">Week of </span>
-          {weekLabel(monday, sunday)}
+          <span className="sr-only">Showing </span>
+          {rangeLabel(start, last)}
         </h2>
         <button
           type="button"
-          aria-label="Next week"
-          onClick={() => setMonday(addDays(monday, 7))}
+          aria-label="Next 7 days"
+          onClick={() => setStart(addDays(start, PLAN_RANGE_DAYS))}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm"
         >
           <ChevronRight aria-hidden className="h-6 w-6" />
         </button>
       </div>
-      {!isThisWeek && (
+      {!isDefaultRange && (
         <button
           type="button"
-          onClick={() => setMonday(weekStart(today))}
+          onClick={() => setStart(today)}
           className="mx-auto mb-3 flex min-h-tap items-center gap-1 rounded-full bg-accent-soft px-4 text-base font-semibold text-accent"
         >
           <CalendarDays aria-hidden className="h-5 w-5" />
-          This week
+          Today
         </button>
       )}
 
@@ -117,10 +117,12 @@ export function PlanView() {
             <Button
               variant="secondary"
               className="mb-3"
-              onClick={() => shop(isThisWeek ? 'this week' : weekLabel(monday, sunday), days)}
+              onClick={() =>
+                shop(isDefaultRange ? 'the next 7 days' : rangeLabel(start, last), days)
+              }
             >
               <ListPlus aria-hidden className="h-5 w-5" />
-              Add this week&apos;s ingredients
+              Add ingredients for these 7 days
             </Button>
           )}
           <ul aria-label="Days" className="space-y-3">

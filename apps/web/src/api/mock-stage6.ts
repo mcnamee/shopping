@@ -14,7 +14,6 @@ import {
   parseUpdatePlanEntry,
   sortPlanEntries,
   storeToday,
-  weekStart,
   type MealPlanEntry,
   type MealPlanResponse,
 } from '@trolley/core';
@@ -34,7 +33,7 @@ import {
 import { MOCK_RECIPE_IDS, recipesOf } from './mock-stage5';
 
 function seedPlan(): MealPlanEntry[] {
-  const mon = weekStart(storeToday());
+  const mon = storeToday();
   const at = nowIso();
   const e = (
     n: number,

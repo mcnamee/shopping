@@ -5,6 +5,7 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { ApiError, createPlanEntry } from '../api';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
+import { DateField } from '../components/DateField';
 import { useToast } from '../components/Toast';
 import { SheetHeader } from '../lists/ListSheets';
 import { RecipePhoto } from '../recipes/RecipeThumb';
@@ -134,14 +135,7 @@ export function AddToPlanSheet({ date: initialDate, defaultMeal, recipe, onClose
         >
           Day
         </label>
-        <input
-          id={`${headingId}-day`}
-          type="date"
-          value={date}
-          min={storeToday()}
-          onChange={(e) => setDate(e.target.value)}
-          className={field}
-        />
+        <DateField id={`${headingId}-day`} value={date} min={storeToday()} onChange={setDate} />
       </div>
       <Meals value={meal} onChange={setMeal} id={headingId} />
       {!recipe && (

@@ -437,7 +437,7 @@ export function RecipeToListSheet({ recipe, onClose }: { recipe: Recipe; onClose
                   <button
                     type="button"
                     aria-expanded={open}
-                    aria-label={`${product ? 'Change product' : 'Choose a product'} for ${l.text}`}
+                    aria-label={`${product ? 'Change product' : 'Choose ALDI product'} for ${l.text}`}
                     onClick={() => setOpenRow(open ? null : i)}
                     className="inline-flex min-h-tap items-center gap-1 rounded-full bg-accent-soft px-3 text-sm font-semibold text-accent"
                   >

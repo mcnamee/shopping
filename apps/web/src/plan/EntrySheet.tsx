@@ -2,9 +2,10 @@ import { storeToday, type MealPlanEntry, type PlanMeal, type RecipeSummary } fro
 import { CircleAlert, ExternalLink, Trash2 } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ApiError, createPlanEntry, deletePlanEntry, movePlanEntry } from '../api';
+import { ApiError, createPlanEntry, deletePlanEntry, movePlanEntry, updatePlanEntry } from '../api';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
+import { DateField } from '../components/DateField';
 import { useToast } from '../components/Toast';
 import { SheetHeader } from '../lists/ListSheets';
 import { Meals } from './AddToPlanSheet';
@@ -31,11 +32,18 @@ export function EntrySheet({
   const [meal, setMeal] = useState<PlanMeal | null>(entry.meal);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [text, setText] = useState(entry.text ?? '');
+  const [note, setNote] = useState(entry.note ?? '');
   const title =
     entry.kind === 'recipe'
       ? (recipe?.title ?? (recipeGone ? 'Recipe deleted' : 'Recipe'))
       : (entry.text ?? '');
-  const changed = date !== entry.date || meal !== entry.meal;
+  const isText = entry.kind === 'text';
+  const textChanged = isText && text.trim() !== (entry.text ?? '');
+  const noteChanged = note.trim() !== (entry.note ?? '');
+  const moved = date !== entry.date || meal !== entry.meal;
+  const changed = textChanged || noteChanged || moved;
+  const textEmpty = isText && text.trim() === '';
 
   const fail = (err: unknown) => {
     setBusy(false);
@@ -51,16 +59,36 @@ export function EntrySheet({
     );
   };
 
-  const move = async () => {
-    if (busy || !changed || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const save = async () => {
+    if (busy || !changed) return;
+    if (textEmpty) {
+      setBanner('Enter some text.');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      setBanner('Choose a day.');
+      return;
+    }
     setBusy(true);
     setBanner(null);
     try {
-      await movePlanEntry(entry.date, entry.id, { version: entry.version, date, meal });
+      let version = entry.version;
+      if (textChanged || noteChanged) {
+        const updated = await updatePlanEntry(entry.date, entry.id, {
+          version,
+          ...(textChanged ? { text: text.trim() } : {}),
+          ...(noteChanged ? { note: note.trim() } : {}),
+        });
+        version = updated.version;
+      }
+      if (moved) await movePlanEntry(entry.date, entry.id, { version, date, meal });
       await refresh();
-      toast.show(`Moved to ${dayLabel(date)}, ${mealLabel(meal).toLowerCase()}`);
+      toast.show(
+        moved ? `Moved to ${dayLabel(date)}, ${mealLabel(meal).toLowerCase()}` : 'Plan updated',
+      );
       onClose();
     } catch (err) {
+      await refresh().catch(() => undefined);
       fail(err);
     }
   };
@@ -119,9 +147,9 @@ export function EntrySheet({
             busy={busy}
             busyLabel="Working..."
             aria-disabled={!changed}
-            onClick={() => void move()}
+            onClick={() => void save()}
           >
-            Move
+            {moved && !textChanged && !noteChanged ? 'Move' : 'Save'}
           </Button>
           <Button variant="danger-outline" disabled={busy} onClick={() => void remove()}>
             <Trash2 aria-hidden className="h-5 w-5" />
@@ -130,7 +158,6 @@ export function EntrySheet({
         </>
       }
     >
-      {entry.note && <p className="mb-3 break-words text-base text-muted">{entry.note}</p>}
       {entry.kind === 'recipe' && recipe && (
         <Button
           variant="secondary"
@@ -144,6 +171,40 @@ export function EntrySheet({
           Open recipe
         </Button>
       )}
+      {isText && (
+        <div className="mb-3">
+          <label
+            htmlFor={`${headingId}-text`}
+            className="mb-1 block text-xs uppercase tracking-wide text-muted"
+          >
+            What
+          </label>
+          <input
+            id={`${headingId}-text`}
+            type="text"
+            maxLength={100}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="block min-h-primary w-full min-w-0 rounded-md border-2 border-border bg-surface px-3 text-base text-text focus:border-accent"
+          />
+        </div>
+      )}
+      <div className="mb-3">
+        <label
+          htmlFor={`${headingId}-note`}
+          className="mb-1 block text-xs uppercase tracking-wide text-muted"
+        >
+          Note (optional)
+        </label>
+        <input
+          id={`${headingId}-note`}
+          type="text"
+          maxLength={200}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="block min-h-primary w-full min-w-0 rounded-md border-2 border-border bg-surface px-3 text-base text-text focus:border-accent"
+        />
+      </div>
       <div className="mb-3">
         <label
           htmlFor={`${headingId}-day`}
@@ -151,13 +212,11 @@ export function EntrySheet({
         >
           Day
         </label>
-        <input
+        <DateField
           id={`${headingId}-day`}
-          type="date"
           value={date}
           min={entry.date < storeToday() ? entry.date : storeToday()}
-          onChange={(e) => setDate(e.target.value)}
-          className="block min-h-primary w-full rounded-md border-2 border-border bg-surface px-3 text-base text-text focus:border-accent"
+          onChange={setDate}
         />
       </div>
       <Meals value={meal} onChange={setMeal} id={headingId} />

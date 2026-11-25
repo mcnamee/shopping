@@ -45,16 +45,8 @@ export const dayLabel = (date: string) =>
   fmt({ weekday: 'short', day: 'numeric', month: 'short' }).format(at(date)).replace(',', '');
 /** "Monday" */
 export const weekdayName = (date: string) => fmt({ weekday: 'long' }).format(at(date));
-/** "23 - 29 Nov" or "30 Nov - 6 Dec" */
-export function weekLabel(monday: string, sunday: string): string {
-  const a = at(monday);
-  const b = at(sunday);
-  const d = (x: Date) => fmt({ day: 'numeric' }).format(x);
-  const m = (x: Date) => fmt({ month: 'short' }).format(x);
-  return a.getUTCMonth() === b.getUTCMonth()
-    ? `${d(a)} - ${d(b)} ${m(b)}`
-    : `${d(a)} ${m(a)} - ${d(b)} ${m(b)}`;
-}
+/** "Wed 25 Nov - Tue 1 Dec" */
+export const rangeLabel = (first: string, last: string) => `${dayLabel(first)} - ${dayLabel(last)}`;
 
 /** Entries on a day, grouped for display. */
 export const entriesFor = (
