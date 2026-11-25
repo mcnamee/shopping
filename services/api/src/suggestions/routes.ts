@@ -17,6 +17,7 @@ import {
   type BulkAddItemsResponse,
   type BulkUndoResponse,
   type BulkUndoResult,
+  isCustomSku,
   type LineChange,
   parseUndoRequest,
   type LineInput,
@@ -76,8 +77,10 @@ export function createSuggestionRoutes(getDeps: () => Stage3Deps): RouteTable {
     const { resolveProduct } = getDeps();
     const resolved = await Promise.all(
       cands.map(async (c): Promise<Resolved | null> => {
-        if (c.templateProduct) return { ...c, snapshot: c.templateProduct };
         const p = await resolveProduct(hh, c.productId);
+        // A removed catalogue product (D-123) is never suggested, even from a template line.
+        if (c.templateProduct)
+          return !p && !isCustomSku(c.productId) ? null : { ...c, snapshot: c.templateProduct };
         if (!p) return null; // e.g. a custom product that no longer exists
         return { ...c, snapshot: snapshotOf({ ...p, unitType: p.defaultUnitType ?? p.unitType }) };
       }),

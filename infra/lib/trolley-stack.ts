@@ -464,7 +464,7 @@ export class TrolleyStack extends Stack {
     scraperRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'WriteCatalogueItemsOnly',
-        actions: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem', 'dynamodb:DeleteItem'],
+        actions: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem'],
         resources: [table.tableArn],
         // Household data (HH#...) can never be written by the scraper.
         conditions: {

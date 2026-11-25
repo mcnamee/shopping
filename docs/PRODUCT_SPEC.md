@@ -27,7 +27,7 @@ URL: https://trolley.mcn.am (fallback: CloudFront URL). Region: ap-southeast-2.
 ## 3. Functional requirements
 
 ### 3.1 Product catalogue (ALDI)
-- Weekly scheduled job (Fridays 5pm Canberra, D-122) pulls ALDI AU product data (name, brand, SKU, category, image URL, price, pack size/unit) into the DB. Upsert by SKU; products missing from 2 consecutive successful runs are deleted (D-122; lists, templates and history keep their snapshots).
+- Weekly scheduled job (Fridays 5pm Canberra, D-122) pulls ALDI AU product data (name, brand, SKU, category, image URL, price, pack size/unit) into the DB. Upsert by SKU; products missing from 2 consecutive successful runs are soft-removed: hidden from search, matching and suggestions, restored if they return (D-123; lists, templates and history keep their snapshots).
 - Users can also add **custom products** (e.g. butcher items, non-ALDI) so the app never blocks them.
 - Search: type-ahead, results in a **2-column grid** - image, title, primary **Add** button, subtle **+template** icon.
 

@@ -1,19 +1,20 @@
 /**
- * One scrape run: crawl -> map -> (unless dry run) upsert, discontinue, record.
+ * One scrape run: crawl -> map -> (unless dry run) upsert, soft-remove, record.
  *
- * Safety rules (spec 3.1/4, Stage 1 A5-A8, D-028):
- *   - a product is DELETED (D-084, supersedes "never delete") only after it is missing
- *     from 2 consecutive successful, complete runs (missedRuns >= 2); seeing it again
- *     resets the count. Products already flagged discontinued by older runs are deleted
- *     on the next successful run. List/template/purchase rows keep their snapshots (D-047);
- *   - DELETE CAP: if a run would delete more than 25% of the stored catalogue, the delete
- *     step is aborted, nothing is deleted, the run is `failed` and it throws;
+ * Safety rules (spec 3.1/4, Stage 1 A5-A8, D-028, D-123):
+ *   - NOTHING IS EVER DELETED (D-123 supersedes D-122). A product missing from 2
+ *     consecutive successful, complete runs (missedRuns >= 2) is flagged `discontinued`
+ *     with `discontinuedAt` ("removed"); every read path then hides it, but its item (and
+ *     list/template snapshots) stay. Seeing it again in any later run restores it
+ *     (flag and timestamp cleared, missedRuns 0);
+ *   - REMOVAL CAP: if a run would remove more than 25% of the active catalogue, the removal
+ *     step is skipped, nothing is flagged, the run is `failed` and it throws;
  *   - ABORTED: if a run fetches < 50% of the previous successful run's product count
- *     (bot block, API change), it writes NO product changes, deletes nothing,
+ *     (bot block, API change), it writes NO product changes, removes nothing,
  *     records status `aborted` and throws (-> Lambda error -> alarm email). The first
  *     run is exempt;
  *   - FAILED: if the crawl is incomplete (bot block mid-way, error, deadline, cap) or
- *     returns nothing, freshly seen products are upserted but the delete step is
+ *     returns nothing, freshly seen products are upserted but the removal step is
  *     skipped; status `failed` and it throws.
  */
 import { allowedAlcohol, storeToday, type CatalogueProduct } from '@trolley/core';
@@ -22,10 +23,10 @@ import { crawlCatalogue, type CrawlOptions, type CrawlResult } from './crawl';
 import { mapProduct, type MappedProduct } from './map-product';
 import type { CatalogueStore, ScrapeRunRecord } from './store';
 
-export const DELETE_AFTER_MISSED_RUNS = 2;
+export const REMOVE_AFTER_MISSED_RUNS = 2;
 export const DEFAULT_SAFETY_RATIO = 0.5;
-/** Max share of the stored catalogue one run may delete. */
-export const DEFAULT_MAX_DELETE_RATIO = 0.25;
+/** Max share of the active catalogue one run may remove. */
+export const DEFAULT_MAX_REMOVE_RATIO = 0.25;
 
 export class ScrapeFailedError extends Error {
   override name = 'ScrapeFailedError';
@@ -45,7 +46,7 @@ export interface RunOptions {
   crawl?: CrawlOptions;
   trigger?: string;
   safetyRatio?: number;
-  maxDeleteRatio?: number;
+  maxRemoveRatio?: number;
   now?: () => Date;
   log?: (event: Record<string, unknown>) => void;
 }
@@ -88,7 +89,7 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
   const startedAt = started.toISOString();
   const today = storeToday(started);
   const safetyRatio = options.safetyRatio ?? DEFAULT_SAFETY_RATIO;
-  const maxDeleteRatio = options.maxDeleteRatio ?? DEFAULT_MAX_DELETE_RATIO;
+  const maxRemoveRatio = options.maxRemoveRatio ?? DEFAULT_MAX_REMOVE_RATIO;
 
   const run: ScrapeRunRecord = {
     startedAt,
@@ -106,7 +107,7 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
     unchanged: 0,
     reactivated: 0,
     missed: 0,
-    deleted: 0,
+    removed: 0,
     errors: 0,
     discontinueStep: 'skipped',
     notAtStore: 0,
@@ -176,7 +177,7 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
   if (run.baseline && mapped.length < run.baseline * safetyRatio) {
     const message =
       `Aborted: fetched ${mapped.length} products, below ${Math.round(safetyRatio * 100)}% ` +
-      `of the previous ${run.baseline}. Nothing was written or deleted.`;
+      `of the previous ${run.baseline}. Nothing was written.`;
     await finish('aborted', message);
     throw new ScrapeFailedError(message, run);
   }
@@ -205,48 +206,45 @@ export async function runScrape(options: RunOptions): Promise<RunResult> {
   if (mapped.length === 0) failures.push('No products fetched');
   if (!crawl.complete) failures.push(`Incomplete crawl (${crawl.stoppedReason ?? 'unknown'})`);
 
-  const toDelete: string[] = [];
   if (failures.length === 0) {
     run.discontinueStep = 'applied';
-    const missing: CatalogueProduct[] = [];
+    const toRemove: CatalogueProduct[] = [];
+    const missedOnly: CatalogueProduct[] = [];
     for (const prev of existing.values()) {
-      if (seen.has(prev.sku)) continue;
-      if (prev.discontinued) {
-        // Flagged by an older run (before deletion existed): delete now.
-        toDelete.push(prev.sku);
-        continue;
-      }
+      if (seen.has(prev.sku) || prev.discontinued) continue; // already removed: leave as is
       const missedRuns = prev.missedRuns + 1;
       run.missed++;
-      if (missedRuns >= DELETE_AFTER_MISSED_RUNS) {
-        toDelete.push(prev.sku);
-        missing.push({ ...prev, missedRuns });
+      if (missedRuns >= REMOVE_AFTER_MISSED_RUNS) {
+        toRemove.push({ ...prev, missedRuns, discontinued: true, discontinuedAt: ts });
       } else {
-        toWrite.push({ ...prev, missedRuns });
+        missedOnly.push({ ...prev, missedRuns });
       }
     }
-    if (toDelete.length > existing.size * maxDeleteRatio) {
-      // Too many at once (likely a partial catalogue): keep everything, count the misses.
+    toWrite.push(...missedOnly);
+    if (toRemove.length > activeCount * maxRemoveRatio) {
+      // Too many at once (likely a partial catalogue): keep them visible, count the misses.
       failures.push(
-        `Delete step aborted: ${toDelete.length} of ${existing.size} products would be deleted, ` +
-          `above ${Math.round(maxDeleteRatio * 100)}%`,
+        `Removal step aborted: ${toRemove.length} of ${activeCount} products would be removed, ` +
+          `above ${Math.round(maxRemoveRatio * 100)}%`,
       );
       run.discontinueStep = 'skipped';
-      toDelete.length = 0;
-      toWrite.push(...missing);
+      toWrite.push(
+        ...toRemove.map(({ discontinued: _d, discontinuedAt: _a, ...p }) => ({
+          ...p,
+          discontinued: false,
+        })),
+      );
+    } else {
+      toWrite.push(...toRemove);
+      run.removed = toRemove.length;
     }
   }
 
   log({ level: 'info', msg: 'writing products', count: toWrite.length });
   await store.writeProducts(toWrite, ts);
-  if (toDelete.length) {
-    log({ level: 'info', msg: 'deleting products', count: toDelete.length });
-    await store.deleteProducts(toDelete);
-    run.deleted = toDelete.length;
-  }
 
   if (failures.length) {
-    const message = `${failures.join('; ')}. Seen products updated; nothing deleted.`;
+    const message = `${failures.join('; ')}. Seen products updated; nothing removed.`;
     await finish('failed', message);
     throw new ScrapeFailedError(message, run);
   }

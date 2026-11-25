@@ -20,6 +20,7 @@ import {
   BREAD,
   MILK,
   MINCE,
+  removeProduct,
   setup,
   T0,
   type Harness,
@@ -232,6 +233,18 @@ describe('POST /api/lists/{listId}/suggestions (rules)', () => {
     expect(res.body.suggestions.map((s) => s.productId)).not.toContain(
       'custom-11111111-1111-4111-8111-111111111111',
     );
+  });
+
+  it('never suggests a removed (soft-deleted) product, from template or history (D-123)', async () => {
+    await seedHistory();
+    await weeklyTemplate([[MILK, 2, 'pack']]);
+    for (const sku of [MILK, MINCE]) removeProduct(h, sku);
+    const listId = await newList([[BANANAS, 1, 'kg']]);
+    const res = await suggestFor(listId);
+    const ids = res.body.suggestions.map((x) => x.productId);
+    expect(ids).not.toContain(MILK);
+    expect(ids).not.toContain(MINCE);
+    expect(ids).toContain(BREAD);
   });
 
   it('rules path is fast with a year of weekly shops', async () => {

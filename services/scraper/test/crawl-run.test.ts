@@ -161,13 +161,6 @@ class MemoryStore implements CatalogueStore {
     this.writes += products.length;
     for (const p of products) this.products.set(p.sku, structuredClone(p));
   }
-  deleted: string[] = [];
-  async deleteProducts(skus: readonly string[]) {
-    for (const sku of skus) {
-      this.products.delete(sku);
-      this.deleted.push(sku);
-    }
-  }
   async putRun(run: ScrapeRunRecord) {
     this.runs.push(structuredClone(run));
   }
@@ -261,7 +254,7 @@ describe('runScrape', () => {
     expect(after.notAtStore).toBe(false);
   });
 
-  it('upserts, counts missed runs, deletes after 2 successful misses, re-adds as new', async () => {
+  it('upserts, counts missed runs, soft-removes after 2 successful misses, restores on return', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 20);
@@ -277,7 +270,7 @@ describe('runScrape', () => {
       baseline: null,
       store: 'G526',
       discontinueStep: 'applied',
-      deleted: 0,
+      removed: 0,
     });
     expect(store.products.size).toBe(40);
     const first = store.products.get(dairy[0]!.sku)!;
@@ -291,59 +284,85 @@ describe('runScrape', () => {
       updated: 1,
       unchanged: 38,
       missed: 1,
-      deleted: 0,
+      removed: 0,
     });
     expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 1, discontinued: false });
     expect(store.products.get(dairy[1]!.sku)!.firstSeenAt).toBe(first.firstSeenAt);
 
-    // Run 3: still missing -> deleted (not marked discontinued)
+    // Run 3: still missing -> soft-removed (flagged, never deleted)
     const r3 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
-    expect(r3.run).toMatchObject({ status: 'succeeded', missed: 1, deleted: 1 });
-    expect(store.deleted).toEqual([dairy[0]!.sku]);
-    expect(store.products.has(dairy[0]!.sku)).toBe(false);
-    expect(store.products.size).toBe(39);
+    expect(r3.run).toMatchObject({ status: 'succeeded', missed: 1, removed: 1 });
+    expect(store.products.get(dairy[0]!.sku)).toMatchObject({
+      missedRuns: 2,
+      discontinued: true,
+      discontinuedAt: store.runs.at(-1)!.startedAt,
+    });
+    expect(store.products.size).toBe(40);
 
-    // Run 4: nothing left to delete
+    // Run 4: already removed and still gone: left alone, not counted again
     const r4 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
-    expect(r4.run).toMatchObject({ missed: 0, deleted: 0 });
+    expect(r4.run).toMatchObject({ missed: 0, removed: 0 });
+    expect(store.products.get(dairy[0]!.sku)).toMatchObject({ discontinued: true });
 
-    // Run 5: it comes back -> a fresh product
+    // Run 5: it comes back -> restored automatically
     const r5 = await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
-    expect(r5.run).toMatchObject({ new: 1, deleted: 0 });
-    expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 0, discontinued: false });
+    expect(r5.run).toMatchObject({ new: 0, reactivated: 1, removed: 0 });
+    const restored = store.products.get(dairy[0]!.sku)!;
+    expect(restored).toMatchObject({ missedRuns: 0, discontinued: false });
+    expect(restored.discontinuedAt).toBeUndefined();
+    expect(restored.firstSeenAt).toBe(first.firstSeenAt);
   });
 
-  it('deletes products already flagged discontinued by older runs on the next successful run', async () => {
+  it('does not remove on the first miss, and a product seen again resets its count', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 40);
     await scrape(store, { [DAIRY.key]: dairy });
-    const legacy = store.products.get(dairy[0]!.sku)!;
-    store.products.set(legacy.sku, { ...legacy, discontinued: true, missedRuns: 2 });
-    const r = await scrape(store, { [DAIRY.key]: dairy.slice(1) });
-    expect(r.run).toMatchObject({ status: 'succeeded', deleted: 1, missed: 0 });
-    expect(store.products.has(legacy.sku)).toBe(false);
+    await scrape(store, { [DAIRY.key]: dairy.slice(1) });
+    expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 1, discontinued: false });
+    await scrape(store, { [DAIRY.key]: dairy });
+    await scrape(store, { [DAIRY.key]: dairy.slice(1) });
+    expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 1, discontinued: false });
   });
 
-  it('aborts the delete step above 25% of the catalogue: fails loudly, deletes nothing', async () => {
+  it('never removes on a failed (incomplete) run, even for products already missed once', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const dairy = make('1', 30);
+    const pantry = make('2', 10);
+    await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
+    await scrape(store, { [DAIRY.key]: dairy.slice(1), [PANTRY.key]: pantry }); // missedRuns 1
+    const html = fixtureText('akamai-access-denied.html');
+    await failure(
+      scrape(store, { [DAIRY.key]: dairy.slice(1), [PANTRY.key]: pantry }, (_n, url) =>
+        url.searchParams.get('categoryKey') === PANTRY.key
+          ? new Response(html, { status: 403 })
+          : undefined,
+      ),
+    );
+    expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 1, discontinued: false });
+    expect([...store.products.values()].filter((p) => p.discontinued)).toEqual([]);
+  });
+
+  it('skips the removal step above 25% of the active catalogue: fails loudly, flags nothing', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 40);
     const pantry = make('2', 40);
     await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
-    // Run 2: 30 of 80 go missing (below 50% abort threshold, miss count 1, none deleted yet)
+    // Run 2: 30 of 80 go missing (below 50% abort threshold, miss count 1, none removed yet)
     const kept = dairy.slice(30);
     await scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry });
-    // Run 3: they would all be deleted (30/80 = 37.5% > 25%)
+    // Run 3: they would all be removed (30/80 = 37.5% > 25%)
     const run = await failure(scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry }));
-    expect(run).toMatchObject({ status: 'failed', discontinueStep: 'skipped', deleted: 0 });
-    expect(run.message).toMatch(/Delete step aborted: 30 of 80/);
-    expect(store.deleted).toEqual([]);
+    expect(run).toMatchObject({ status: 'failed', discontinueStep: 'skipped', removed: 0 });
+    expect(run.message).toMatch(/Removal step aborted: 30 of 80/);
     expect(store.products.size).toBe(80);
     expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 2, discontinued: false });
+    expect(store.products.get(dairy[0]!.sku)!.discontinuedAt).toBeUndefined();
   });
 
-  it('deletes exactly at the 25% cap', async () => {
+  it('removes exactly at the 25% cap', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 80);
@@ -352,8 +371,9 @@ describe('runScrape', () => {
     const kept = dairy.slice(25);
     await scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry });
     const r = await scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry });
-    expect(r.run).toMatchObject({ status: 'succeeded', deleted: 25 });
-    expect(store.products.size).toBe(75);
+    expect(r.run).toMatchObject({ status: 'succeeded', removed: 25 });
+    expect(store.products.size).toBe(100);
+    expect([...store.products.values()].filter((p) => p.discontinued)).toHaveLength(25);
   });
 
   it('aborts with no writes when < 50% of the previous successful run is fetched', async () => {
@@ -407,7 +427,7 @@ describe('runScrape', () => {
     expect(run).toMatchObject({ status: 'aborted', baseline: 100 });
   });
 
-  it('fails, updates seen products and skips the delete step on an incomplete crawl (bot block)', async () => {
+  it('fails, updates seen products and skips the removal step on an incomplete crawl (bot block)', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 30);
@@ -429,7 +449,6 @@ describe('runScrape', () => {
       errors: 1,
     });
     expect([...store.products.values()].every((p) => p.missedRuns === 0)).toBe(true);
-    expect(store.deleted).toEqual([]);
   });
 
   it('records a failed run when blocked before any data', async () => {

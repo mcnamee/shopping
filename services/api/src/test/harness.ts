@@ -58,6 +58,18 @@ export function product(
   };
 }
 
+/** Soft-remove a catalogue product (D-123) without touching the shared CATALOGUE objects. */
+export function removeProduct(h: { products: CatalogueProduct[] }, sku: string) {
+  const i = h.products.findIndex((p) => p.sku === sku);
+  const current = h.products[i];
+  if (!current) throw new Error(`No product ${sku}`);
+  h.products[i] = {
+    ...current,
+    discontinued: true,
+    discontinuedAt: '2026-11-01T00:00:00.000Z',
+  };
+}
+
 export const MILK = '398691';
 export const BANANAS = '100001';
 export const BREAD = '500001';
