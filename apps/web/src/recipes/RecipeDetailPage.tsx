@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parseIngredientLines, parseMethodBlocks, type Recipe } from '@trolley/core';
-import { ExternalLink, ListPlus, Pencil, Star } from 'lucide-react';
+import { CalendarPlus, ExternalLink, ListPlus, Pencil, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ApiError, setRecipeFavourite } from '../api';
@@ -10,6 +10,8 @@ import { EmptyView, ErrorView, Skeleton } from '../components/StateViews';
 import { useToast } from '../components/Toast';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
 import { useDelayedFlag } from '../search/hooks';
+import { AddToPlanSheet } from '../plan/AddToPlanSheet';
+import { storeToday } from '@trolley/core';
 import { RecipePhoto } from './RecipeThumb';
 import { RecipeToListSheet } from './RecipeToListSheet';
 import { rqk, useRecipeQuery } from './data';
@@ -50,6 +52,7 @@ export function RecipeDetailPage() {
   const { online } = useOnlineStatus();
   const [awake, setAwake] = useState(true);
   const [sheet, setSheet] = useState(false);
+  const [planSheet, setPlanSheet] = useState(false);
   const { supported } = useWakeLock(awake && !!recipe);
 
   const fav = useMutation({
@@ -136,6 +139,14 @@ export function RecipeDetailPage() {
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-accent"
           >
             <Star aria-hidden className="h-6 w-6" fill={r.favourite ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            type="button"
+            aria-label="Add to plan"
+            onClick={() => setPlanSheet(true)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm"
+          >
+            <CalendarPlus aria-hidden className="h-6 w-6" />
           </button>
           <button
             type="button"
@@ -279,6 +290,14 @@ export function RecipeDetailPage() {
             Add to list
           </Button>
         </div>
+      )}
+      {planSheet && (
+        <AddToPlanSheet
+          date={storeToday()}
+          defaultMeal="dinner"
+          recipe={{ id: r.id, title: r.title }}
+          onClose={() => setPlanSheet(false)}
+        />
       )}
       {sheet && <RecipeToListSheet recipe={r} onClose={() => setSheet(false)} />}
     </div>

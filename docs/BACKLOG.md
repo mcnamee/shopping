@@ -31,3 +31,7 @@ Small items deferred from signed-off stages. Highest priority first. Pull into a
 | B-025 | Low | Recipes in the offline read cache (cook without signal). | Stage 5 cut (D-110) | Kitchens have Wi-Fi. |
 | B-026 | Low | Sweep orphaned recipe photos; markdown/step highlight in cooking view. | Stage 5 cut (D-105, D-107) | Negligible cost; polish. |
 | B-027 | Low | Recipes: reject a photoKey already used by another recipe (QA Stage 5 D2; UI cannot produce it). | Stage 5 QA | open |
+| B-028 | Low | Plan: drag and drop between days; edit a text entry or note in the UI; scale a recipe twice a week. | Stage 6 cut | Move sheet covers it. |
+| B-029 | Low | MCP/Siri "what's for dinner" tools. | Stage 6 out of scope | Prove the plan first. |
+| B-030 | Low | Calendar sync (ICS/Google) of the meal plan. | Stage 6 out of scope | |
+| B-031 | Low | Nutrition totals per day/week. | Stage 6 out of scope | Needs parsed nutrition. |

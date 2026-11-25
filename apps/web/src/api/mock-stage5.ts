@@ -204,7 +204,7 @@ function seedRecipes(): Recipe[] {
   ];
 }
 
-function recipesOf(hh: MockHousehold): Recipe[] {
+export function recipesOf(hh: MockHousehold): Recipe[] {
   hh.recipes ??= seedRecipes();
   return hh.recipes;
 }

@@ -218,6 +218,13 @@ function primary(p: Parser): Cond {
       : (it) => getPath(it, path) === undefined;
   }
   const left = operand(p);
+  if (String(p.peek()).toUpperCase() === 'BETWEEN') {
+    p.next();
+    const lo = operand(p);
+    if (p.next().toUpperCase() !== 'AND') throw new Error('BETWEEN needs AND');
+    const hi = operand(p);
+    return (it) => compare(left(it), '>=', lo(it)) && compare(left(it), '<=', hi(it));
+  }
   const op = p.next();
   if (!['=', '<>', '<', '<=', '>', '>='].includes(op)) throw new Error(`Bad comparator ${op}`);
   const right = operand(p);

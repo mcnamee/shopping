@@ -46,6 +46,11 @@ import type {
   RecipeMatchResponse,
   RecipeToListResponse,
   UpdateRecipeRequest,
+  CreatePlanEntryRequest,
+  MealPlanEntry,
+  MealPlanResponse,
+  MovePlanEntryRequest,
+  UpdatePlanEntryRequest,
 } from '@trolley/core';
 import { getAuth } from '../auth/service';
 import { MOCK_AUTH } from '../env';
@@ -234,3 +239,15 @@ export const saveMatchChoices = (id: string, body: RecipeMatchChoicesRequest) =>
 /** Ingredient lines (no headings, <= 50) as free-text list lines; Undo via undoListItemsBulk. */
 export const addRecipeToList = (id: string, body: RecipeToListRequest) =>
   api.post<RecipeToListResponse>(`/recipes/${enc(id)}/to-list`, body);
+
+// Stage 6 meal plan (docs/api.md). Entries are addressed by date + id (the date is in the key).
+export const getPlan = (from: string, to: string) =>
+  api.get<MealPlanResponse>(`/plan?from=${enc(from)}&to=${enc(to)}`);
+export const createPlanEntry = (body: CreatePlanEntryRequest) =>
+  api.post<MealPlanEntry>('/plan', body);
+export const updatePlanEntry = (date: string, id: string, body: UpdatePlanEntryRequest) =>
+  api.patch<MealPlanEntry>(`/plan/${enc(date)}/${enc(id)}`, body);
+export const movePlanEntry = (date: string, id: string, body: MovePlanEntryRequest) =>
+  api.post<MealPlanEntry>(`/plan/${enc(date)}/${enc(id)}/move`, body);
+export const deletePlanEntry = (date: string, id: string) =>
+  api.delete<undefined>(`/plan/${enc(date)}/${enc(id)}`);

@@ -12,6 +12,8 @@ import { createProductRoutes, type ProductDeps } from './products/routes';
 import type { RouteTable } from './router';
 import { SettingsStore } from './settings/store';
 import { createRecipeMatchRoutes, MATCH_AI_TIMEOUT_MS, type MatchDeps } from './recipes/match';
+import { createPlanRoutes } from './plan/routes';
+import { PlanStore } from './plan/store';
 import { createRecipeRoutes, type Stage5Deps } from './recipes/routes';
 import { RecipeStore } from './recipes/store';
 import { s3PhotoStore } from './recipes/photos';
@@ -175,6 +177,7 @@ export function stage5DepsFor(
 ): Stage5Deps {
   return {
     recipes: new RecipeStore(db, stage2.now),
+    plan: new PlanStore(db, stage2.now),
     photos,
     lists: stage2.lists,
     now: stage2.now,
@@ -228,6 +231,10 @@ export function createRoutes(
   return {
     ...baseRoutes,
     ...createRecipeRoutes(getStage5),
+    ...createPlanRoutes(() => {
+      const s5d = getStage5();
+      return { plan: s5d.plan, recipes: s5d.recipes };
+    }),
     ...createRecipeMatchRoutes(() => recipeMatchDepsFor(getStage3(), getStage5(), products)),
     ...createProductRoutes(products),
     ...createStage2Routes(getStage2),

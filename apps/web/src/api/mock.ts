@@ -33,6 +33,7 @@ import {
   resetMockStage2,
 } from './mock-stage2';
 import { createStage4MockRoutes, resetMockStage4 } from './mock-stage4';
+import { createStage6MockRoutes } from './mock-stage6';
 import { createStage5MockRoutes, resetMockMedia } from './mock-stage5';
 
 type Claims = Record<string, string>;
@@ -358,6 +359,7 @@ export const mockRoutes: Record<string, MockRoute> = {
     customs: (hh) => customsFor(hh).map(customSummary),
   }),
   ...createStage4MockRoutes(),
+  ...createStage6MockRoutes(),
   ...createStage5MockRoutes({
     find: findProduct,
     search: (householdId, query) =>
