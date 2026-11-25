@@ -37,7 +37,7 @@ describe('bottom navigation', () => {
     await signedInApp('/');
     const nav = await screen.findByRole('navigation', { name: 'Main' });
     const links = within(nav).getAllByRole('link');
-    expect(links.map((l) => l.textContent)).toEqual(['Lists', 'Search', 'Recipes', 'Settings']);
+    expect(links.map((l) => l.textContent)).toEqual(['Lists', 'Groceries', 'Recipes', 'Settings']);
     expect(links.map((l) => l.getAttribute('href'))).toEqual([
       '/',
       '/search',
@@ -48,7 +48,7 @@ describe('bottom navigation', () => {
 
   it.each([
     ['/', 'Lists'],
-    ['/search', 'Search'],
+    ['/search', 'Groceries'],
     ['/recipes', 'Recipes'],
     ['/settings', 'Settings'],
   ])('marks only the %s tab as current', async (path, label) => {
@@ -66,8 +66,8 @@ describe('bottom navigation', () => {
   it('updates the active tab when navigating', async () => {
     const { user } = await signedInApp('/');
     const nav = await screen.findByRole('navigation', { name: 'Main' });
-    await user.click(within(nav).getByRole('link', { name: 'Search' }));
-    expect(within(nav).getByRole('link', { name: 'Search' })).toHaveAttribute(
+    await user.click(within(nav).getByRole('link', { name: 'Groceries' }));
+    expect(within(nav).getByRole('link', { name: 'Groceries' })).toHaveAttribute(
       'aria-current',
       'page',
     );

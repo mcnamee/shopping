@@ -88,7 +88,7 @@ test.describe('edge cases', () => {
     // Placeholder pages are short, so just assert switching tabs resets to top for a fresh tab.
     await page
       .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Search' })
+      .getByRole('link', { name: 'Groceries' })
       .click();
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
   });
