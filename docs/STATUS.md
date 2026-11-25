@@ -4,7 +4,7 @@
 - **Stage 0**: signed off, live.
 - **Stage 1** (catalogue, scraper, search UI): signed off (D-043), live.
 - **Stage 2** (templates + lists + shop mode): **signed off** (D-060, `docs/stages/stage-2-qa.md` section 5). Being merged to main and deployed by GitHub Actions (new GSI2 ships with it). Paused here before Stage 3 at the user's request.
-- Weekly scrape (Fridays 5pm Canberra, D-122) runs from GitHub (`scrape-fallback.yml`, needs `SCRAPE_FALLBACK_ENABLED=true`); AWS schedule and alarm are opt-in, default off, because ALDI blocks AWS IPs (D-042).
+- Weekly scrape (Fridays 5pm Canberra, D-122; products that leave the catalogue are soft-removed, D-123) runs from GitHub (`scrape-fallback.yml`, needs `SCRAPE_FALLBACK_ENABLED=true`); AWS schedule and alarm are opt-in, default off, because ALDI blocks AWS IPs (D-042).
 
 ## Open user items
 - **Stage 2 [U] first real shop** (K1/K2): checklist in `docs/stages/stage-2-qa.md` section 5 - set aisle order for Casey, build the list in under 5 min, both phones ticking the same list, archive + Undo, list in History.

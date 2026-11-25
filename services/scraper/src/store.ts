@@ -31,8 +31,8 @@ export interface ScrapeRunRecord {
   unchanged: number;
   reactivated: number;
   missed: number;
-  /** Products deleted this run (missing from 2 consecutive successful runs, D-084). */
-  deleted: number;
+  /** Products soft-removed this run (missing from 2 consecutive successful runs, D-123). */
+  removed: number;
   /** Number of errors (details in errorMessages, max 20). */
   errors: number;
   discontinueStep: 'applied' | 'skipped';
@@ -49,8 +49,6 @@ export interface ScrapeRunRecord {
 export interface CatalogueStore {
   loadProducts(): Promise<CatalogueProduct[]>;
   writeProducts(products: readonly CatalogueProduct[], updatedAt: string): Promise<void>;
-  /** Delete PRODUCT#<sku>/META items (BatchWrite, unprocessed retry). */
-  deleteProducts(skus: readonly string[]): Promise<void>;
   putRun(run: ScrapeRunRecord): Promise<void>;
   /** Most recent run with status "succeeded", or null. */
   lastSuccessfulRun(): Promise<ScrapeRunRecord | null>;
@@ -114,13 +112,6 @@ export class DynamoCatalogueStore implements CatalogueStore {
   async writeProducts(products: readonly CatalogueProduct[], updatedAt: string): Promise<void> {
     await this.batch(products, (p) => ({
       PutRequest: { Item: catalogueProductToItem(p, updatedAt) },
-    }));
-  }
-
-  /** Deletes catalogue items only: keys are always PRODUCT#<sku> / META. */
-  async deleteProducts(skus: readonly string[]): Promise<void> {
-    await this.batch(skus, (sku) => ({
-      DeleteRequest: { Key: { pk: keys.productPk(sku), sk: keys.productSk } },
     }));
   }
 

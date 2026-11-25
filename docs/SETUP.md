@@ -199,15 +199,7 @@ are untouched; switch to the fallback below.
 ### Scrape fallback (only if ALDI blocks AWS)
 
 Runs the same scraper from a GitHub-hosted runner instead of AWS. It needs a second, narrow
-GitHub role that can only write and delete catalogue items (`PRODUCT#`/`SCRAPE#` keys, never
-your lists). One-off, in CloudShell:
-
-> **Redeploy needed (D-122).** Products no longer on the ALDI site are now deleted, which
-> adds `dynamodb:DeleteItem` (still limited to `PRODUCT#*`/`SCRAPE#*` keys) to this role and
-> to the scraper Lambda's role. If you set the fallback up earlier, run the commands below
-> again from CloudShell to redeploy `TrolleyGithubOidcStack` (and deploy `TrolleyStack` as
-> usual for the Lambda role) before the next Friday scrape, or the delete step will fail
-> with an access error. Until then nothing is lost: the run just fails after upserting.
+GitHub role that can only write catalogue items (never your lists). One-off, in CloudShell:
 
 ```bash
 cd ~/shopping && git pull && npm ci -w @trolley/infra && cd infra

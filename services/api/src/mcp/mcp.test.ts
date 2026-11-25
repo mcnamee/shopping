@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { keys, type UnitType } from '@trolley/core';
-import { MILK, ORIGIN, product, setup, type Harness } from '../test/harness';
+import { MILK, ORIGIN, product, removeProduct, setup, type Harness } from '../test/harness';
 import { callTool, connect, mcp } from '../test/oauth-client';
 import { TOOL_CALLS_PER_MINUTE } from './server';
 
@@ -495,5 +495,47 @@ describe('add_item prefers household templates (D-099)', () => {
     await template(h, 'Weekly', 'weekly', [{ productId: TISSUES_KLEENEX, qty: 1, unit: 'pack' }]);
     const r = await callTool(h, access, 'add_item', { text: 'tissues', productId: TISSUES_ALDI });
     expect(r.structuredContent).toMatchObject({ productId: TISSUES_ALDI, chosenBy: 'productId' });
+  });
+});
+
+describe('removed (soft-deleted) products are skipped (D-123)', () => {
+  const remove = (h: Harness, sku: string) => {
+    removeProduct(h, sku);
+  };
+
+  it('search_products leaves them out, and add_item refuses their productId', async () => {
+    const { h, access } = await ready();
+    remove(h, CHIPS_BBQ);
+    const r = await callTool(h, access, 'search_products', { query: 'chips' });
+    expect(r.text).not.toContain('BBQ');
+    const add = await callTool(h, access, 'add_item', { text: 'chips', productId: CHIPS_BBQ });
+    expect(add.isError).toBe(true);
+    expect(await thisWeek(h)).toBeNull();
+  });
+
+  it('a template line, history entry or remembered unit that points at one falls through', async () => {
+    const { h, access } = await ready();
+    const t = await h.call<{ id: string }>('POST /api/templates', {
+      body: { name: 'Weekly', type: 'weekly' },
+    });
+    await h.call('POST /api/templates/{templateId}/items', {
+      path: { templateId: t.body.id },
+      body: { productId: TISSUES_KLEENEX, qty: 2, unit: 'pack' },
+    });
+    await bought(h, 'home-1', TISSUES_KLEENEX, 'Kleenex Tissues 3-ply', '2026-10-01');
+    await bought(h, 'home-1', TISSUES_KLEENEX, 'Kleenex Tissues 3-ply', '2026-10-09');
+    await bought(h, 'home-1', TISSUES_ALDI, 'Confidence Tissues', '2026-11-01');
+    remove(h, TISSUES_KLEENEX);
+    // Template (tier 2) and Kleenex history are skipped; the next history entry wins.
+    const r = await callTool(h, access, 'add_item', { text: 'tissues' });
+    expect(r.structuredContent).toMatchObject({ productId: TISSUES_ALDI, chosenBy: 'history' });
+  });
+
+  it('with nothing else to fall back to, the catalogue tier never picks one', async () => {
+    const { h, access } = await ready();
+    remove(h, PAPRIKA);
+    const r = await callTool(h, access, 'add_item', { text: 'smoked paprika' });
+    expect(r.structuredContent).toMatchObject({ added: false });
+    expect(await thisWeek(h)).toBeNull();
   });
 });

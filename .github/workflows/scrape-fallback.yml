@@ -2,12 +2,12 @@ name: Scrape fallback (runner)
 
 # FALLBACK ONLY: use if ALDI blocks AWS IP addresses (the scheduled Lambda then fails with
 # "blocked" and emails an alarm). Runs the same scraper CLI on a GitHub-hosted runner and
-# writes to DynamoDB with the same safety rules (deletes products missing from 2 consecutive
-# successful runs, D-084; aborts with no writes below 50% of the last successful run; skips
-# the delete step on partial runs; fails loudly rather than delete more than 25%).
+# writes to DynamoDB with the same safety rules (soft-removes products missing from 2 consecutive
+# successful runs, D-123; aborts with no writes below 50% of the last successful run; skips
+# the removal step on partial runs; fails loudly rather than remove more than 25%).
 #
 # Writing needs the opt-in role from docs/SETUP.md "Scrape fallback" (D-037): it may only
-# query the catalogue index and write/delete PRODUCT#/SCRAPE# items. A dry run needs no AWS
+# query the catalogue index and write PRODUCT#/SCRAPE# items. A dry run needs no AWS
 # access.
 
 on:

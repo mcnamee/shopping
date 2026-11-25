@@ -107,7 +107,7 @@ export function createRecipeMatchRoutes(getDeps: () => MatchDeps): RouteTable {
     }
   }
 
-  /** A cached match may name a catalogue product deleted since (D-084): drop it, keep the line. */
+  /** A cached match may name a catalogue product removed since (D-123): drop it, keep the line. */
   async function dropGoneProducts(hh: string, rows: RecipeMatchRow[]): Promise<RecipeMatchRow[]> {
     const d = getDeps();
     const ids = new Set(

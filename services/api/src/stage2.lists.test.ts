@@ -10,7 +10,16 @@ import type {
   Template,
 } from '@trolley/core';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BANANAS, BREAD, ICE_CREAM, MILK, MINCE, setup, type Harness } from './test/harness';
+import {
+  BANANAS,
+  BREAD,
+  ICE_CREAM,
+  MILK,
+  MINCE,
+  removeProduct,
+  setup,
+  type Harness,
+} from './test/harness';
 
 let h: Harness;
 beforeEach(() => {
@@ -292,8 +301,8 @@ describe('list items', () => {
     });
     await add(list.id, MILK, 990, 'pack');
     expect(await bad({ productId: MILK, qty: 10, unit: 'pack' })).toMatchObject({ field: 'qty' });
-    // Discontinued products are still known (history, templates).
-    expect((await add(list.id, ICE_CREAM, 1, 'pack')).status).toBe(201);
+    // A removed (discontinued) product cannot be added any more (D-123).
+    expect((await add(list.id, ICE_CREAM, 1, 'pack')).status).toBe(400);
   });
 
   it("accepts the household's own custom products", async () => {
@@ -605,14 +614,12 @@ describe('ticking, auto-archive, undo, finish (F1-F5)', () => {
   });
 });
 
-describe('products deleted from the catalogue (D-084)', () => {
-  const dropFromCatalogue = (sku: string) =>
-    h.products.splice(
-      h.products.findIndex((p) => p.sku === sku),
-      1,
-    );
+describe('products soft-removed from the catalogue (D-123)', () => {
+  const dropFromCatalogue = (sku: string) => {
+    removeProduct(h, sku);
+  };
 
-  it('keeps snapshots on list items, template items and purchase rows; detail 404s; no new adds', async () => {
+  it('keeps snapshots on list items, template items and purchase rows; detail still returns it flagged; no new adds', async () => {
     const list = await newList();
     const added = await add(list.id, MILK, 2, 'pack');
     expect(added.status).toBe(201);
@@ -627,7 +634,8 @@ describe('products deleted from the catalogue (D-084)', () => {
     dropFromCatalogue(MILK);
 
     const detail = await h.call('GET /api/products/{sku}', { path: { sku: MILK } });
-    expect(detail.status).toBe(404);
+    expect(detail.status).toBe(200);
+    expect(detail.body).toMatchObject({ sku: MILK, discontinued: true });
     const got = await getList(list.id);
     expect(got.items[0]!.product).toMatchObject({ productId: MILK, name: 'Full Cream Milk 2L' });
     const tpl = await h.call<Template>('GET /api/templates/{templateId}', {
@@ -649,7 +657,7 @@ describe('products deleted from the catalogue (D-084)', () => {
       expect.objectContaining({ productId: MILK, name: 'Full Cream Milk 2L' }),
     ]);
 
-    // Adding or changing a unit for the deleted product is refused cleanly.
+    // Adding or changing a unit for the removed product is refused cleanly.
     const again = await newList();
     expect((await add(again.id, MILK, 1, 'pack')).status).toBe(400);
     const put = await h.call('PUT /api/settings/unit-overrides/{productId}', {
