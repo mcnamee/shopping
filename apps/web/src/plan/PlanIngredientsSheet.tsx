@@ -13,7 +13,7 @@ import {
   type RecipeMatchProduct,
   type RecipeMatchRow,
 } from '@trolley/core';
-import { Check, CircleAlert, Star } from 'lucide-react';
+import { Check, ChevronDown, CircleAlert, Star } from 'lucide-react';
 import { useId, useMemo, useRef, useState } from 'react';
 import {
   addListItemsBulk,
@@ -21,6 +21,7 @@ import {
   createList,
   getRecipe,
   matchRecipe,
+  saveMatchChoices,
   undoListItemsBulk,
 } from '../api';
 import { BottomSheet } from '../components/BottomSheet';
@@ -46,6 +47,8 @@ interface Row {
   key: string;
   recipeId: string;
   text: string;
+  /** The cached match row (matched product plus alternatives), when it lines up. */
+  match: RecipeMatchRow | null;
   product: RecipeMatchProduct | null;
   pantry: boolean;
 }
@@ -101,6 +104,10 @@ export function PlanIngredientsSheet({
     }),
   });
 
+  // Per-row product picks ("text" = keep as text); untouched rows use the matched product.
+  const [choice, setChoice] = useState<Readonly<Record<string, string>>>({});
+  const [openRow, setOpenRow] = useState<string | null>(null);
+
   const blocks: Block[] = recipeIds.flatMap((id, i) => {
     const recipe = recipeQs[i]?.data;
     if (!recipe) return [];
@@ -108,12 +115,18 @@ export function PlanIngredientsSheet({
     let k = 0;
     const items = parseIngredientLines(recipe.ingredients).map((l, n): Block['items'][number] => {
       if (l.kind === 'heading') return { heading: l.text };
-      const row: RecipeMatchRow | undefined = matchRows?.[k++];
+      const found: RecipeMatchRow | undefined = matchRows?.[k++];
+      const row = found && found.line === l.text ? found : null;
+      const key = `${id}:${n}`;
+      const picked = choice[key] ?? row?.match?.productId ?? 'text';
       return {
-        key: `${id}:${n}`,
+        key,
         recipeId: id,
         text: l.text,
-        product: row && row.line === l.text ? row.match : null,
+        match: row,
+        product: row
+          ? ([row.match, ...row.alternatives].find((p) => p?.productId === picked) ?? null)
+          : null,
         pantry: parseIngredient(l.text).pantry,
       };
     });
@@ -275,6 +288,21 @@ export function PlanIngredientsSheet({
     const main = `Added ${added} to ${name}${merged ? ` (${merged} combined)` : ''}`;
     const notAdded = missed > 0 ? ` - ${missed} not added${full ? ' - list is full' : ''}` : '';
     const doneId = listId;
+    // Remember the picks per recipe for next time (best effort; the server updates its cache).
+    const picksByRecipe = new Map<string, Array<{ line: string; choice: string }>>();
+    for (const r of rows) {
+      if (!r.match || !isOn(r)) continue;
+      picksByRecipe.set(r.recipeId, [
+        ...(picksByRecipe.get(r.recipeId) ?? []),
+        { line: r.text, choice: r.product?.productId ?? 'text' },
+      ]);
+    }
+    for (const [recipeId, picks] of picksByRecipe) {
+      const version = recipeQs[recipeIds.indexOf(recipeId)]?.data?.version;
+      saveMatchChoices(recipeId, { choices: picks.slice(0, 100) })
+        .then(() => qc.invalidateQueries({ queryKey: ['recipe-match', recipeId, version] }))
+        .catch(() => undefined);
+    }
     toast.show(main + notAdded, {
       durationMs: 8000,
       action: { label: 'Undo', onAction: () => undo(doneId, changes) },
@@ -403,6 +431,12 @@ export function PlanIngredientsSheet({
                 );
               }
               const ticked = isOn(it);
+              const options = it.match
+                ? [it.match.match, ...it.match.alternatives].filter(
+                    (p): p is RecipeMatchProduct => p !== null,
+                  )
+                : [];
+              const open = openRow === it.key && options.length > 0;
               const others = it.product
                 ? [...(alsoIn.get(it.product.productId) ?? [])].filter((id) => id !== it.recipeId)
                 : [];
@@ -454,6 +488,72 @@ export function PlanIngredientsSheet({
                       )}
                     </span>
                   </button>
+                  {options.length > 0 && (
+                    <div className="pb-2 pl-12">
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-label={`${it.product ? 'Change product' : 'Choose ALDI product'} for ${it.text}`}
+                        onClick={() => setOpenRow(open ? null : it.key)}
+                        className="inline-flex min-h-tap items-center gap-1 rounded-full bg-accent-soft px-3 text-sm font-semibold text-accent"
+                      >
+                        {it.product ? 'Change' : 'Choose ALDI product'}
+                        <ChevronDown
+                          aria-hidden
+                          className={`h-4 w-4 ${open ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                      {open && (
+                        <div
+                          role="radiogroup"
+                          aria-label={`Product for ${it.text}`}
+                          className="mt-1"
+                        >
+                          {[...options.map((o) => o.productId), 'text'].map((id) => {
+                            const o = options.find((x) => x.productId === id);
+                            const on = (it.product?.productId ?? 'text') === id;
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                role="radio"
+                                aria-checked={on}
+                                onClick={() => {
+                                  setChoice((c) => ({ ...c, [it.key]: id }));
+                                  setOpenRow(null);
+                                }}
+                                className={`flex min-h-12 w-full items-center gap-2 rounded-sm px-2 text-left ${
+                                  on ? 'bg-accent-soft' : ''
+                                }`}
+                              >
+                                <span
+                                  aria-hidden
+                                  className="flex h-5 w-5 shrink-0 items-center justify-center"
+                                >
+                                  {on && <Check className="h-5 w-5 text-accent" strokeWidth={3} />}
+                                </span>
+                                {o ? (
+                                  <>
+                                    <ProductThumb src={o.imageUrl} name={o.name} />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block break-words text-base">{o.name}</span>
+                                      {o.packSize && (
+                                        <span className="block text-sm text-muted">
+                                          {o.packSize}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="flex-1 text-base">Keep as text</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </li>
               );
             })}

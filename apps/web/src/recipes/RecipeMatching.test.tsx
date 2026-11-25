@@ -142,7 +142,7 @@ describe('smart Add to list', () => {
     expect(within(dialog).queryByText(`1 x ${OLIVE_OIL}`)).toBeNull();
     // The chip offers the product again.
     await user.click(
-      within(dialog).getByRole('button', { name: 'Choose a product for 3 tbsp olive oil' }),
+      within(dialog).getByRole('button', { name: 'Choose ALDI product for 3 tbsp olive oil' }),
     );
     await user.click(within(dialog).getByRole('radio', { name: new RegExp(OLIVE_OIL) }));
     expect(within(dialog).getByRole('checkbox', { name: new RegExp(OLIVE_OIL) })).toBeVisible();

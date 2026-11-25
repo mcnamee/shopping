@@ -108,6 +108,14 @@ export function weekDates(monday: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 }
 
+/** Length of the rolling planner range: today plus six days. */
+export const PLAN_RANGE_DAYS = 7;
+
+/** The rolling range of `PLAN_RANGE_DAYS` dates starting at `start`. */
+export function rangeDates(start: string, n: number = PLAN_RANGE_DAYS): string[] {
+  return Array.from({ length: n }, (_, i) => addDays(start, i));
+}
+
 // ---------------------------------------------------------------------------------------
 // Validation
 

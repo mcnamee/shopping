@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
-import { addDays, storeToday, weekStart, type ListDetail } from '@trolley/core';
+import { addDays, storeToday, type ListDetail } from '@trolley/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MOCK_SEED_IDS } from '../api/mock-stage2';
 import { MOCK_RECIPE_IDS } from '../api/mock-stage5';
@@ -20,7 +20,7 @@ afterEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 200));
 });
 
-const mon = () => weekStart(storeToday());
+const mon = () => storeToday();
 const day = (n: number) =>
   new Intl.DateTimeFormat('en-AU', { weekday: 'long', timeZone: 'UTC' }).format(
     new Date(`${addDays(mon(), n)}T00:00:00Z`),
@@ -55,12 +55,12 @@ describe('Plan view', () => {
     expect(await screen.findByRole('list', { name: 'Days' }, { timeout: 3000 })).toBeVisible();
   });
 
-  it('moves between weeks and jumps back to this week', async () => {
+  it('moves by 7 days and jumps back to today', async () => {
     const { user } = await openPlan();
-    await user.click(screen.getByRole('button', { name: 'Next week' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'This week' })).toBeVisible());
+    await user.click(screen.getByRole('button', { name: 'Next 7 days' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Today' })).toBeVisible());
     expect(screen.queryByRole('button', { name: /^Lamb curry.*Actions/ })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'This week' }));
+    await user.click(screen.getByRole('button', { name: 'Today' }));
     expect(
       await screen.findByRole('button', { name: /^Lamb curry.*Actions/ }, { timeout: 3000 }),
     ).toBeVisible();
@@ -120,6 +120,25 @@ describe('Plan view', () => {
     expect(await screen.findByText('Eat out')).toBeVisible();
   });
 
+  it('edits a free-text entry: text, note, meal and day', async () => {
+    const { user } = await openPlan();
+    await user.click(await screen.findByRole('button', { name: /^Eat out.*Actions/ }));
+    const dialog = await screen.findByRole('dialog');
+    const what = within(dialog).getByLabelText('What');
+    await user.clear(what);
+    await user.type(what, 'Takeaway');
+    await user.type(within(dialog).getByLabelText('Note (optional)'), 'Thai');
+    const date = within(dialog).getByLabelText('Day');
+    await user.clear(date);
+    await user.type(date, addDays(mon(), 5));
+    await user.click(within(dialog).getByRole('radio', { name: 'Lunch' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    const saturday = await screen.findByRole('listitem', { name: new RegExp(`^${day(5)}`) });
+    expect(await within(saturday).findByText('Takeaway')).toBeVisible();
+    expect(within(saturday).getByText('Thai')).toBeVisible();
+    expect(screen.queryByText('Eat out')).toBeNull();
+  });
+
   it('shows "Recipe deleted" when the recipe is gone', async () => {
     await openPlan(async () => {
       await callMock('DELETE', `/recipes/${MOCK_RECIPE_IDS.greekSalad}`);
@@ -147,7 +166,7 @@ describe('Plan view', () => {
   });
 });
 
-describe("Add this week's ingredients", () => {
+describe('Add ingredients for these 7 days', () => {
   it('reviews every recipe in the week and adds to the list with one Undo', async () => {
     const { user } = await openPlan(async () => {
       const r = await callMock<{ id: string }>('POST', '/recipes', {
@@ -156,7 +175,9 @@ describe("Add this week's ingredients", () => {
       });
       await callMock('POST', '/plan', { date: mon(), kind: 'recipe', recipeId: r.body.id });
     });
-    await user.click(await screen.findByRole('button', { name: /Add this week's ingredients/ }));
+    await user.click(
+      await screen.findByRole('button', { name: /Add ingredients for these 7 days/ }),
+    );
     const dialog = await screen.findByRole('dialog');
     await within(dialog).findByRole('radio', { name: /Week of/ });
     await waitFor(
@@ -169,6 +190,14 @@ describe("Add this week's ingredients", () => {
     // Pantry rows start unticked.
     const salt = within(dialog).queryAllByRole('checkbox', { name: /salt/i, checked: false });
     expect(salt.length).toBeGreaterThan(0);
+
+    // Per-row product switcher: keep a matched row as text.
+    const change = within(dialog).getAllByRole('button', {
+      name: /^Change product for/,
+    })[0] as HTMLElement;
+    await user.click(change);
+    await user.click(within(dialog).getByRole('radio', { name: 'Keep as text' }));
+    expect(within(dialog).queryByRole('radiogroup', { name: /^Product for/ })).toBeNull();
 
     const before = (await callMock<ListDetail>('GET', `/lists/${MOCK_SEED_IDS.thisWeekList}`)).body;
     // Some rows (salt) start unticked, so this reads "Select all": go to all, then none.
