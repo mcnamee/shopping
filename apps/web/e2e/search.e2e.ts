@@ -117,7 +117,7 @@ test.describe('Search tab', () => {
     await expect(page.getByRole('heading', { name: /milk/i, level: 3 }).first()).toBeVisible();
     const nav = page.getByRole('navigation', { name: 'Main' });
     await nav.getByRole('link', { name: 'Settings' }).click();
-    await nav.getByRole('link', { name: 'Groceries' }).click();
+    await nav.getByRole('link', { name: 'Products' }).click();
     await expect(page).toHaveURL(/q=milk/);
   });
 

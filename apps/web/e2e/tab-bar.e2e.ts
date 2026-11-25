@@ -10,7 +10,7 @@ async function box(loc: Locator) {
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 const ROOTS = [
   { label: 'Lists', path: '/' },
-  { label: 'Groceries', path: '/search' },
+  { label: 'Products', path: '/search' },
   { label: 'Recipes', path: '/recipes' },
   { label: 'Settings', path: '/settings' },
 ];
