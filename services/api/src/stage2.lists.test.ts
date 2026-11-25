@@ -604,3 +604,58 @@ describe('ticking, auto-archive, undo, finish (F1-F5)', () => {
     expect((await h.call('GET /api/history', { query: { limit: '0' } })).status).toBe(400);
   });
 });
+
+describe('products deleted from the catalogue (D-084)', () => {
+  const dropFromCatalogue = (sku: string) =>
+    h.products.splice(
+      h.products.findIndex((p) => p.sku === sku),
+      1,
+    );
+
+  it('keeps snapshots on list items, template items and purchase rows; detail 404s; no new adds', async () => {
+    const list = await newList();
+    const added = await add(list.id, MILK, 2, 'pack');
+    expect(added.status).toBe(201);
+    const tid = await template('Weekly', 'weekly', [[MILK, 1, 'pack']]);
+    await h.call('PUT /api/settings/unit-overrides/{productId}', {
+      path: { productId: MILK },
+      body: { unit: 'L' },
+    });
+    const itemId = added.body.item.id;
+    await tick(list.id, itemId); // last item -> archived, purchase rows written
+
+    dropFromCatalogue(MILK);
+
+    const detail = await h.call('GET /api/products/{sku}', { path: { sku: MILK } });
+    expect(detail.status).toBe(404);
+    const got = await getList(list.id);
+    expect(got.items[0]!.product).toMatchObject({ productId: MILK, name: 'Full Cream Milk 2L' });
+    const tpl = await h.call<Template>('GET /api/templates/{templateId}', {
+      path: { templateId: tid },
+    });
+    expect(tpl.status).toBe(200);
+    expect(tpl.body.items[0]!.product).toMatchObject({
+      productId: MILK,
+      name: 'Full Cream Milk 2L',
+    });
+    const history = await h.call<HistoryResponse>('GET /api/history', { query: {} });
+    expect(history.body.lists.map((l) => l.id)).toEqual([list.id]);
+    expect(h.table.all().filter((i) => String(i.sk).startsWith('PURCHASE#'))).toHaveLength(1);
+    // The remembered unit still lists with its stored name.
+    const overrides = await h.call<{ overrides: Array<{ productId: string; name: string }> }>(
+      'GET /api/settings/unit-overrides',
+    );
+    expect(overrides.body.overrides).toEqual([
+      expect.objectContaining({ productId: MILK, name: 'Full Cream Milk 2L' }),
+    ]);
+
+    // Adding or changing a unit for the deleted product is refused cleanly.
+    const again = await newList();
+    expect((await add(again.id, MILK, 1, 'pack')).status).toBe(400);
+    const put = await h.call('PUT /api/settings/unit-overrides/{productId}', {
+      path: { productId: MILK },
+      body: { unit: 'each' },
+    });
+    expect(put.status).toBe(404);
+  });
+});

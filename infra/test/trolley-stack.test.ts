@@ -432,12 +432,18 @@ describe('TrolleyStack', () => {
       'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] },
     });
     const write = byAction('dynamodb:BatchWriteItem');
-    expect(write.Action).toEqual(['dynamodb:BatchWriteItem', 'dynamodb:PutItem']);
+    expect(write.Action).toEqual([
+      'dynamodb:BatchWriteItem',
+      'dynamodb:PutItem',
+      'dynamodb:DeleteItem',
+    ]);
     expect(write.Condition).toEqual({
       'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['PRODUCT#*', 'SCRAPE#*'] },
     });
     const all = JSON.stringify(statements);
-    expect(all).not.toMatch(/dynamodb:(DeleteItem|UpdateItem|Scan|GetItem|\*)/);
+    expect(all).not.toMatch(/dynamodb:(UpdateItem|Scan|GetItem|\*)/);
+    // DeleteItem exists only inside the PRODUCT#/SCRAPE# LeadingKeys statement (D-084).
+    expect(statements.filter((st) => JSON.stringify(st).includes('DeleteItem'))).toEqual([write]);
   });
 
   it('has no AWS scrape schedule by default (ALDI blocks AWS, D-042)', () => {

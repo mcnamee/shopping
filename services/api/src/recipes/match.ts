@@ -23,6 +23,7 @@ import {
   type HistoryPurchase,
   type ProductSummary,
   type RecipeMatchResponse,
+  type RecipeMatchRow,
   type TemplateLike,
 } from '@trolley/core';
 import { fail, json, readJsonBody, type HttpResult } from '../http';
@@ -106,6 +107,27 @@ export function createRecipeMatchRoutes(getDeps: () => MatchDeps): RouteTable {
     }
   }
 
+  /** A cached match may name a catalogue product deleted since (D-084): drop it, keep the line. */
+  async function dropGoneProducts(hh: string, rows: RecipeMatchRow[]): Promise<RecipeMatchRow[]> {
+    const d = getDeps();
+    const ids = new Set(
+      rows.flatMap((r) => [r.match, ...r.alternatives].flatMap((p) => (p ? [p.productId] : []))),
+    );
+    const gone = new Set<string>();
+    await Promise.all(
+      [...ids].map(async (id) => {
+        if (!(await d.resolveProduct(hh, id))) gone.add(id);
+      }),
+    );
+    if (gone.size === 0) return rows;
+    return rows.map((r) => {
+      const alternatives = r.alternatives.filter((a) => !gone.has(a.productId));
+      return r.match && gone.has(r.match.productId)
+        ? { ...r, match: null, alternatives }
+        : { ...r, alternatives };
+    });
+  }
+
   async function match(req: AuthedRequest): Promise<HttpResult> {
     const hh = req.household.householdId;
     const d = getDeps();
@@ -119,7 +141,7 @@ export function createRecipeMatchRoutes(getDeps: () => MatchDeps): RouteTable {
       const hit = await d.recipes.matchCache.get(hh, recipe.id, hash, now.getTime());
       if (hit) {
         return json(200, {
-          rows: applyChoices(hit.rows, hit.choices),
+          rows: await dropGoneProducts(hh, applyChoices(hit.rows, hit.choices)),
           ai: hit.ai,
           cached: true,
           cachedAt: hit.cachedAt,

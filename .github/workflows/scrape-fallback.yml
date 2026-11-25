@@ -2,17 +2,24 @@ name: Scrape fallback (runner)
 
 # FALLBACK ONLY: use if ALDI blocks AWS IP addresses (the scheduled Lambda then fails with
 # "blocked" and emails an alarm). Runs the same scraper CLI on a GitHub-hosted runner and
-# writes to DynamoDB with the same safety rules (never deletes; aborts with no writes below
-# 50% of the last successful run; skips the discontinue step on partial runs).
+# writes to DynamoDB with the same safety rules (deletes products missing from 2 consecutive
+# successful runs, D-084; aborts with no writes below 50% of the last successful run; skips
+# the delete step on partial runs; fails loudly rather than delete more than 25%).
 #
 # Writing needs the opt-in role from docs/SETUP.md "Scrape fallback" (D-037): it may only
-# query the catalogue index and write PRODUCT#/SCRAPE# items. A dry run needs no AWS access.
+# query the catalogue index and write/delete PRODUCT#/SCRAPE# items. A dry run needs no AWS
+# access.
 
 on:
   # Switch-over (docs/SETUP.md): set repository variable SCRAPE_FALLBACK_ENABLED=true and
-  # this runs monthly on its own. 17:23 UTC on the 1st = 03:23/04:23 on the 2nd in Sydney.
+  # this runs every Friday at 5pm Canberra time on its own. Cron is UTC-only and Canberra
+  # observes daylight saving, so both times are scheduled and the first step lets only the
+  # one that is 17:00 in Australia/Sydney through: 06:00 UTC = 17:00 AEDT (Oct-Apr),
+  # 07:00 UTC = 17:00 AEST (Apr-Oct). GitHub may delay scheduled runs (often by minutes,
+  # sometimes much longer at busy times); a run delayed past 18:00 is skipped by the guard.
   schedule:
-    - cron: '23 17 1 * *'
+    - cron: '0 6 * * 5'
+    - cron: '0 7 * * 5'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -42,19 +49,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # First real step: exit early unless it is 17:xx in Canberra (see the schedule above).
+      - name: Only scrape at 5pm Canberra time
+        id: guard
+        run: .github/scripts/schedule-guard.sh "$GITHUB_EVENT_NAME"
+
       - uses: actions/setup-node@v4
+        if: steps.guard.outputs.run == 'true'
         with:
           node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - if: steps.guard.outputs.run == 'true'
+        run: npm ci
 
       - name: Dry run
-        if: env.DRY_RUN == 'true'
+        if: steps.guard.outputs.run == 'true' && env.DRY_RUN == 'true'
         run: npm run scrape -w @trolley/scraper -- --dry-run --trigger github-fallback --out "$RUNNER_TEMP/products.json"
 
       - name: Check fallback configuration
-        if: env.DRY_RUN != 'true'
+        if: steps.guard.outputs.run == 'true' && env.DRY_RUN != 'true'
         env:
           ROLE: ${{ vars.AWS_SCRAPE_ROLE_ARN }}
           TABLE: ${{ vars.TROLLEY_TABLE_NAME }}
@@ -67,7 +81,7 @@ jobs:
           fi
 
       - name: Configure AWS credentials (OIDC, catalogue-only role)
-        if: env.DRY_RUN != 'true'
+        if: steps.guard.outputs.run == 'true' && env.DRY_RUN != 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_SCRAPE_ROLE_ARN }}
@@ -75,7 +89,7 @@ jobs:
           role-session-name: trolley-scrape-fallback-${{ github.run_id }}
 
       - name: Scrape and write
-        if: env.DRY_RUN != 'true'
+        if: steps.guard.outputs.run == 'true' && env.DRY_RUN != 'true'
         env:
           TABLE_NAME: ${{ vars.TROLLEY_TABLE_NAME }}
         run: npm run scrape -w @trolley/scraper -- --trigger github-fallback

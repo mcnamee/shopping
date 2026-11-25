@@ -108,7 +108,7 @@ describe('GithubOidcStack', () => {
         Condition: { 'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['SCRAPE#*'] } },
       }),
       expect.objectContaining({
-        Action: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem'],
+        Action: ['dynamodb:BatchWriteItem', 'dynamodb:PutItem', 'dynamodb:DeleteItem'],
         Condition: {
           'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['PRODUCT#*', 'SCRAPE#*'] },
         },

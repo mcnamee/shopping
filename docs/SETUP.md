@@ -199,7 +199,15 @@ are untouched; switch to the fallback below.
 ### Scrape fallback (only if ALDI blocks AWS)
 
 Runs the same scraper from a GitHub-hosted runner instead of AWS. It needs a second, narrow
-GitHub role that can only write catalogue items (never your lists). One-off, in CloudShell:
+GitHub role that can only write and delete catalogue items (`PRODUCT#`/`SCRAPE#` keys, never
+your lists). One-off, in CloudShell:
+
+> **Redeploy needed (D-122).** Products no longer on the ALDI site are now deleted, which
+> adds `dynamodb:DeleteItem` (still limited to `PRODUCT#*`/`SCRAPE#*` keys) to this role and
+> to the scraper Lambda's role. If you set the fallback up earlier, run the commands below
+> again from CloudShell to redeploy `TrolleyGithubOidcStack` (and deploy `TrolleyStack` as
+> usual for the Lambda role) before the next Friday scrape, or the delete step will fail
+> with an access error. Until then nothing is lost: the run just fails after upserting.
 
 ```bash
 cd ~/shopping && git pull && npm ci -w @trolley/infra && cd infra
@@ -216,7 +224,12 @@ Variables):
 |---|---|
 | `AWS_SCRAPE_ROLE_ARN` | the `ScrapeFallbackRoleArn` output from the command above |
 | `TROLLEY_TABLE_NAME` | the table name printed by `echo "$TABLE"` |
-| `SCRAPE_FALLBACK_ENABLED` | `true` (turns on the monthly runner scrape, 03:23-04:23 Sydney on the 2nd) |
+| `SCRAPE_FALLBACK_ENABLED` | `true` (turns on the weekly runner scrape, every Friday 5pm Canberra time; GitHub may start it late) |
+
+The scrape runs every Friday at 5pm Canberra time. GitHub cron is UTC-only, so the workflow
+schedules 06:00 and 07:00 UTC and a first step lets through only the one that is 5pm in
+Canberra (daylight saving handled). GitHub can start scheduled runs late; one delayed past
+6pm is skipped, so run it manually then.
 
 Test it: **Actions -> Scrape fallback (runner) -> Run workflow**, untick "Dry run". To
 switch back, delete `SCRAPE_FALLBACK_ENABLED` (the AWS schedule keeps running regardless;

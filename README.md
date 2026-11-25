@@ -56,7 +56,7 @@ Trolley does the remembering for you. It knows what you buy, how much and how of
 | Sign-in | Amazon Cognito (invite only) |
 | Backend | API Gateway + AWS Lambda, DynamoDB |
 | Suggestions | Your purchase history plus Amazon Bedrock (Nova Micro) |
-| Product catalogue | Monthly scrape of ALDI Australia via GitHub Actions |
+| Product catalogue | Weekly scrape (Fridays 5pm Canberra) of ALDI Australia via GitHub Actions; products no longer listed are deleted |
 | Chatbots | Remote MCP server with OAuth 2.1 |
 | Deployment | GitHub Actions only - no servers to patch |
 

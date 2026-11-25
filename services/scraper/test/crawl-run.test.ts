@@ -161,6 +161,13 @@ class MemoryStore implements CatalogueStore {
     this.writes += products.length;
     for (const p of products) this.products.set(p.sku, structuredClone(p));
   }
+  deleted: string[] = [];
+  async deleteProducts(skus: readonly string[]) {
+    for (const sku of skus) {
+      this.products.delete(sku);
+      this.deleted.push(sku);
+    }
+  }
   async putRun(run: ScrapeRunRecord) {
     this.runs.push(structuredClone(run));
   }
@@ -254,7 +261,7 @@ describe('runScrape', () => {
     expect(after.notAtStore).toBe(false);
   });
 
-  it('upserts, counts missed runs, discontinues after 2 successful misses, reactivates, never deletes', async () => {
+  it('upserts, counts missed runs, deletes after 2 successful misses, re-adds as new', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 20);
@@ -270,57 +277,83 @@ describe('runScrape', () => {
       baseline: null,
       store: 'G526',
       discontinueStep: 'applied',
+      deleted: 0,
     });
     expect(store.products.size).toBe(40);
     const first = store.products.get(dairy[0]!.sku)!;
-    expect(first).toMatchObject({
-      missedRuns: 0,
-      discontinued: false,
-      groupId: 'dairy-eggs',
-      storeId: 'G526',
-    });
+    expect(first).toMatchObject({ missedRuns: 0, discontinued: false, groupId: 'dairy-eggs' });
 
     // Run 2: one product missing, one price change
     const changed = dairy.slice(1).map((p, i) => (i === 0 ? { ...p, price: { amount: 999 } } : p));
     const r2 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
     expect(r2.run).toMatchObject({
       status: 'succeeded',
-      new: 0,
       updated: 1,
       unchanged: 38,
       missed: 1,
-      discontinued: 0,
-      baseline: 40,
+      deleted: 0,
     });
     expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 1, discontinued: false });
     expect(store.products.get(dairy[1]!.sku)!.firstSeenAt).toBe(first.firstSeenAt);
-    expect(store.products.get(dairy[1]!.sku)!.price).toBe(999);
 
-    // Run 3: still missing -> discontinued (kept)
+    // Run 3: still missing -> deleted (not marked discontinued)
     const r3 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
-    expect(r3.run).toMatchObject({ missed: 1, discontinued: 1 });
-    const gone = store.products.get(dairy[0]!.sku)!;
-    expect(gone).toMatchObject({ missedRuns: 2, discontinued: true });
-    expect(gone.discontinuedAt).toBeDefined();
-    expect(store.products.size).toBe(40);
+    expect(r3.run).toMatchObject({ status: 'succeeded', missed: 1, deleted: 1 });
+    expect(store.deleted).toEqual([dairy[0]!.sku]);
+    expect(store.products.has(dairy[0]!.sku)).toBe(false);
+    expect(store.products.size).toBe(39);
 
-    // Run 4: already discontinued products are not rewritten
-    const writesBefore = store.writes;
+    // Run 4: nothing left to delete
     const r4 = await scrape(store, { [DAIRY.key]: changed, [PANTRY.key]: pantry });
-    expect(r4.run).toMatchObject({ missed: 0, discontinued: 0 });
-    expect(store.writes - writesBefore).toBe(39);
+    expect(r4.run).toMatchObject({ missed: 0, deleted: 0 });
 
-    // Run 5: it comes back -> flag and missed count reset
+    // Run 5: it comes back -> a fresh product
     const r5 = await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
-    expect(r5.run.reactivated).toBe(1);
+    expect(r5.run).toMatchObject({ new: 1, deleted: 0 });
     expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 0, discontinued: false });
-    expect(store.runs.map((r) => r.status)).toEqual([
-      'succeeded',
-      'succeeded',
-      'succeeded',
-      'succeeded',
-      'succeeded',
-    ]);
+  });
+
+  it('deletes products already flagged discontinued by older runs on the next successful run', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const dairy = make('1', 40);
+    await scrape(store, { [DAIRY.key]: dairy });
+    const legacy = store.products.get(dairy[0]!.sku)!;
+    store.products.set(legacy.sku, { ...legacy, discontinued: true, missedRuns: 2 });
+    const r = await scrape(store, { [DAIRY.key]: dairy.slice(1) });
+    expect(r.run).toMatchObject({ status: 'succeeded', deleted: 1, missed: 0 });
+    expect(store.products.has(legacy.sku)).toBe(false);
+  });
+
+  it('aborts the delete step above 25% of the catalogue: fails loudly, deletes nothing', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const dairy = make('1', 40);
+    const pantry = make('2', 40);
+    await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
+    // Run 2: 30 of 80 go missing (below 50% abort threshold, miss count 1, none deleted yet)
+    const kept = dairy.slice(30);
+    await scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry });
+    // Run 3: they would all be deleted (30/80 = 37.5% > 25%)
+    const run = await failure(scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry }));
+    expect(run).toMatchObject({ status: 'failed', discontinueStep: 'skipped', deleted: 0 });
+    expect(run.message).toMatch(/Delete step aborted: 30 of 80/);
+    expect(store.deleted).toEqual([]);
+    expect(store.products.size).toBe(80);
+    expect(store.products.get(dairy[0]!.sku)).toMatchObject({ missedRuns: 2, discontinued: false });
+  });
+
+  it('deletes exactly at the 25% cap', async () => {
+    day = 1;
+    const store = new MemoryStore();
+    const dairy = make('1', 80);
+    const pantry = make('2', 20);
+    await scrape(store, { [DAIRY.key]: dairy, [PANTRY.key]: pantry });
+    const kept = dairy.slice(25);
+    await scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry });
+    const r = await scrape(store, { [DAIRY.key]: kept, [PANTRY.key]: pantry });
+    expect(r.run).toMatchObject({ status: 'succeeded', deleted: 25 });
+    expect(store.products.size).toBe(75);
   });
 
   it('aborts with no writes when < 50% of the previous successful run is fetched', async () => {
@@ -374,7 +407,7 @@ describe('runScrape', () => {
     expect(run).toMatchObject({ status: 'aborted', baseline: 100 });
   });
 
-  it('fails, updates seen products and skips the discontinue step on an incomplete crawl (bot block)', async () => {
+  it('fails, updates seen products and skips the delete step on an incomplete crawl (bot block)', async () => {
     day = 1;
     const store = new MemoryStore();
     const dairy = make('1', 30);
@@ -396,6 +429,7 @@ describe('runScrape', () => {
       errors: 1,
     });
     expect([...store.products.values()].every((p) => p.missedRuns === 0)).toBe(true);
+    expect(store.deleted).toEqual([]);
   });
 
   it('records a failed run when blocked before any data', async () => {
