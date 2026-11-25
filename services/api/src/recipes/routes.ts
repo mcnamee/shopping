@@ -23,11 +23,13 @@ import { fail, json, readJsonBody, type HttpResult } from '../http';
 import type { ListStore } from '../lists/store';
 import type { AuthedRequest, RouteTable } from '../router';
 import { ensureThisWeekList } from '../this-week';
+import type { PlanStore } from '../plan/store';
 import type { PhotoStore } from './photos';
 import type { RecipeStore } from './store';
 
 export interface Stage5Deps {
   recipes: RecipeStore;
+  plan: PlanStore;
   photos: PhotoStore;
   lists: ListStore;
   now: () => Date;

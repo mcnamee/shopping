@@ -11,3 +11,10 @@ Notes:
 - Imports are safe to repeat: recipes are matched on their Mela id, then on exact title and link.
 - Only the first photo of each recipe is kept. Times such as "15" become "15 min" and a yield of "10" becomes "Serves 10".
 - Text longer than Trolley allows is shortened (the summary says which recipes). Trolley holds up to 500 recipes.
+
+## Meal planner (Stage 6)
+Recipes tab > **Plan** shows a Monday-Sunday week (prev/next, "This week", today highlighted). Each day lists Breakfast, Lunch, Dinner and Other; empty meals are small "+ Breakfast" style buttons.
+- **Add:** tap a "+" (or the calendar icon on a recipe page, "Add to plan"). Pick the day and meal (Breakfast, Lunch, Dinner or None), then a recipe (favourites first, searchable) or "Other" for free text such as "Leftovers" or "Eat out", with an optional note.
+- **Change:** tap an entry to open the recipe, move it to another day or meal, or delete it (Undo for 8 seconds). If a recipe is deleted, its entries stay and read "Recipe deleted".
+- **Shop:** "Add this week's ingredients" (or the list icon on a day) opens one review sheet grouped by recipe. Pantry items start unticked, the same product in two recipes is combined, pick the list (this week's by default), and one Undo takes it all back.
+- A day holds up to 20 entries. The plan is shared by the household and needs a connection. Decisions D-117 to D-121; API in docs/api.md.

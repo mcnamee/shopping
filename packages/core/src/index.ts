@@ -16,3 +16,4 @@ export * from './ingredient-groups';
 export * from './recipes';
 export * from './ingredients';
 export * from './ingredient-match';
+export * from './meal-plan';

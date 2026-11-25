@@ -17,6 +17,10 @@ function assertSegment(name: string, value: string): void {
   }
 }
 
+function assertDate(value: string): void {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('Invalid key segment: date');
+}
+
 export const keys = {
   householdPk(householdId: string): string {
     assertHousehold(householdId);
@@ -70,6 +74,22 @@ export const keys = {
     return `RECIPE#${recipeId}`;
   },
   recipeSkPrefix: 'RECIPE#',
+  /** Meal-plan entry (D-117): pk = householdPk; date-ordered so a week is one range query. */
+  planSk(date: string, entryId: string): string {
+    assertDate(date);
+    assertSegment('entryId', entryId);
+    return `PLAN#${date}#${entryId}`;
+  },
+  planDayPrefix(date: string): string {
+    assertDate(date);
+    return `PLAN#${date}#`;
+  },
+  /** Inclusive sort-key bounds for BETWEEN over dates from..to ('~' sorts after any id). */
+  planRange(from: string, to: string): { from: string; to: string } {
+    assertDate(from);
+    assertDate(to);
+    return { from: `PLAN#${from}#`, to: `PLAN#${to}#~` };
+  },
   /** Household settings: aisle order, unit overrides. */
   settingsSk: 'SETTINGS',
   /** Pointer to the "this week" list (D-056): one item, so flagging is one atomic write. */

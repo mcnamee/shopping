@@ -405,6 +405,12 @@ export class TrolleyStack extends Stack {
       // Must match services/api/src/recipes/match.ts (D-115).
       ['/api/recipes/{recipeId}/match', POST],
       ['/api/recipes/{recipeId}/match/choices', PUT],
+      // Stage 6 (docs/api.md). Must match services/api/src/plan/routes.ts.
+      ['/api/plan', GET],
+      ['/api/plan', POST],
+      ['/api/plan/{date}/{entryId}', PATCH],
+      ['/api/plan/{date}/{entryId}/move', POST],
+      ['/api/plan/{date}/{entryId}', DELETE],
       // Stage 4: consent screen and Connected apps (SPA, Cognito ID token).
       ['/api/oauth/requests/{requestId}', GET],
       ['/api/oauth/consent', POST],

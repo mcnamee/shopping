@@ -91,6 +91,26 @@ export class Db {
     return items;
   }
 
+  /** Items with sort key BETWEEN `from` and `to` (inclusive), in key order, strongly consistent. */
+  async queryBetween(pk: string, from: string, to: string): Promise<DbItem[]> {
+    const items: DbItem[] = [];
+    let startKey: DbItem | undefined;
+    do {
+      const res = (await this.doc.send(
+        new QueryCommand({
+          TableName: this.tableName,
+          KeyConditionExpression: 'pk = :pk AND sk BETWEEN :from AND :to',
+          ExpressionAttributeValues: { ':pk': pk, ':from': from, ':to': to },
+          ConsistentRead: true,
+          ExclusiveStartKey: startKey,
+        }),
+      )) as { Items?: DbItem[]; LastEvaluatedKey?: DbItem };
+      items.push(...(res.Items ?? []));
+      startKey = res.LastEvaluatedKey;
+    } while (startKey);
+    return items;
+  }
+
   /**
    * Like queryAll but returning only `attrs` (ProjectionExpression), e.g. recipe summaries
    * without their long text (B2). Strongly consistent.

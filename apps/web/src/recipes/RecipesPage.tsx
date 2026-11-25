@@ -10,9 +10,44 @@ import { useDelayedFlag } from '../search/hooks';
 import { ImportMelaSheet } from './ImportMelaSheet';
 import { RecipeThumbCard } from './RecipeCard';
 import { useRecipesQuery } from './data';
+import { PlanView } from '../plan/PlanView';
+import { loadView, saveView, type RecipesView } from '../plan/data';
 
-/** Recipes tab (docs/stages/stage-5.md C): search, chips, 2-column cards. */
+/** Recipes tab: a Recipes | Plan segmented control (docs/stages/stage-6.md B1), remembered per device. */
 export function RecipesPage() {
+  const [view, setView] = useState<RecipesView>(loadView);
+  const choose = (v: RecipesView) => {
+    setView(v);
+    saveView(v);
+  };
+  return (
+    <div>
+      <div
+        role="group"
+        aria-label="Recipes or plan"
+        className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-surface p-1"
+      >
+        {(['recipes', 'plan'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={view === v}
+            onClick={() => choose(v)}
+            className={`min-h-tap rounded-full text-base font-semibold ${
+              view === v ? 'bg-accent text-accent-on' : 'text-text'
+            }`}
+          >
+            {v === 'recipes' ? 'Recipes' : 'Plan'}
+          </button>
+        ))}
+      </div>
+      {view === 'plan' ? <PlanView /> : <RecipesList />}
+    </div>
+  );
+}
+
+/** The recipe list: search, chips, 2-column cards (docs/stages/stage-5.md C). */
+function RecipesList() {
   const query = useRecipesQuery();
   const navigate = useNavigate();
   const { online } = useOnlineStatus();

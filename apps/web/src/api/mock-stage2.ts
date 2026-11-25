@@ -17,6 +17,7 @@
  * 'limit' (429). POST /api/lists/{id}/items/bulk and /items/undo mirror the API.
  */
 import {
+  type MealPlanEntry,
   addLine,
   canUndoArchive,
   defaultListName,
@@ -123,6 +124,8 @@ export interface MockHousehold {
   purchases: Record<string, PurchaseRecord>;
   /** Recipes (Stage 5); missing in state saved before it, seeded on first use. */
   recipes?: Recipe[];
+  /** Meal plan entries (Stage 6); missing in state saved before it, seeded on first use. */
+  plan?: MealPlanEntry[];
   /** Suggestion runs today (D-066); missing in state saved before Stage 3. */
   suggestRuns?: { day: string; runs: number };
 }
