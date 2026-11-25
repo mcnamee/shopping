@@ -10,8 +10,8 @@ test.describe('signed-in shell', () => {
 
   test('bottom nav has four links; the active tab carries aria-current', async ({ page }) => {
     const nav = page.getByRole('navigation', { name: 'Main' });
-    await expect(nav.getByRole('link')).toHaveText(['Lists', 'Search', 'Recipes', 'Settings']);
-    for (const name of ['Lists', 'Search', 'Recipes', 'Settings']) {
+    await expect(nav.getByRole('link')).toHaveText(['Lists', 'Groceries', 'Recipes', 'Settings']);
+    for (const name of ['Lists', 'Groceries', 'Recipes', 'Settings']) {
       await nav.getByRole('link', { name }).click();
       await expect(nav.getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
       await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
@@ -117,7 +117,7 @@ test.describe('no household', () => {
     ).toBeVisible();
     await page
       .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Search' })
+      .getByRole('link', { name: 'Groceries' })
       .click();
     await expect(
       page.getByRole('heading', { name: "Your account isn't set up yet" }),
