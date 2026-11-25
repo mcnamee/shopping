@@ -248,6 +248,8 @@ export function setup(opts: SetupOptions = {}) {
 
   return {
     table,
+    /** The live catalogue array: splice a product out to simulate a scraper delete (D-084). */
+    products,
     db,
     stage2,
     stage3,

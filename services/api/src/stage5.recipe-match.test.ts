@@ -237,6 +237,21 @@ describe('match cache (D-116)', () => {
     expect(await runsOf()).toBe(1);
   });
 
+  it('a cached match whose product was deleted from the catalogue drops the match, keeps the line', async () => {
+    const r = await recipe(OIL);
+    const first = await matchRaw(r.id);
+    expect(first.body.rows[0]!.match).toMatchObject({ productId: OLIVE });
+    h.products.splice(
+      h.products.findIndex((p) => p.sku === OLIVE),
+      1,
+    );
+    const second = await matchRaw(r.id);
+    expect(second.body).toMatchObject({ cached: true });
+    expect(second.body.rows[0]).toMatchObject({ match: null });
+    expect(second.body.rows[0]!.alternatives.some((a) => a.productId === OLIVE)).toBe(false);
+    expect(await runsOf()).toBe(1);
+  });
+
   it('serves hits when the daily limit is exhausted', async () => {
     const r = await recipe(OIL);
     await matchRaw(r.id);

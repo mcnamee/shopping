@@ -27,7 +27,7 @@ URL: https://trolley.mcn.am (fallback: CloudFront URL). Region: ap-southeast-2.
 ## 3. Functional requirements
 
 ### 3.1 Product catalogue (ALDI)
-- Monthly scheduled job pulls ALDI AU product data (name, brand, SKU, category, image URL, price, pack size/unit) into the DB. Upsert by SKU; products missing from 2 consecutive runs are marked `discontinued` (kept for history).
+- Weekly scheduled job (Fridays 5pm Canberra, D-122) pulls ALDI AU product data (name, brand, SKU, category, image URL, price, pack size/unit) into the DB. Upsert by SKU; products missing from 2 consecutive successful runs are deleted (D-122; lists, templates and history keep their snapshots).
 - Users can also add **custom products** (e.g. butcher items, non-ALDI) so the app never blocks them.
 - Search: type-ahead, results in a **2-column grid** - image, title, primary **Add** button, subtle **+template** icon.
 
@@ -102,7 +102,7 @@ Each product has a `unitType` that drives the quantity modal:
                                                                      └──────────▶ Bedrock (Nova Micro) [suggest]
  Claude / ChatGPT ──OAuth──▶ API Gateway /oauth/* ──▶ Lambda (oauth shim) ──▶ Cognito Hosted UI (login)
                   ──Bearer─▶ API Gateway /mcp     ──▶ Lambda (mcp)        ──▶ DynamoDB
- EventBridge Scheduler (monthly) ──▶ Lambda (scraper) ──▶ ALDI site ─▶ DynamoDB
+ EventBridge Scheduler (opt-in) ──▶ Lambda (scraper) ──▶ ALDI site ─▶ DynamoDB
  GitHub Actions ──OIDC role──▶ CDK deploy (no long-lived AWS keys)
 ```
 

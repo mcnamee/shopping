@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ChefHat, ListChecks, Settings, ShoppingBasket, type LucideIcon } from 'lucide-react';
+import { ChefHat, LayoutGrid, ListChecks, Settings, type LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router';
 import { ApiError, getMe } from '../api';
@@ -13,7 +13,7 @@ import { NoHouseholdState } from './NoHouseholdState';
 
 export const TABS: readonly { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: 'Lists', Icon: ListChecks },
-  { to: '/search', label: 'Groceries', Icon: ShoppingBasket },
+  { to: '/search', label: 'Products', Icon: LayoutGrid },
   { to: '/recipes', label: 'Recipes', Icon: ChefHat },
   { to: '/settings', label: 'Settings', Icon: Settings },
 ];

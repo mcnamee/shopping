@@ -40,6 +40,20 @@ const product = (sku: string): CatalogueProduct => ({
 });
 
 describe('DynamoCatalogueStore', () => {
+  it('deletes PRODUCT#<sku>/META keys in batches of 25 and retries unprocessed deletes', async () => {
+    const unprocessed = { T: [{ DeleteRequest: { Key: { pk: 'PRODUCT#0', sk: 'META' } } }] };
+    const { doc, of } = fakeDoc([{ UnprocessedItems: unprocessed }, {}]);
+    const store = new DynamoCatalogueStore(doc, { tableName: 'T', sleep: noSleep });
+    await store.deleteProducts(Array.from({ length: 30 }, (_, i) => String(i)));
+    const batches = of(BatchWriteCommand);
+    expect(batches.map((b) => b.RequestItems!.T!.length)).toEqual([25, 1, 5]);
+    expect(batches[0]!.RequestItems!.T![0]).toEqual({
+      DeleteRequest: { Key: { pk: 'PRODUCT#0', sk: 'META' } },
+    });
+    for (const b of batches)
+      for (const r of b.RequestItems!.T!) expect(r.PutRequest).toBeUndefined();
+  });
+
   it('writes in batches of 25 with catalogue keys', async () => {
     const { doc, of } = fakeDoc();
     const store = new DynamoCatalogueStore(doc, { tableName: 'T', sleep: noSleep });

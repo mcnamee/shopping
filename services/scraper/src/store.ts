@@ -31,7 +31,8 @@ export interface ScrapeRunRecord {
   unchanged: number;
   reactivated: number;
   missed: number;
-  discontinued: number;
+  /** Products deleted this run (missing from 2 consecutive successful runs, D-084). */
+  deleted: number;
   /** Number of errors (details in errorMessages, max 20). */
   errors: number;
   discontinueStep: 'applied' | 'skipped';
@@ -48,6 +49,8 @@ export interface ScrapeRunRecord {
 export interface CatalogueStore {
   loadProducts(): Promise<CatalogueProduct[]>;
   writeProducts(products: readonly CatalogueProduct[], updatedAt: string): Promise<void>;
+  /** Delete PRODUCT#<sku>/META items (BatchWrite, unprocessed retry). */
+  deleteProducts(skus: readonly string[]): Promise<void>;
   putRun(run: ScrapeRunRecord): Promise<void>;
   /** Most recent run with status "succeeded", or null. */
   lastSuccessfulRun(): Promise<ScrapeRunRecord | null>;
@@ -109,11 +112,22 @@ export class DynamoCatalogueStore implements CatalogueStore {
 
   /** BatchWrite in chunks of 25, retrying UnprocessedItems with exponential backoff. */
   async writeProducts(products: readonly CatalogueProduct[], updatedAt: string): Promise<void> {
+    await this.batch(products, (p) => ({
+      PutRequest: { Item: catalogueProductToItem(p, updatedAt) },
+    }));
+  }
+
+  /** Deletes catalogue items only: keys are always PRODUCT#<sku> / META. */
+  async deleteProducts(skus: readonly string[]): Promise<void> {
+    await this.batch(skus, (sku) => ({
+      DeleteRequest: { Key: { pk: keys.productPk(sku), sk: keys.productSk } },
+    }));
+  }
+
+  private async batch<T>(entries: readonly T[], toRequest: (e: T) => WriteRequests[number]) {
     const table = this.options.tableName;
-    for (let i = 0; i < products.length; i += 25) {
-      let requests: WriteRequests = products
-        .slice(i, i + 25)
-        .map((p) => ({ PutRequest: { Item: catalogueProductToItem(p, updatedAt) } }));
+    for (let i = 0; i < entries.length; i += 25) {
+      let requests: WriteRequests = entries.slice(i, i + 25).map(toRequest);
       for (let attempt = 0; requests.length > 0; attempt++) {
         if (attempt >= this.maxAttempts) {
           throw new Error(

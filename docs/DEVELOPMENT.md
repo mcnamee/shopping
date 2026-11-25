@@ -44,7 +44,7 @@ plus seeded custom products. Search for `__error` to see the error state, `__slo
 
 ## ALDI catalogue scraper
 
-Runs monthly in AWS (1st, 03:00 Sydney) and on demand via **Actions -> Scrape now**. Locally:
+Runs every Friday 5pm Canberra time from a GitHub runner (`scrape-fallback.yml`, needs `SCRAPE_FALLBACK_ENABLED=true`; the AWS schedule is opt-in, D-042/D-122) and on demand via **Actions -> Scrape fallback -> Run workflow**. Products missing from 2 consecutive successful runs are deleted (D-122). Locally:
 
 ```bash
 # Offline, against the recorded fixtures in services/scraper/test/fixtures (no network)

@@ -21,6 +21,7 @@ const api = vi.hoisted(() => ({
   updateListItem: vi.fn(),
   deleteTemplateItem: vi.fn(),
   saveUnitOverride: vi.fn(),
+  getProduct: vi.fn(),
 }));
 
 vi.mock('../api', async (importOriginal) => {
@@ -43,6 +44,7 @@ vi.mock('../api', async (importOriginal) => {
     updateListItem: api.updateListItem,
     deleteTemplateItem: api.deleteTemplateItem,
     saveUnitOverride: api.saveUnitOverride,
+    getProduct: api.getProduct,
   };
 });
 
@@ -833,5 +835,17 @@ describe('Search tab: product images', () => {
     api.searchProducts.mockResolvedValue(page([product(1, { name: 'bread', imageUrl: null })], 1));
     await searchTab('/search?q=bread');
     expect(await screen.findByTestId('image-fallback')).toHaveTextContent('B');
+  });
+});
+
+describe('Search tab: product deleted from the catalogue (D-084)', () => {
+  it('"Find in Search" for a deleted product (pin 404) just shows the name search results', async () => {
+    api.getProduct.mockRejectedValue(new ApiError(404, 'NOT_FOUND', 'Not found', {}));
+    api.searchProducts.mockResolvedValue(page([product(1), product(2)], 2));
+    await searchTab('/search?q=Old%20Milk&pin=999999');
+    expect(await screen.findByText('Milk number 1')).toBeInTheDocument();
+    expect(screen.getByText('Milk number 2')).toBeInTheDocument();
+    expect(api.getProduct).toHaveBeenCalledWith('999999');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
