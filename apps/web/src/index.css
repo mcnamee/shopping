@@ -176,14 +176,19 @@ html {
   touch-action: manipulation;
 }
 
-/* iOS Safari centres and pads native date values regardless of text-align on the input;
-   pin the value to the left and vertically centre it (DateField). */
+/* iOS Safari centres and pads native date values regardless of text-align on the input, and
+   ignores flex alignment inside it. Make the line box fill the field so the value sits in the
+   vertical middle, and pin it left (DateField). */
 input[type='date'] {
-  display: flex;
-  align-items: center;
+  display: block;
+  height: 3.5rem;
+  min-height: 3.5rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 3.5rem;
 }
 input[type='date']::-webkit-date-and-time-value {
   text-align: left;
   margin: 0;
-  min-height: 1.5em;
+  line-height: 3.5rem;
 }
