@@ -2,7 +2,7 @@ import { filterRecipes, type PlanMeal, type RecipeSummary } from '@trolley/core'
 import { storeToday } from '@trolley/core';
 import { Check, CircleAlert, Search, Star } from 'lucide-react';
 import { useId, useMemo, useRef, useState } from 'react';
-import { ApiError, createPlanEntry } from '../api';
+import { ApiError, createPlanEntry, skipPlanOccurrence } from '../api';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
 import { DateField } from '../components/DateField';
@@ -18,6 +18,17 @@ interface Props {
   defaultMeal: PlanMeal | null;
   /** Fixed recipe (from a recipe's page): hides the recipe/text choice. */
   recipe?: { id: string; title: string };
+  /**
+   * "Change this week only" (docs/stages/stage-6b.md B1): starts from a recurring meal and,
+   * once the one-off entry exists, skips that rule's occurrence on `date`.
+   */
+  override?: {
+    ruleId: string;
+    kind: 'recipe' | 'text';
+    recipeId?: string;
+    text?: string;
+    note?: string;
+  };
   onClose: () => void;
 }
 
@@ -27,7 +38,13 @@ const FAILED = "Couldn't add that. Please try again.";
  * Add to the plan (docs/stages/stage-6.md B3): day, meal (Breakfast/Lunch/Dinner/None), then
  * a recipe from a searchable list (favourites first) or free text with an optional note.
  */
-export function AddToPlanSheet({ date: initialDate, defaultMeal, recipe, onClose }: Props) {
+export function AddToPlanSheet({
+  date: initialDate,
+  defaultMeal,
+  recipe,
+  override,
+  onClose,
+}: Props) {
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const toast = useToast();
@@ -35,11 +52,11 @@ export function AddToPlanSheet({ date: initialDate, defaultMeal, recipe, onClose
   const recipes = useRecipesQuery();
   const [date, setDate] = useState(initialDate);
   const [meal, setMeal] = useState<PlanMeal | null>(defaultMeal);
-  const [mode, setMode] = useState<'recipe' | 'text'>('recipe');
+  const [mode, setMode] = useState<'recipe' | 'text'>(override?.kind ?? 'recipe');
   const [q, setQ] = useState('');
-  const [picked, setPicked] = useState<string | null>(recipe?.id ?? null);
-  const [text, setText] = useState('');
-  const [note, setNote] = useState('');
+  const [picked, setPicked] = useState<string | null>(recipe?.id ?? override?.recipeId ?? null);
+  const [text, setText] = useState(override?.text ?? '');
+  const [note, setNote] = useState(override?.note ?? '');
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
@@ -70,8 +87,13 @@ export function AddToPlanSheet({ date: initialDate, defaultMeal, recipe, onClose
           : { kind: 'text' as const, text: text.trim() }),
         ...(note.trim() ? { note: note.trim() } : {}),
       });
+      if (override) await skipPlanOccurrence(override.ruleId, initialDate);
       await refresh();
-      toast.show(`Added to ${dayLabel(date)}, ${mealLabel(meal).toLowerCase()}`);
+      toast.show(
+        override
+          ? `Changed for ${dayLabel(initialDate)} only`
+          : `Added to ${dayLabel(date)}, ${mealLabel(meal).toLowerCase()}`,
+      );
       onClose();
     } catch (err) {
       setBusy(false);
@@ -97,7 +119,13 @@ export function AddToPlanSheet({ date: initialDate, defaultMeal, recipe, onClose
       header={
         <SheetHeader
           id={headingId}
-          title={recipe ? 'Add to plan' : `Add to ${dayLabel(initialDate)}`}
+          title={
+            override
+              ? `Change ${dayLabel(initialDate)} only`
+              : recipe
+                ? 'Add to plan'
+                : `Add to ${dayLabel(initialDate)}`
+          }
           headingRef={heading}
           onClose={onClose}
         />
@@ -119,7 +147,7 @@ export function AddToPlanSheet({ date: initialDate, defaultMeal, recipe, onClose
             aria-disabled={!ready}
             onClick={() => void submit()}
           >
-            Add to plan
+            {override ? 'Save for this week' : 'Add to plan'}
           </Button>
           <Button variant="secondary" disabled={busy} onClick={onClose}>
             Cancel
@@ -263,10 +291,18 @@ export function Meals({
   );
 }
 
-function RecipeRow({ r, on, onPick }: { r: RecipeSummary; on: boolean; onPick: () => void }) {
+export function RecipeRow({
+  r,
+  on,
+  onPick,
+}: {
+  r: RecipeSummary;
+  on: boolean;
+  onPick: () => void;
+}) {
   const meta = recipeMeta(r);
   return (
-    <li>
+    <li role="none">
       <button
         type="button"
         role="radio"

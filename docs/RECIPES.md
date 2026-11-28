@@ -18,3 +18,10 @@ Recipes tab > **Plan** shows a Monday-Sunday week (prev/next, "This week", today
 - **Change:** tap an entry to open the recipe, move it to another day or meal, or delete it (Undo for 8 seconds). If a recipe is deleted, its entries stay and read "Recipe deleted".
 - **Shop:** "Add this week's ingredients" (or the list icon on a day) opens one review sheet grouped by recipe. Pantry items start unticked, the same product in two recipes is combined, pick the list (this week's by default), and one Undo takes it all back.
 - A day holds up to 20 entries. The plan is shared by the household and needs a connection. Decisions D-117 to D-121; API in docs/api.md.
+
+### Recurring meals
+Recipes > Plan > **Recurring meals** (pushed screen, back button) lists repeating meals by weekday, e.g. "Every Friday · Dinner" or "Every 2nd Thursday · Dinner (next 3 Dec)".
+- **Add/edit:** pick a recipe or "Something else", meal, weekday, how often (every 1-4 weeks), the start date (the first one; fortnights are counted from it), an optional end date and note. Pause keeps a meal but hides it. Delete asks first. Up to 30 per household.
+- **On the plan:** recurring meals show with a small repeat icon. Tap one to open the recipe, **Skip this week** (Undo in the toast), **Change this week only** (skips it and adds a normal entry you can edit) or **Edit recurring meal**.
+- **Make this recurring:** in any normal entry's sheet, prefilled from its day, meal and recipe.
+- "Add ingredients for these 7 days" includes recurring meals (not skipped ones). Decisions D-124 to D-128.

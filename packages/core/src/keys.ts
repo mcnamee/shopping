@@ -90,6 +90,28 @@ export const keys = {
     assertDate(to);
     return { from: `PLAN#${from}#`, to: `PLAN#${to}#~` };
   },
+  /** Recurring meal rule (D-124): pk = householdPk. */
+  planRuleSk(ruleId: string): string {
+    assertSegment('ruleId', ruleId);
+    return `PLANRULE#${ruleId}`;
+  },
+  planRuleSkPrefix: 'PLANRULE#',
+  /** Skipped occurrence of a rule (D-125): one row per rule and date. */
+  planSkipSk(ruleId: string, date: string): string {
+    assertSegment('ruleId', ruleId);
+    assertDate(date);
+    return `PLANSKIP#${ruleId}#${date}`;
+  },
+  planSkipRuleRange(ruleId: string, from: string, to: string): { from: string; to: string } {
+    assertSegment('ruleId', ruleId);
+    assertDate(from);
+    assertDate(to);
+    return { from: `PLANSKIP#${ruleId}#${from}`, to: `PLANSKIP#${ruleId}#${to}` };
+  },
+  planSkipRulePrefix(ruleId: string): string {
+    assertSegment('ruleId', ruleId);
+    return `PLANSKIP#${ruleId}#`;
+  },
   /** Household settings: aisle order, unit overrides. */
   settingsSk: 'SETTINGS',
   /** Pointer to the "this week" list (D-056): one item, so flagging is one atomic write. */

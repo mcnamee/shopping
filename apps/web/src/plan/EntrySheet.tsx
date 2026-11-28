@@ -1,5 +1,5 @@
 import { storeToday, type MealPlanEntry, type PlanMeal, type RecipeSummary } from '@trolley/core';
-import { CircleAlert, ExternalLink, Trash2 } from 'lucide-react';
+import { CircleAlert, ExternalLink, Repeat, Trash2 } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ApiError, createPlanEntry, deletePlanEntry, movePlanEntry, updatePlanEntry } from '../api';
@@ -10,6 +10,7 @@ import { useToast } from '../components/Toast';
 import { SheetHeader } from '../lists/ListSheets';
 import { Meals } from './AddToPlanSheet';
 import { dayLabel, mealLabel, useRefreshPlan } from './data';
+import { RuleSheet } from './RuleSheet';
 
 /** Entry actions (docs/stages/stage-6.md B4): open recipe, move to another day/meal, delete with Undo. */
 export function EntrySheet({
@@ -31,6 +32,7 @@ export function EntrySheet({
   const [date, setDate] = useState(entry.date);
   const [meal, setMeal] = useState<PlanMeal | null>(entry.meal);
   const [busy, setBusy] = useState(false);
+  const [recurring, setRecurring] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [text, setText] = useState(entry.text ?? '');
   const [note, setNote] = useState(entry.note ?? '');
@@ -125,6 +127,22 @@ export function EntrySheet({
     }
   };
 
+  if (recurring) {
+    return (
+      <RuleSheet
+        prefill={{
+          kind: entry.kind,
+          ...(entry.recipeId ? { recipeId: entry.recipeId } : {}),
+          ...(entry.kind === 'text' ? { text: entry.text ?? '' } : {}),
+          meal: entry.meal,
+          startDate: entry.date,
+          ...(entry.note ? { note: entry.note } : {}),
+        }}
+        onClose={onClose}
+      />
+    );
+  }
+
   return (
     <BottomSheet
       labelledBy={headingId}
@@ -150,6 +168,10 @@ export function EntrySheet({
             onClick={() => void save()}
           >
             {moved && !textChanged && !noteChanged ? 'Move' : 'Save'}
+          </Button>
+          <Button variant="secondary" disabled={busy} onClick={() => setRecurring(true)}>
+            <Repeat aria-hidden className="h-5 w-5" />
+            Make this recurring
           </Button>
           <Button variant="danger-outline" disabled={busy} onClick={() => void remove()}>
             <Trash2 aria-hidden className="h-5 w-5" />

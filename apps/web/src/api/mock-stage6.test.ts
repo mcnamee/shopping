@@ -103,3 +103,51 @@ describe('mock meal plan (Stage 6)', () => {
     ).toBe(400);
   });
 });
+
+describe('mock recurring meals (Stage 6b)', () => {
+  it('is seeded with Pizza weekly and Chicken wraps fortnightly, merged into GET /plan', async () => {
+    const rules = await call<{ rules: Array<{ text: string; everyWeeks: number }> }>(
+      'GET',
+      '/plan-rules',
+    );
+    expect(rules.body.rules.map((r) => [r.text, r.everyWeeks])).toEqual([
+      ['Pizza', 1],
+      ['Chicken wraps', 2],
+    ]);
+    const week = await call<MealPlanResponse>('GET', range());
+    expect(week.body.occurrences.map((o) => o.text).sort()).toEqual(['Chicken wraps', 'Pizza']);
+    const later = await call<MealPlanResponse>(
+      'GET',
+      `/plan?from=${addDays(mon(), 7)}&to=${addDays(mon(), 13)}`,
+    );
+    expect(later.body.occurrences.map((o) => o.text)).toEqual(['Pizza']);
+  });
+
+  it('skips and unskips an occurrence, and validates the rule', async () => {
+    const week = (await call<MealPlanResponse>('GET', range())).body;
+    const pizza = week.occurrences.find((o) => o.text === 'Pizza');
+    if (!pizza) throw new Error('no pizza');
+    const path = `/plan-rules/${pizza.ruleId}/skips/${pizza.date}`;
+    expect((await call('PUT', path)).status).toBe(204);
+    expect((await call<MealPlanResponse>('GET', range())).body.occurrences).toHaveLength(1);
+    expect((await call('DELETE', path)).status).toBe(204);
+    expect((await call<MealPlanResponse>('GET', range())).body.occurrences).toHaveLength(2);
+    expect(
+      (await call('PUT', `/plan-rules/${pizza.ruleId}/skips/${addDays(pizza.date, 1)}`)).status,
+    ).toBe(400);
+    const rule = {
+      kind: 'text',
+      text: 'X',
+      weekday: 5,
+      everyWeeks: 1,
+      startDate: pizza.date,
+    };
+    const stale = await call('PUT', `/plan-rules/${pizza.ruleId}`, { ...rule, version: 9 });
+    expect(stale.status).toBe(409);
+    expect((await call('PUT', `/plan-rules/${pizza.ruleId}`, { ...rule, version: 1 })).status).toBe(
+      200,
+    );
+    expect((await call('DELETE', `/plan-rules/${pizza.ruleId}`)).status).toBe(204);
+    expect((await call<MealPlanResponse>('GET', range())).body.occurrences).toHaveLength(1);
+  });
+});

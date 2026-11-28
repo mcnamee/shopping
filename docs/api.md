@@ -82,6 +82,20 @@ Server: `services/api/src/plan/`; rules, limits and week helpers: `packages/core
 
 `MealPlanEntry`: `id, date, meal ('breakfast'|'lunch'|'dinner'|null), kind, recipeId?, text?, note?, order, version, createdAt, updatedAt`. Limits in `MEAL_PLAN_LIMITS` (text 100, note 200, 20 per day). Entries are not joined to recipes: look the recipe up in `GET /recipes`; a missing recipe means "Recipe deleted". Ingredients for a week use the existing `POST /recipes/{id}/match`, `/to-list` and bulk add per recipe.
 
+### Recurring meals (Stage 6b, D-124 to D-128)
+Server: `services/api/src/plan/rules-store.ts`, routes in `plan/routes.ts`; occurrence maths and validation: `packages/core/src/meal-plan-recurring.ts`. Household-scoped; another household's rule is a 404. Occurrences are computed per request, never stored.
+
+| Route | Body | Result |
+|---|---|---|
+| GET `/plan-rules` | | `{ rules: PlanRule[] }` oldest first |
+| POST `/plan-rules` | `{ kind: 'recipe'\|'text', recipeId? \| text, meal?, weekday (1 Mon..7 Sun), everyWeeks (1-4), startDate, endDate?, note?, paused? }` | 201 rule; 400 VALIDATION naming the field (`startDate` must fall on `weekday`, `endDate` >= `startDate`, unknown recipe = `recipeId`); 409 LIMIT at 30 rules |
+| PUT `/plan-rules/{ruleId}` | same fields + `version` (full replacement) | rule (`version` + 1); 409 STALE (`current` = latest) |
+| DELETE `/plan-rules/{ruleId}` | | 204 (its skips are deleted too); 404 when gone |
+| PUT `/plan-rules/{ruleId}/skips/{date}` | | 204, idempotent; 400 when `date` is not an occurrence of the rule |
+| DELETE `/plan-rules/{ruleId}/skips/{date}` | | 204 (unskip), idempotent |
+
+`GET /plan?from=&to=` now returns `{ entries, occurrences }`. `PlanOccurrence`: `ruleId, recurring: true, date, meal, kind, recipeId?, text?, note?`, minus skipped days and paused rules, ordered by date, meal slot, then rule id. "Change this week only" is `PUT .../skips/{date}` plus a normal `POST /plan` (client composes both).
+
 ## Suggestions (Stage 3)
 Engine: `packages/core/src/suggestions.ts`; AI pass and routes: `services/api/src/suggestions/`; mock: `apps/web/src/api/mock-stage2.ts`; decisions D-061 to D-074.
 

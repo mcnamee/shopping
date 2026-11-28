@@ -48,6 +48,7 @@ vi.mock('../api', async (importOriginal) => {
   };
 });
 
+import { defaultListName } from '@trolley/core';
 import { ApiError } from '../api';
 import { clearListOverlay } from '../lists/data';
 import { sessionTargets } from '../search/target';
@@ -626,7 +627,7 @@ describe('Search tab: adding and toasts', () => {
     const { user, dialog } = await openPotatoes();
     expect(
       await within(dialog).findByRole('button', {
-        name: 'Adding to New list: Week of 23 Nov. Change',
+        name: `Adding to New list: ${defaultListName(new Date())}. Change`,
       }),
     ).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: /^Add to/ }));

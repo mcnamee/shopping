@@ -3,6 +3,7 @@ import { HistoryPage } from './lists/HistoryPage';
 import { ListPage } from './lists/ListPage';
 import { ListsPage } from './lists/ListsPage';
 import { ToastProvider } from './components/Toast';
+import { RecurringPage } from './plan/RecurringPage';
 import { AisleOrderPage } from './settings/AisleOrderPage';
 import { UnitsPage } from './settings/UnitsPage';
 import { RecipeDetailPage } from './recipes/RecipeDetailPage';
@@ -62,6 +63,7 @@ export function AppRoutes() {
         <Route path="/lists/:id" element={<ListPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/recipes" element={<RecipesPage />} />
+        <Route path="/recipes/recurring" element={<RecurringPage />} />
         <Route path="/recipes/new" element={<RecipeEditorPage isNew />} />
         <Route path="/recipes/:id" element={<RecipeDetailPage />} />
         <Route path="/recipes/:id/edit" element={<RecipeEditorPage />} />

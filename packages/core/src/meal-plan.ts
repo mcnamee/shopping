@@ -4,6 +4,7 @@
  * the web mock. Dates are plain YYYY-MM-DD strings in Canberra time (no time zones here).
  */
 import { ENTITY_ID_PATTERN, cleanText, type Parsed } from './lists';
+import type { PlanOccurrence } from './meal-plan-recurring';
 
 export const MEAL_PLAN_LIMITS = {
   /** Entries on one day. */
@@ -36,6 +37,8 @@ export interface MealPlanEntry {
 
 export interface MealPlanResponse {
   entries: MealPlanEntry[];
+  /** Recurring meals falling in the range (D-124), minus skips. Computed, never stored. */
+  occurrences: PlanOccurrence[];
 }
 
 export interface CreatePlanEntryRequest {
