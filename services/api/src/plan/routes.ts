@@ -8,18 +8,24 @@ import {
   isValidEntityId,
   parseCreatePlanEntry,
   parseMovePlanEntry,
+  fallsOnRule,
   parsePlanRange,
+  parsePlanRule,
+  parseUpdatePlanRule,
   parseUpdatePlanEntry,
   type MealPlanResponse,
+  type PlanRulesResponse,
   type Parsed,
 } from '@trolley/core';
 import { fail, json, readJsonBody, type HttpResult } from '../http';
 import type { AuthedRequest, RouteTable } from '../router';
 import type { RecipeStore } from '../recipes/store';
+import type { PlanRuleStore } from './rules-store';
 import type { PlanStore } from './store';
 
 export interface PlanDeps {
   plan: PlanStore;
+  rules: PlanRuleStore;
   recipes: RecipeStore;
 }
 
@@ -36,8 +42,12 @@ export function createPlanRoutes(getDeps: () => PlanDeps): RouteTable {
 
   async function range(req: AuthedRequest): Promise<HttpResult> {
     const { from, to } = unwrap(parsePlanRange(req.event.queryStringParameters ?? {}));
-    const entries = await getDeps().plan.range(hhOf(req), from, to);
-    return json(200, { entries } satisfies MealPlanResponse);
+    const { plan, rules } = getDeps();
+    const [entries, occurrences] = await Promise.all([
+      plan.range(hhOf(req), from, to),
+      rules.occurrences(hhOf(req), from, to),
+    ]);
+    return json(200, { entries, occurrences } satisfies MealPlanResponse);
   }
 
   async function create(req: AuthedRequest): Promise<HttpResult> {
@@ -68,6 +78,62 @@ export function createPlanRoutes(getDeps: () => PlanDeps): RouteTable {
     return { statusCode: 204, headers: { 'cache-control': 'no-store' } };
   }
 
+  // ---- Recurring meals (docs/stages/stage-6b.md)
+  const ruleId = (req: AuthedRequest) => {
+    const id = req.event.pathParameters?.ruleId;
+    return isValidEntityId(id) ? id : fail.notFound();
+  };
+  const skipTarget = (req: AuthedRequest) => {
+    const date = req.event.pathParameters?.date;
+    return { id: ruleId(req), date: isPlanDate(date) ? date : fail.notFound() };
+  };
+
+  async function checkRecipe(hh: string, input: { kind: string; recipeId?: string }) {
+    if (input.kind === 'recipe' && !(await getDeps().recipes.get(hh, input.recipeId as string))) {
+      fail.validation('That recipe no longer exists.', 'recipeId');
+    }
+  }
+
+  async function listRules(req: AuthedRequest): Promise<HttpResult> {
+    const rules = await getDeps().rules.list(hhOf(req));
+    return json(200, { rules } satisfies PlanRulesResponse);
+  }
+
+  async function createRule(req: AuthedRequest): Promise<HttpResult> {
+    const input = unwrap(parsePlanRule(readJsonBody(req.event)));
+    await checkRecipe(hhOf(req), input);
+    return json(201, await getDeps().rules.create(hhOf(req), input));
+  }
+
+  async function replaceRule(req: AuthedRequest): Promise<HttpResult> {
+    const id = ruleId(req);
+    const input = unwrap(parseUpdatePlanRule(readJsonBody(req.event)));
+    await checkRecipe(hhOf(req), input);
+    return json(200, await getDeps().rules.replace(hhOf(req), id, input));
+  }
+
+  async function removeRule(req: AuthedRequest): Promise<HttpResult> {
+    await getDeps().rules.delete(hhOf(req), ruleId(req));
+    return { statusCode: 204, headers: { 'cache-control': 'no-store' } };
+  }
+
+  async function skip(req: AuthedRequest): Promise<HttpResult> {
+    const { id, date } = skipTarget(req);
+    const rule = await getDeps().rules.mustGet(hhOf(req), id);
+    if (!fallsOnRule(rule, date)) {
+      return fail.validation('That meal does not fall on this day.', 'date');
+    }
+    await getDeps().rules.skip(hhOf(req), id, date);
+    return { statusCode: 204, headers: { 'cache-control': 'no-store' } };
+  }
+
+  async function unskip(req: AuthedRequest): Promise<HttpResult> {
+    const { id, date } = skipTarget(req);
+    await getDeps().rules.mustGet(hhOf(req), id);
+    await getDeps().rules.unskip(hhOf(req), id, date);
+    return { statusCode: 204, headers: { 'cache-control': 'no-store' } };
+  }
+
   const r = (handler: (req: AuthedRequest) => Promise<HttpResult>) => ({
     auth: true as const,
     handler,
@@ -78,5 +144,11 @@ export function createPlanRoutes(getDeps: () => PlanDeps): RouteTable {
     'PATCH /api/plan/{date}/{entryId}': r(update),
     'POST /api/plan/{date}/{entryId}/move': r(move),
     'DELETE /api/plan/{date}/{entryId}': r(remove),
+    'GET /api/plan-rules': r(listRules),
+    'POST /api/plan-rules': r(createRule),
+    'PUT /api/plan-rules/{ruleId}': r(replaceRule),
+    'DELETE /api/plan-rules/{ruleId}': r(removeRule),
+    'PUT /api/plan-rules/{ruleId}/skips/{date}': r(skip),
+    'DELETE /api/plan-rules/{ruleId}/skips/{date}': r(unskip),
   };
 }

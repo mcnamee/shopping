@@ -51,6 +51,10 @@ import type {
   MealPlanResponse,
   MovePlanEntryRequest,
   UpdatePlanEntryRequest,
+  PlanRule,
+  PlanRuleRequest,
+  PlanRulesResponse,
+  UpdatePlanRuleRequest,
 } from '@trolley/core';
 import { getAuth } from '../auth/service';
 import { MOCK_AUTH } from '../env';
@@ -251,3 +255,14 @@ export const movePlanEntry = (date: string, id: string, body: MovePlanEntryReque
   api.post<MealPlanEntry>(`/plan/${enc(date)}/${enc(id)}/move`, body);
 export const deletePlanEntry = (date: string, id: string) =>
   api.delete<undefined>(`/plan/${enc(date)}/${enc(id)}`);
+
+// Stage 6b recurring meals (docs/api.md). Occurrences come back inside GET /plan.
+export const getPlanRules = () => api.get<PlanRulesResponse>('/plan-rules');
+export const createPlanRule = (body: PlanRuleRequest) => api.post<PlanRule>('/plan-rules', body);
+export const updatePlanRule = (id: string, body: UpdatePlanRuleRequest) =>
+  api.put<PlanRule>(`/plan-rules/${enc(id)}`, body);
+export const deletePlanRule = (id: string) => api.delete<undefined>(`/plan-rules/${enc(id)}`);
+export const skipPlanOccurrence = (id: string, date: string) =>
+  api.put<undefined>(`/plan-rules/${enc(id)}/skips/${enc(date)}`);
+export const unskipPlanOccurrence = (id: string, date: string) =>
+  api.delete<undefined>(`/plan-rules/${enc(id)}/skips/${enc(date)}`);

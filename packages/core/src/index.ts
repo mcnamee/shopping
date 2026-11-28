@@ -17,3 +17,4 @@ export * from './recipes';
 export * from './ingredients';
 export * from './ingredient-match';
 export * from './meal-plan';
+export * from './meal-plan-recurring';

@@ -8,6 +8,8 @@ import {
 
 const SHOTS =
   '/tmp/claude-0/-home-user-shopping/8e252ed6-4540-5359-9d43-d654ea5e1540/scratchpad/stage6-shots';
+const SHOTS_6B =
+  '/tmp/claude-0/-home-user-shopping/8e252ed6-4540-5359-9d43-d654ea5e1540/scratchpad/stage6b-shots';
 
 /** Weekday name of Sydney's today plus n days (the plan range starts today). */
 const dayName = (n: number) => {
@@ -90,6 +92,84 @@ test.describe('Meal plan', () => {
     await expect(page.getByText(/^Added \d+ to Week of/)).toBeVisible();
     await page.getByRole('button', { name: 'Undo' }).click();
     await expect(page.getByText(/^Removed \d+ items?/)).toBeVisible();
+  });
+});
+
+test.describe('Recurring meals', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('create an every-2-weeks rule, see it on the right days, skip a week, ingredients include it', async ({
+    page,
+  }) => {
+    await signInToShell(page);
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Recipes' })
+      .click();
+    await page.getByRole('button', { name: 'Plan' }).click();
+    // Seeded: Pizza every Friday and Chicken wraps every 2nd Thursday show with a repeat marker.
+    await expect(page.getByRole('button', { name: /^Pizza.*Repeats.*Actions/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Chicken wraps.*Repeats/ })).toBeVisible();
+    await page.screenshot({ path: `${SHOTS_6B}/plan-week-recurring.png` });
+
+    await page.getByRole('link', { name: 'Recurring meals' }).click();
+    await expect(page.getByRole('heading', { name: 'Recurring meals', level: 1 })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
+    await expect(page.getByText('Every Friday · Dinner')).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expectTapTargets(page);
+    await expectNoHorizontalScroll(page);
+    await page.screenshot({ path: `${SHOTS_6B}/recurring-meals.png` });
+
+    // Add: Fluffy pancakes at breakfast, every 2 weeks, starting today.
+    await page.getByRole('button', { name: 'Add recurring meal' }).click();
+    let sheet = page.getByRole('dialog');
+    await sheet.getByRole('radio', { name: /pancakes/i }).click();
+    await sheet.getByRole('radio', { name: 'Breakfast' }).click();
+    await sheet.getByRole('radio', { name: 'Every 2 weeks' }).click();
+    await expectNoSeriousAxeViolations(page);
+    await expectTapTargets(page);
+    await expectNoHorizontalScroll(page);
+    await sheet.getByRole('button', { name: 'Add recurring meal' }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole('button', { name: /^Fluffy pancakes/ })).toContainText(
+      /Every 2nd \w+ · Breakfast \(next /,
+    );
+
+    // Today has it, the next 7 days do not, the 7 days after that do.
+    await page.getByRole('link', { name: 'Back to Recipes' }).click();
+    const today = page.getByRole('listitem', { name: new RegExp(`^${dayName(0)}`) });
+    await expect(today.getByRole('button', { name: /^Fluffy pancakes.*Repeats/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Next 7 days' }).click();
+    await expect(page.getByRole('button', { name: /^Pizza/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Fluffy pancakes/ })).toBeHidden();
+    await page.getByRole('button', { name: 'Next 7 days' }).click();
+    await expect(page.getByRole('button', { name: /^Fluffy pancakes.*Repeats/ })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await page.getByRole('button', { name: 'Today' }).click();
+
+    // The week's ingredients include the recurring recipe.
+    await page.getByRole('button', { name: /Add ingredients for these 7 days/ }).click();
+    sheet = page.getByRole('dialog');
+    await expect(sheet.getByRole('region', { name: 'Fluffy pancakes' })).toBeVisible();
+    await sheet.getByRole('button', { name: 'Close' }).click();
+    await expect(sheet).toBeHidden();
+
+    // Skip this week: gone from the plan and from the ingredients; Undo brings it back.
+    await today.getByRole('button', { name: /^Fluffy pancakes/ }).click();
+    sheet = page.getByRole('dialog');
+    await expect(sheet.getByRole('button', { name: 'Change this week only' })).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expectTapTargets(page);
+    await sheet.getByRole('button', { name: 'Skip this week' }).click();
+    await expect(page.getByRole('button', { name: /^Fluffy pancakes/ })).toBeHidden();
+    await page.getByRole('button', { name: /Add ingredients for these 7 days/ }).click();
+    sheet = page.getByRole('dialog');
+    await expect(sheet.getByRole('region', { name: 'Lamb curry' })).toBeVisible();
+    await expect(sheet.getByRole('region', { name: 'Fluffy pancakes' })).toBeHidden();
+    await sheet.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(page.getByRole('button', { name: /^Fluffy pancakes.*Repeats/ })).toBeVisible();
   });
 });
 

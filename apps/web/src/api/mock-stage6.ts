@@ -5,6 +5,13 @@
  */
 import {
   addDays,
+  expandOccurrences,
+  fallsOnRule,
+  nextWeekdayOnOrAfter,
+  parsePlanRule,
+  parseUpdatePlanRule,
+  PLAN_RULE_LIMITS,
+  skipKey,
   isPlanDate,
   isValidEntityId,
   MEAL_PLAN_LIMITS,
@@ -16,6 +23,8 @@ import {
   storeToday,
   type MealPlanEntry,
   type MealPlanResponse,
+  type PlanRule,
+  type PlanRulesResponse,
 } from '@trolley/core';
 import {
   clone,
@@ -57,6 +66,49 @@ function seedPlan(): MealPlanEntry[] {
     e(3, 2, 'dinner', { kind: 'recipe', recipeId: MOCK_RECIPE_IDS.greekSalad }),
     e(4, 4, 'dinner', { text: 'Eat out' }),
   ];
+}
+
+/** Pizza every Friday dinner; Chicken wraps every 2nd Thursday dinner (next Thursday onwards). */
+function seedRules(): PlanRule[] {
+  const at = nowIso();
+  const base = { kind: 'text' as const, meal: 'dinner' as const, paused: false, version: 1 };
+  return [
+    {
+      ...base,
+      id: '00000000-0000-4000-8000-0000000000e1',
+      text: 'Pizza',
+      weekday: 5,
+      everyWeeks: 1,
+      startDate: nextWeekdayOnOrAfter(storeToday(), 5),
+      createdAt: at,
+      updatedAt: at,
+    },
+    {
+      ...base,
+      id: '00000000-0000-4000-8000-0000000000e2',
+      text: 'Chicken wraps',
+      weekday: 4,
+      everyWeeks: 2,
+      startDate: nextWeekdayOnOrAfter(storeToday(), 4),
+      createdAt: at,
+      updatedAt: at,
+    },
+  ];
+}
+
+const rulesOf = (hh: MockHousehold): PlanRule[] => (hh.planRules ??= seedRules());
+const skipsOf = (hh: MockHousehold): string[] => (hh.planSkips ??= []);
+
+function ruleParam(hh: MockHousehold, params: Record<string, string>): PlanRule {
+  const id = params.ruleId;
+  if (!isValidEntityId(id)) return notFound();
+  return rulesOf(hh).find((r) => r.id === id) ?? notFound();
+}
+
+function checkRecipe(hh: MockHousehold, input: { kind: string; recipeId?: string }): void {
+  if (input.kind === 'recipe' && !recipesOf(hh).some((r) => r.id === input.recipeId)) {
+    invalid('That recipe no longer exists.', 'recipeId');
+  }
 }
 
 function planOf(hh: MockHousehold): MealPlanEntry[] {
@@ -103,7 +155,8 @@ export function createStage6MockRoutes() {
       const entries = [...days]
         .sort()
         .flatMap((d) => sortPlanEntries(inRange.filter((e) => e.date === d)).map(view));
-      return json(200, { entries } satisfies MealPlanResponse);
+      const occurrences = expandOccurrences(rulesOf(hh), new Set(skipsOf(hh)), from, to);
+      return json(200, { entries, occurrences } satisfies MealPlanResponse);
     }),
     'POST /api/plan': write((hh, { body }) => {
       const input = unwrap(parseCreatePlanEntry(body));
@@ -166,6 +219,61 @@ export function createStage6MockRoutes() {
     'DELETE /api/plan/{date}/{entryId}': write((hh, { params }) => {
       const e = find(hh, params);
       hh.plan = planOf(hh).filter((x) => x !== e);
+      return json(204, null);
+    }),
+    'GET /api/plan-rules': read((hh) =>
+      json(200, { rules: rulesOf(hh).map(clone) } satisfies PlanRulesResponse),
+    ),
+    'POST /api/plan-rules': write((hh, { body }) => {
+      const input = unwrap(parsePlanRule(body));
+      checkRecipe(hh, input);
+      if (rulesOf(hh).length >= PLAN_RULE_LIMITS.perHousehold) {
+        conflict(
+          'LIMIT',
+          `You can have up to ${PLAN_RULE_LIMITS.perHousehold} recurring meals. Remove one first.`,
+        );
+      }
+      const at = nowIso();
+      const rule: PlanRule = { ...input, id: newId(), version: 1, createdAt: at, updatedAt: at };
+      rulesOf(hh).push(rule);
+      return json(201, clone(rule));
+    }),
+    'PUT /api/plan-rules/{ruleId}': write((hh, { params, body }) => {
+      const current = ruleParam(hh, params);
+      const { version, ...input } = unwrap(parseUpdatePlanRule(body));
+      checkRecipe(hh, input);
+      if (version !== current.version)
+        conflict('STALE', 'Changed on another phone', clone(current));
+      const next: PlanRule = {
+        ...input,
+        id: current.id,
+        version: current.version + 1,
+        createdAt: current.createdAt,
+        updatedAt: nowIso(),
+      };
+      hh.planRules = rulesOf(hh).map((r) => (r === current ? next : r));
+      return json(200, clone(next));
+    }),
+    'DELETE /api/plan-rules/{ruleId}': write((hh, { params }) => {
+      const rule = ruleParam(hh, params);
+      hh.planRules = rulesOf(hh).filter((r) => r !== rule);
+      hh.planSkips = skipsOf(hh).filter((k) => !k.startsWith(`${rule.id}#`));
+      return json(204, null);
+    }),
+    'PUT /api/plan-rules/{ruleId}/skips/{date}': write((hh, { params }) => {
+      const rule = ruleParam(hh, params);
+      const { date } = params;
+      if (!isPlanDate(date)) return notFound();
+      if (!fallsOnRule(rule, date)) invalid('That meal does not fall on this day.', 'date');
+      const key = skipKey(rule.id, date);
+      if (!skipsOf(hh).includes(key)) skipsOf(hh).push(key);
+      return json(204, null);
+    }),
+    'DELETE /api/plan-rules/{ruleId}/skips/{date}': write((hh, { params }) => {
+      const rule = ruleParam(hh, params);
+      const { date } = params;
+      if (!isPlanDate(date)) return notFound();
+      hh.planSkips = skipsOf(hh).filter((k) => k !== skipKey(rule.id, date));
       return json(204, null);
     }),
   };

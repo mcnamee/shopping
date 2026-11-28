@@ -411,6 +411,13 @@ export class TrolleyStack extends Stack {
       ['/api/plan/{date}/{entryId}', PATCH],
       ['/api/plan/{date}/{entryId}/move', POST],
       ['/api/plan/{date}/{entryId}', DELETE],
+      // Stage 6b recurring meals (D-124). Must match services/api/src/plan/routes.ts.
+      ['/api/plan-rules', GET],
+      ['/api/plan-rules', POST],
+      ['/api/plan-rules/{ruleId}', PUT],
+      ['/api/plan-rules/{ruleId}', DELETE],
+      ['/api/plan-rules/{ruleId}/skips/{date}', PUT],
+      ['/api/plan-rules/{ruleId}/skips/{date}', DELETE],
       // Stage 4: consent screen and Connected apps (SPA, Cognito ID token).
       ['/api/oauth/requests/{requestId}', GET],
       ['/api/oauth/consent', POST],

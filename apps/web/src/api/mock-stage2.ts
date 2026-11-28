@@ -18,6 +18,7 @@
  */
 import {
   type MealPlanEntry,
+  type PlanRule,
   addLine,
   canUndoArchive,
   defaultListName,
@@ -126,6 +127,9 @@ export interface MockHousehold {
   recipes?: Recipe[];
   /** Meal plan entries (Stage 6); missing in state saved before it, seeded on first use. */
   plan?: MealPlanEntry[];
+  /** Recurring meal rules and skipped occurrences (`<ruleId>#<date>`), Stage 6b. */
+  planRules?: PlanRule[];
+  planSkips?: string[];
   /** Suggestion runs today (D-066); missing in state saved before Stage 3. */
   suggestRuns?: { day: string; runs: number };
 }
